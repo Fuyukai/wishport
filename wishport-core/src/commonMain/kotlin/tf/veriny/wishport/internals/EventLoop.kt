@@ -7,6 +7,7 @@
 package tf.veriny.wishport.internals
 
 import tf.veriny.wishport.CancellableResult
+import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.core.CancelScope
 import tf.veriny.wishport.core.Nursery
@@ -60,7 +61,7 @@ public class EventLoop private constructor() {
      * Creates the root task that all tasks inherit from. This will use the root cancellation scope
      * and the root nursery.
      */
-    internal fun <S, F> makeRootTask(coro: suspend () -> CancellableResult<S, F>): Task {
+    internal fun <S, F : Fail> makeRootTask(coro: suspend () -> CancellableResult<S, F>): Task {
         val task = Task(coro, this, rootScope)
         rootNursery = Nursery(task)
         // make sure everything works out fine
@@ -69,7 +70,7 @@ public class EventLoop private constructor() {
         return task
     }
 
-    internal fun <S, F> makeTask(
+    internal fun <S, F : Fail> makeTask(
         coro: suspend () -> CancellableResult<S, F>,
         nursery: Nursery,
     ): Task {

@@ -15,7 +15,7 @@ import kotlin.coroutines.coroutineContext
  * Runs the specified suspend function until complete.
  */
 @OptIn(LowLevelApi::class)
-public fun <S, F> runUntilComplete(
+public fun <S, F : Fail> runUntilComplete(
     fn: suspend () -> CancellableResult<S, F>,
 ): CancellableResult<S, F> {
     val loop = EventLoop.new()
@@ -112,7 +112,7 @@ public suspend fun checkIfCancelled(): CancellableEmpty {
  * ```
  */
 @OptIn(LowLevelApi::class)
-public suspend fun <S, F> checkpoint(value: S): CancellableResult<S, F> {
+public suspend fun <S, F : Fail> checkpoint(value: S): CancellableResult<S, F> {
     return checkIfCancelled()
         .andThen {
             // force immediate reschedule

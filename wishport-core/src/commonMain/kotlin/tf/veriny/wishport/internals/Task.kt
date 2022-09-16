@@ -53,7 +53,7 @@ public class Task(
 
     /** The cancellation scope currently associated with this task. */
     public var cancelScope: CancelScope? = cancelScope
-        internal set(value: CancelScope?) {
+        internal set(value) {
             val old = field
             field = value
 
@@ -121,7 +121,7 @@ public class Task(
      * Gets the result of this task.
      */
     @Suppress("UNCHECKED_CAST")
-    public fun <S, F> result(): CancellableResult<S, F> {
+    public fun <S, F : Fail> result(): CancellableResult<S, F> {
         return result as CancellableResult<S, F>
     }
 }
