@@ -1,0 +1,3 @@
+package = external.liburing
+headers = liburing.h
+headerFilter = liburing.h liburing/*
