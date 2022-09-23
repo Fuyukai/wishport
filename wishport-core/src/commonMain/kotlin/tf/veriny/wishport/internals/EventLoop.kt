@@ -10,6 +10,7 @@ import tf.veriny.wishport.CancellableResult
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.core.CancelScope
+import tf.veriny.wishport.core.Clock
 import tf.veriny.wishport.core.Nursery
 import kotlin.coroutines.coroutineContext
 
@@ -17,9 +18,9 @@ import kotlin.coroutines.coroutineContext
  * Main event loop dispatcher. You almost certainly do not want to use this
  */
 @LowLevelApi
-public class EventLoop private constructor() {
+public class EventLoop private constructor(public val clock: Clock) {
     public companion object {
-        internal fun new() = EventLoop()
+        internal fun new(clock: Clock = PlatformClock) = EventLoop(clock)
 
         /**
          * Gets the currently running event loop. This will ONLY work from within a Wishport
@@ -51,8 +52,9 @@ public class EventLoop private constructor() {
     }
 
     // Task queues:
-    // 1) Queue of tasks that are immediately going to run
+    // 1) Set of tasks that are immediately going to run
     private val runningTasks = mutableSetOf<Task>()
+    // 2) Queue of tasks that we need to check for deadlines
 
     private val rootScope = CancelScope.create(this)
     private lateinit var rootNursery: Nursery

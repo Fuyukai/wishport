@@ -75,8 +75,7 @@ public class Task(
     }
 
     override fun compareTo(other: Task): Int {
-        // TODO implement
-        return 0
+        return other.cancelScope!!.effectiveDeadline.compareTo(cancelScope!!.effectiveDeadline)
     }
 
     /**

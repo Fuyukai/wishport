@@ -48,7 +48,7 @@ private val OFFSET = run {
 }
 
 // On modern versions of linux, this should avoid system calls as clock_gettime is vDSO'd.
-public actual fun getMonotonicTime(): Long = memScoped {
+public actual fun getMonotonicTime(): Long {
     val res = clock_gettime(CLOCK_REALTIME, SHARED_TIMESPEC.ptr)
     if (res != 0) throw Throwable("clock_gettime failed?")
 
