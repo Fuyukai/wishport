@@ -1,4 +1,10 @@
-@file:OptIn(ExperimentalUnsignedTypes::class)
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
+@file:OptIn(ExperimentalUnsignedTypes::class, ExperimentalUnsignedTypes::class)
 @file:Suppress("unused", "NOTHING_TO_INLINE")
 
 package tf.veriny.wishport
@@ -206,7 +212,7 @@ public inline fun ByteArray.toInt(offset: Int = 0): Int {
             or ((this[offset + 1].toInt()) shl 16)
             or ((this[offset + 2].toInt()) shl 8)
             or (this[offset + 3].toInt())
-           )
+        )
 }
 
 /**
@@ -219,7 +225,7 @@ public inline fun ByteArray.toIntLE(offset: Int = 0): Int {
             or ((this[offset + 2].toInt()) shl 16)
             or ((this[offset + 1].toInt()) shl 8)
             or (this[offset].toInt())
-           )
+        )
 }
 
 /**
@@ -236,7 +242,7 @@ public inline fun ByteArray.toLong(offset: Int = 0): Long {
             or ((this[offset + 5].toLong()) shl 16)
             or ((this[offset + 6].toLong()) shl 8)
             or (this[offset + 7].toLong())
-           )
+        )
 }
 
 /**
@@ -253,7 +259,7 @@ public inline fun ByteArray.toLongLE(offset: Int = 0): Long {
             or ((this[offset + 2].toLong()) shl 16)
             or ((this[offset + 1].toLong()) shl 8)
             or (this[0].toLong())
-           )
+        )
 }
 
 /**
@@ -272,7 +278,7 @@ public inline fun ByteArray.toULong(offset: Int = 0): ULong {
             or ((this[offset + 5].toULong()) shl 16)
             or ((this[offset + 6].toULong()) shl 8)
             or (this[offset + 7].toULong())
-           )
+        )
 }
 
 /**
@@ -291,7 +297,7 @@ public inline fun ByteArray.toULongLE(offset: Int = 0): ULong {
             or ((this[offset + 2].toULong()) shl 16)
             or ((this[offset + 1].toULong()) shl 8)
             or (this[offset].toULong())
-           )
+        )
 }
 
 /**
@@ -304,7 +310,7 @@ public inline fun UByteArray.toUInt(offset: Int = 0): UInt {
             or ((this[offset + 1].toUInt()) shl 16)
             or ((this[offset + 2].toUInt()) shl 8)
             or (this[offset + 3].toUInt())
-           )
+        )
 }
 
 /**
@@ -317,7 +323,7 @@ public inline fun UByteArray.toUIntLE(offset: Int = 0): UInt {
             or ((this[offset + 2].toUInt()) shl 16)
             or ((this[offset + 1].toUInt()) shl 8)
             or (this[offset].toUInt())
-           )
+        )
 }
 
 // misc helpers

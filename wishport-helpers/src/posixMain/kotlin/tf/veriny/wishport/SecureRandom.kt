@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.wishport
 
 import kotlinx.cinterop.*
@@ -9,7 +15,6 @@ import kotlin.random.Random
  * Gets random bytes and fills them into the specified [ptr].
  */
 internal expect fun getrandom(ptr: CPointer<ByteVar>, size: size_t)
-
 
 /**
  * A secure random number generator based on a platform call. On Linux, this uses the getrandom()

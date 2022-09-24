@@ -1,6 +1,14 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.wishport.core
 
 import tf.veriny.wishport.annotations.LowLevelApi
+
+public const val NS_PER_SEC: Int = 1_000_000_000
 
 /**
  * The clock is responsible for scheduling tasks in the future. The Wishport clock only provides
@@ -20,4 +28,9 @@ public interface Clock {
      * Gets the current time, in nanoseconds, relative to the start point for this clock.
      */
     public fun getCurrentTime(): Long
+
+    /**
+     * Gets the amount of time to sleep, in order to find the next
+     */
+    public fun getSleepTime(nextDeadline: Long): Long
 }

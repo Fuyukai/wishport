@@ -6,10 +6,8 @@
 
 package tf.veriny.wishport.core
 
-import tf.veriny.wishport.CancellableResult
-import tf.veriny.wishport.Fail
+import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
-import tf.veriny.wishport.getCurrentTask
 import tf.veriny.wishport.internals.EventLoop
 import tf.veriny.wishport.internals.Task
 
@@ -44,6 +42,9 @@ private constructor(
     shield: Boolean = false,
 ) : Comparable<CancelScope> {
     public companion object {
+        public const val NEVER_CANCELLED: Long = Long.MAX_VALUE
+        public const val ALWAYS_CANCELLED: Long = Long.MIN_VALUE
+
         // there's a good reason for this to be separated, but I don't remember why...
         @PublishedApi
         internal fun create(loop: EventLoop, shield: Boolean = false): CancelScope {
@@ -67,11 +68,29 @@ private constructor(
 
             return result
         }
+
+        /**
+         * Creates a new [CancelScope], passing it to the specified function that doesn't return
+         * a result.
+         */
+        public suspend inline fun open(
+            shield: Boolean = false,
+            crossinline block: suspend (CancelScope) -> Unit
+        ): CancellableEmpty {
+            return CancelScope {
+                block(it)
+                checkIfCancelled()
+            }
+        }
     }
 
     override fun compareTo(other: CancelScope): Int {
         return other.effectiveDeadline.compareTo(effectiveDeadline)
     }
+
+    // marks if this cancel scope has been exited or not, prevents stupid shenanigans like returning
+    // the scope from the lambda.
+    internal var exited: Boolean = false
 
     @PublishedApi
     internal fun push(task: Task) {
@@ -83,6 +102,9 @@ private constructor(
     internal fun pop(task: Task) {
         parent?.also { task.cancelScope = it }
         parent = null
+
+        exited = true
+        loop.deadlines.remove(this)
     }
 
     /** True when ``cancel()`` is called. */
@@ -92,9 +114,12 @@ private constructor(
             if (value) permanentlyCancelled = true
         }
 
-    // internal usage, used to prevent child cancel scopes from being uncancelled.
-    private var permanentlyCancelled: Boolean = false
-
+    /**
+     * If this scope is actually permanently cancelled. When True, any attempt at re-entering the
+     * event loop will fail.
+     */
+    public var permanentlyCancelled: Boolean = false
+        private set
 
     // LONG_MAX is always in the future.
     // -LONG_MAX is always in the past, as time is represented by a positive nanosecond monotonic
@@ -105,10 +130,19 @@ private constructor(
      * arbitrary point (known as the startup point). This may not be the real deadline; see
      * [effectiveDeadline] for that.
      */
-    public var localDeadline: Long = Long.MAX_VALUE
+    public var localDeadline: Long = NEVER_CANCELLED
         public set(value) {
             field = value
             quantumObserve()
+
+            // i think this is right...
+            if (!permanentlyCancelled) {
+                if (value == ALWAYS_CANCELLED) {
+                    loop.deadlines.remove(this)
+                } else {
+                    loop.deadlines.add(this)
+                }
+            }
         }
 
     /**
@@ -120,7 +154,7 @@ private constructor(
      */
     public val effectiveDeadline: Long
         get() {
-            if (permanentlyCancelled) return Long.MIN_VALUE
+            if (permanentlyCancelled) return ALWAYS_CANCELLED
 
             val parent = parent
             if (parent != null) {
@@ -159,7 +193,9 @@ private constructor(
         if (!permanentlyCancelled) return
 
         for (child in children) {
-            child.quantumObserve()
+            if (child.shield) continue
+            child.permanentlyCancelled = true
+            child.dispatchPotentialCancellations()
         }
 
         for (task in tasks) {
@@ -168,18 +204,15 @@ private constructor(
             loop.directlyReschedule(task)
         }
     }
-
     /**
      * Updates the state of this scope, and all children scopes, as well as dispatching potential
      * reschedules.
      */
-    private fun quantumObserve() {
+    private fun quantumObserve(time: Long) {
         if (!permanentlyCancelled) {
             if (!shield && parent?.isEffectivelyCancelled() == true) {
                 permanentlyCancelled = true
-            }
-
-            else if (effectiveDeadline < loop.clock.getCurrentTime()) {
+            } else if (effectiveDeadline <= time) {
                 permanentlyCancelled = true
             }
         }
@@ -188,6 +221,20 @@ private constructor(
             dispatchPotentialCancellations()
         }
     }
+
+    private fun quantumObserve() = quantumObserve(loop.clock.getCurrentTime())
+
+    // reflector method to let quantumObserve remain private. not sure if this should be the case.
+    /**
+     * Updates the state from the event loop.
+     */
+    internal fun updateStateFromEventLoop(time: Long) {
+        assert(!exited) { "something has gone terribly wrong!" }
+
+        quantumObserve(time)
+    }
+
+    // == public api == //
 
     /**
      * If true, this scope is shielded from parent cancellations.
@@ -198,6 +245,8 @@ private constructor(
      * Permanently cancels this cancel scope.
      */
     public fun cancel() {
+        assert(!exited) { "something has gone wrong!" }
+
         cancelCalled = true
         quantumObserve()
     }
@@ -206,9 +255,9 @@ private constructor(
      * Checks if this cancel scope is effectively cancelled.
      */
     public fun isEffectivelyCancelled(): Boolean {
-        quantumObserve()
+        assert(!exited) { "something has gone wrong!" }
 
+        quantumObserve()
         return permanentlyCancelled
     }
-
 }

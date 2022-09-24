@@ -11,6 +11,16 @@ import tf.veriny.wishport.internals.EventLoop
 import tf.veriny.wishport.internals.Task
 import kotlin.coroutines.coroutineContext
 
+@OptIn(LowLevelApi::class)
+private fun EventLoop.runWithErrorPrint() {
+    try {
+        runUntilComplete()
+    } catch (e: Throwable) {
+        e.printStackTrace()
+        throw e
+    }
+}
+
 /**
  * Runs the specified suspend function until complete.
  */
@@ -22,7 +32,7 @@ public fun <S, F : Fail> runUntilComplete(
     val task = loop.makeRootTask(fn)
     loop.directlyReschedule(task)
 
-    loop.runUntilComplete()
+    loop.runWithErrorPrint()
     return task.result()
 }
 
@@ -39,7 +49,7 @@ public fun runUntilCompleteNoResult(fn: suspend () -> Unit) {
     }
 
     loop.directlyReschedule(task)
-    loop.runUntilComplete()
+    loop.runWithErrorPrint()
 }
 
 /**
@@ -48,7 +58,25 @@ public fun runUntilCompleteNoResult(fn: suspend () -> Unit) {
  */
 @LowLevelApi
 public suspend inline fun getCurrentTask(): Task {
-    return (coroutineContext as Task.TaskContext).task
+    try {
+        return (coroutineContext as Task.TaskContext).task
+    } catch (e: ClassCastException) {
+        throw Throwable(
+            """
+            Something terrible has gone wrong. You cannot use Wishport from within
+            the context of another coroutine runner.
+            
+            If you are seeing this, please make sure that:
+            
+            1. You are not trying to use Wishport from a ``kotlinx-coroutines`` context
+            2. You are not trying to use Wishport from a ``sequence`` context
+            
+            If neither of the above are true, this is an internal bug and must always
+            be reported!
+            """.trimIndent(),
+            e
+        )
+    }
 }
 
 /**
@@ -58,6 +86,16 @@ public suspend inline fun getCurrentTask(): Task {
 public fun reschedule(task: Task) {
     task.context.eventLoop.directlyReschedule(task)
 }
+
+/**
+ * Gets the current time according to the event loop, in nanoseconds. This is a "fake" suspendable,
+ * i.e. it doesn't abide by cancellation or returning an Either.
+ */
+@OptIn(LowLevelApi::class)
+public suspend fun getCurrentTime(): Long {
+    return getCurrentTask().context.eventLoop.clock.getCurrentTime()
+}
+
 
 /**
  * Waits until this task is rescheduled. This returns an empty cancellation result that can be used

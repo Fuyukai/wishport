@@ -10,3 +10,6 @@ package tf.veriny.wishport.internals
  * Gets a monotonically increasing counter in nanoseconds, plus a random offset.
  */
 public expect fun getMonotonicTime(): Long
+
+// test
+public expect fun nanosleep(ns: Long)

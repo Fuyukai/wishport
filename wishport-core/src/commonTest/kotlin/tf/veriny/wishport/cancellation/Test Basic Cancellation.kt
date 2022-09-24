@@ -8,22 +8,12 @@
 
 package tf.veriny.wishport.cancellation
 
-import tf.veriny.wishport.Cancellable
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.checkIfCancelled
 import tf.veriny.wishport.core.CancelScope
 import tf.veriny.wishport.isCancelled
 import tf.veriny.wishport.runUntilCompleteNoResult
 import kotlin.test.Test
-
-internal suspend inline fun CancelScope.Companion.open(
-    crossinline block: suspend (CancelScope) -> Unit
-) {
-    CancelScope {
-        block(it)
-        Cancellable.cancelled()
-    }
-}
 
 /**
  * Tests that cancellation works.
@@ -62,6 +52,17 @@ public class `Test Basic Cancellation` {
             outer.cancel()
 
             CancelScope.open { inner ->
+                assert(!inner.cancelCalled)
+                assert(checkIfCancelled().isCancelled)
+            }
+        }
+    }
+
+    @Test
+    public fun `Test cancelling outer scope from inner scope`() = runUntilCompleteNoResult {
+        CancelScope.open { outer ->
+            CancelScope.open { inner ->
+                outer.cancel()
                 assert(!inner.cancelCalled)
                 assert(checkIfCancelled().isCancelled)
             }

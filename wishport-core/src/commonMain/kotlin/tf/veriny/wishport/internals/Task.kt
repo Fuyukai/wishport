@@ -38,7 +38,8 @@ public class Task(
     override val context: TaskContext = TaskContext()
 
     // guard
-    private var finished: Boolean = false
+    public var finished: Boolean = false
+        private set
     // epic kotlin result type that sucks
     private lateinit var result: CancellableResult<*, *>
     // generator coroutine
@@ -82,13 +83,8 @@ public class Task(
      * Steps this task once.
      */
     internal fun step() {
-        if (finished) throw Throwable("Task has already completed!")
-        else {
-            // this should never happen, but let's guard against it anyway
-            if (cancelScope == null) {
-                throw Throwable("Task stepped without a valid cancel scope!")
-            }
-        }
+        assert(!finished) { "Task has already completed!" }
+        assert(cancelScope != null) { "Task stepped without a valid canceel scope!" }
 
         val lastContinuation = this.continuation
         running = true
