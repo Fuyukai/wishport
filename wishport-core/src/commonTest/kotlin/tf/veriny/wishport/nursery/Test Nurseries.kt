@@ -48,7 +48,6 @@ public class `Test Nurseries` {
             for (i in 0 until 3) {
                 it.startSoonNoResult {
                     // tasks without a cancel point can't be interrupted so...
-                    // although im not sure
                     checkIfCancelled().andThen {
                         result += 1
                         Cancellable.empty()

@@ -44,8 +44,15 @@ class `Test Deadlines` {
             it.localDeadline = dl
 
             CancelScope.open { inner ->
+                // impl note: never cancelled is always greater than every deadline, so this
+                // also functions as a check for if the DL is gt than the parent one (no).
                 assertEquals(CancelScope.NEVER_CANCELLED, inner.localDeadline)
                 assertEquals(dl, inner.effectiveDeadline)
+
+                inner.localDeadline = getCurrentTime() + (5L * NS_PER_SEC)
+                assertTrue("inner dl should be lt outer deadline") {
+                    inner.effectiveDeadline < dl
+                }
             }
         }
     }
@@ -72,6 +79,23 @@ class `Test Deadlines` {
                 assertTrue(waitUntilRescheduled().isCancelled)
                 assertFalse(inner.cancelCalled)
                 assertTrue(inner.permanentlyCancelled)
+            }
+        }
+    }
+
+    @Test
+    fun `Test deadlines when it comes to shielding`() = runUntilCompleteNoResult {
+        CancelScope.open {
+            val dl = (getCurrentTime() + (30L * NS_PER_SEC))
+            it.localDeadline = dl
+
+            CancelScope.open { inner ->
+                assertEquals(dl, inner.effectiveDeadline)
+                inner.shield = true
+                assertEquals(
+                    CancelScope.NEVER_CANCELLED, inner.effectiveDeadline,
+                    "inner scope's DL should now be never cancelled"
+                )
             }
         }
     }
