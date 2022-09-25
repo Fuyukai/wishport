@@ -34,7 +34,6 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-common"))
                 api(project(":wishport-helpers"))
-                api(project(":wishport-errors"))
             }
         }
     }
