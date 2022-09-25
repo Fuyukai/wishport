@@ -68,4 +68,45 @@ public class `Test Basic Cancellation` {
             }
         }
     }
+
+    @Test
+    public fun `Test shielding`() = runUntilCompleteNoResult {
+        CancelScope.open { outer ->
+            outer.cancel()
+
+            CancelScope.open(shield = true) {
+                assert(it.shield)
+                assert(!checkIfCancelled().isCancelled) { "task is cancelled, but it should not be" }
+            }
+        }
+    }
+
+    // ensures that a shielded cancel scope that becomes unshielded is then cancelled.
+    @Test
+    public fun `Test unshielding`() = runUntilCompleteNoResult {
+        CancelScope.open { outer ->
+            outer.cancel()
+
+            CancelScope.open(shield = true) {
+                assert(!checkIfCancelled().isCancelled) { "task is cancelled, but it should not be" }
+                it.shield = false
+                assert(checkIfCancelled().isCancelled) { "task is not cancelled, but it should be" }
+            }
+        }
+    }
+
+    @Test
+    public fun `Ensure unshielding is permanent`() = runUntilCompleteNoResult {
+        CancelScope.open { first ->
+            first.cancel()
+
+            CancelScope.open(shield = true) {
+                assert(!checkIfCancelled().isCancelled)
+                it.shield = false
+                assert(checkIfCancelled().isCancelled)
+                it.shield = true
+                assert(checkIfCancelled().isCancelled)
+            }
+        }
+    }
 }

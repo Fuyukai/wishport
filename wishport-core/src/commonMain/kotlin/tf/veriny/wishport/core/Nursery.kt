@@ -4,14 +4,11 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-@file:OptIn(ExperimentalTypeInference::class)
-
 package tf.veriny.wishport.core
 
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.internals.Task
-import kotlin.experimental.ExperimentalTypeInference
 
 /** Failure object used to signify this nursery is closed. */
 public object NurseryClosed : Fail
@@ -51,7 +48,10 @@ public class Nursery @PublishedApi internal constructor(private val invokerTask:
 
     /** If this nursery is open for new children tasks. */
     public var closed: Boolean = false
-        private set
+        private set(value) {
+            assert(!field || field == value) { "cannot unclose a nursery" }
+            field = value
+        }
 
     init {
         cancelScope.push(invokerTask)
@@ -82,7 +82,10 @@ public class Nursery @PublishedApi internal constructor(private val invokerTask:
         while (openTasks > 0) {
             val result = invokerTask.suspendTask()
             if (result.isCancelled) {
-                // we don't care.
+                // outer task is cancelled, all children tasks should *be* cancelled due to them
+                // inheriting the nursery's cancel scope.
+                // we close anyway
+                closed = true
             }
         }
 
@@ -94,10 +97,14 @@ public class Nursery @PublishedApi internal constructor(private val invokerTask:
     /**
      * Spawns a new task and schedules it to be ran at the next available opportunity.
      */
-    @OverloadResolutionByLambdaReturnType
     public fun <S, F : Fail> startSoon(
         fn: suspend () -> CancellableResult<S, F>
     ): Either<Unit, NurseryClosed> {
+        if (cancelScope.permanentlyCancelled) {
+            closed = true
+            return Either.err(NurseryClosed)
+        }
+
         if (closed) return Either.err(NurseryClosed)
 
         val loop = invokerTask.context.eventLoop
@@ -123,7 +130,6 @@ public suspend inline fun Nursery.Companion.open(
  *
  * Your function should be returning a CancellableResult, but this is a helper that wraps it safely.
  */
-@OverloadResolutionByLambdaReturnType
 public inline fun Nursery.startSoonNoResult(
     crossinline fn: suspend () -> Unit
 ): Either<Unit, NurseryClosed> {

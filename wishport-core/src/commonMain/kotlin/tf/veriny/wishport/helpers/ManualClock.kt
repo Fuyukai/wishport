@@ -32,6 +32,10 @@ public class ManualClock(public var autojump: Boolean = false) : Clock {
 
     // never sleep
     override fun getSleepTime(nextDeadline: Long): Long {
+        if (autojump) {
+            time = nextDeadline
+        }
+
         return 0
     }
 }

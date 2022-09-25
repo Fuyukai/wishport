@@ -77,7 +77,7 @@ private constructor(
             shield: Boolean = false,
             crossinline block: suspend (CancelScope) -> Unit
         ): CancellableEmpty {
-            return CancelScope {
+            return CancelScope(shield = shield) {
                 block(it)
                 checkIfCancelled()
             }
@@ -157,7 +157,7 @@ private constructor(
             if (permanentlyCancelled) return ALWAYS_CANCELLED
 
             val parent = parent
-            if (parent != null) {
+            if (!shield && parent != null) {
                 if (parent.effectiveDeadline < localDeadline) return parent.effectiveDeadline
             }
 
@@ -179,7 +179,8 @@ private constructor(
 
             // only happens in weird cases, such as opening a new cancel scope, cancelling it,
             // then immediately opening a child one.
-            // this prevents the inner scope from
+            // this is a micro-opt that prevents needing to walk the tree when checking for
+            // cancellation.
             if (!shield && value?.permanentlyCancelled == true) {
                 permanentlyCancelled = true
             }
