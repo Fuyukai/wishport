@@ -62,7 +62,7 @@ public class EventLoop private constructor(public val clock: Clock) {
     }
 
     // set of tasks that are immediately going to run
-    private var scheduledTasks = mutableSetOf<Task>()
+    private var scheduledTasks = linkedSetOf<Task>()
 
     internal val deadlines = Deadlines()
 
@@ -170,7 +170,7 @@ public class EventLoop private constructor(public val clock: Clock) {
             // avoid a copy by using the set in-place and just allocating a new set
 
             val tasks = this.scheduledTasks
-            scheduledTasks = mutableSetOf()
+            scheduledTasks = linkedSetOf()
 
             for (task in tasks) {
                 task.step()
