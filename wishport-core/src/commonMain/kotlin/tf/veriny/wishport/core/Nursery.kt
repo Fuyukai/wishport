@@ -61,8 +61,11 @@ public class Nursery @PublishedApi internal constructor(private val invokerTask:
     // otherwise we leave it alone
     private var suspendedWaitingForChildren = false
 
-    // used to keep track of the number of direct child subtasks
-    private var openTasks = 0
+    /**
+     * The number of direct children tasks currently being ran.
+     */
+    public var openTasks: Int = 0
+        private set
 
     internal fun taskCompleted(task: Task) {
         // TODO: check result and cancel all tasks on an error
