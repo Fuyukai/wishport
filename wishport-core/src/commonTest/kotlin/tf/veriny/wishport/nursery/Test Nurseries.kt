@@ -69,5 +69,10 @@ public class `Test Nurseries` {
 
         val res = nursery.startSoonNoResult { }
         assertTrue(res.isFailure)
+
+        Nursery.open {
+            it.cancelScope.cancel()
+            assertTrue(it.startSoonNoResult {}.isFailure)
+        }
     }
 }

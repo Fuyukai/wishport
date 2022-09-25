@@ -261,4 +261,10 @@ private constructor(
         quantumObserve()
         return permanentlyCancelled
     }
+
+    override fun toString(): String {
+        return "CancelScope[cancelled=${permanentlyCancelled}, " +
+               "local=${localDeadline}, " +
+               "effective=${effectiveDeadline}]"
+    }
 }

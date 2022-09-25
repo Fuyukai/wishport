@@ -16,6 +16,8 @@ public actual object PlatformClock : Clock {
     }
 
     override fun getSleepTime(nextDeadline: Long): Long {
-        return nextDeadline - getMonotonicTime()
+        val x = nextDeadline - getMonotonicTime()
+        return if (x < 0) 0L
+        else x
     }
 }

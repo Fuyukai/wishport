@@ -34,3 +34,15 @@ public interface Clock {
      */
     public fun getSleepTime(nextDeadline: Long): Long
 }
+
+/**
+ * A sub-type of the clock that allows automatically jumping forward to the next deadline.
+ * This is extremely useful for testing, as an example.
+ */
+@LowLevelApi
+public interface AutojumpClock : Clock {
+    /**
+     * Jumps the clock to the next deadline.
+     */
+    public fun autojump(nextDeadline: Long)
+}

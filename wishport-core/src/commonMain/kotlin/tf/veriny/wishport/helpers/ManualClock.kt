@@ -7,7 +7,7 @@
 package tf.veriny.wishport.helpers
 
 import tf.veriny.wishport.annotations.LowLevelApi
-import tf.veriny.wishport.core.Clock
+import tf.veriny.wishport.core.AutojumpClock
 import tf.veriny.wishport.core.NS_PER_SEC
 
 /**
@@ -19,11 +19,15 @@ import tf.veriny.wishport.core.NS_PER_SEC
  *    event loop goes to sleep.
  */
 @LowLevelApi
-public class ManualClock(public var autojump: Boolean = false) : Clock {
+public class ManualClock(public var autojump: Boolean = false) : AutojumpClock {
     private var time: Long = 0
 
     public fun advance(seconds: Int = 0, nanoseconds: Int = 0) {
         time += (seconds * NS_PER_SEC) + nanoseconds
+    }
+
+    override fun autojump(nextDeadline: Long) {
+        if (autojump) time = nextDeadline
     }
 
     override fun getCurrentTime(): Long {
@@ -32,10 +36,6 @@ public class ManualClock(public var autojump: Boolean = false) : Clock {
 
     // never sleep
     override fun getSleepTime(nextDeadline: Long): Long {
-        if (autojump) {
-            time = nextDeadline
-        }
-
         return 0
     }
 }

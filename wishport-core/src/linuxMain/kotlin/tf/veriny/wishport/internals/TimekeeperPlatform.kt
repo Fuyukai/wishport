@@ -43,5 +43,6 @@ public actual fun nanosleep(ns: Long): Unit = memScoped {
     // just assume this can never fail
     // also, use clock_nanosleep as posix says nanosleep is relative to CLOCK_REALTIME but we
     // want CLOCK_MONOTONIC. linux uses monotonic by default but i prefer being explicit
-    clock_nanosleep(CLOCK_MONOTONIC, 0, ts.ptr, null)
+    val res = clock_nanosleep(CLOCK_MONOTONIC, 0, ts.ptr, null)
+    if (res != 0) throw Throwable("clock nanosleep failed???")
 }

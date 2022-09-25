@@ -111,7 +111,8 @@ public class Deadlines {
         val purged = mutableListOf<CancelScope>()
         for (item in scopes) {
             val dl = item.effectiveDeadline
-            if (dl <= deadline) {
+
+            /*else */if (dl <= deadline) {
                 purged.add(item)
             } else {
                 if (min == null || dl < minDl) {

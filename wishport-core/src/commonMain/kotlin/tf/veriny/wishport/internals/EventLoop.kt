@@ -9,18 +9,28 @@ package tf.veriny.wishport.internals
 import tf.veriny.wishport.CancellableResult
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.LowLevelApi
+import tf.veriny.wishport.core.AutojumpClock
 import tf.veriny.wishport.core.CancelScope
 import tf.veriny.wishport.core.Clock
 import tf.veriny.wishport.core.Nursery
+import tf.veriny.wishport.internals.EventLoop.Companion.get
 import kotlin.coroutines.coroutineContext
 
 /**
- * Main event loop dispatcher. You almost certainly do not want to use this
+ * Main event loop dispatcher. You almost certainly do not want to use this class directly; instead,
+ * use the global helper functions that interface with the event loop behind the scenes.
+ *
+ * If you need to access the event loop for some reason, you can use [get] from a Wishport context,
+ * which will retrieve the event loop variable that is stored implicitly in every asynchronous
+ * function's hidden context variable.
  */
 @LowLevelApi
 public class EventLoop private constructor(public val clock: Clock) {
     public companion object {
-        internal fun new(clock: Clock = PlatformClock) = EventLoop(clock)
+        internal fun new(clock: Clock? = PlatformClock): EventLoop {
+            val c = clock ?: PlatformClock
+            return EventLoop(c)
+        }
 
         /**
          * Gets the currently running event loop. This will ONLY work from within a Wishport
@@ -51,15 +61,16 @@ public class EventLoop private constructor(public val clock: Clock) {
         }
     }
 
-    // Task queues:
-    // 1) Set of tasks that are immediately going to run
-    private val runningTasks = mutableSetOf<Task>()
+    // set of tasks that are immediately going to run
+    private var scheduledTasks = mutableSetOf<Task>()
 
     internal val deadlines = Deadlines()
 
-    private val rootScope = CancelScope.create(this)
+    // internal consistency, the root task needs a scope and a nursery
+    private val rootScope = CancelScope.create(this, shield = true)
     private lateinit var rootNursery: Nursery
 
+    // used for checking
     private lateinit var root: Task
 
     /**
@@ -83,12 +94,44 @@ public class EventLoop private constructor(public val clock: Clock) {
         return Task(coro, this, nursery.cancelScope).also { it.nursery = nursery }
     }
 
+    // I/O methods, with different semantics
+    // this one: loop io_uring_peek_cqe
+    /**
+     * Consumes all available I/O events from the completion queue.
+     */
+    private fun peekIO() {
+        // TODO: implement this
+    }
+
+    // this one: io_uring_wait_cqes with max queue length and a timeout.
+    /**
+     * Waits for I/O.
+     */
+    private fun waitForIO(nextDeadline: Long) {
+        if (clock is AutojumpClock) {
+            // we can pretend that the time happened, then peek to see if any I/O wouldve happened
+            clock.autojump(nextDeadline)
+            peekIO()
+        } else {
+            // TODO: really
+            val sleepTime = clock.getSleepTime(nextDeadline)
+            nanosleep(sleepTime)
+        }
+    }
+
+    // this one: io_uring_wait_cqe. we only wait for one and then peek any remaining ones off
+    // to maximise i/o passes for dead tasks
+    private fun waitForIOForever() {
+        TODO("not implemented")
+    }
+
+
     /**
      * Directly reschedules a task, adding it to the task queue.
      */
     @LowLevelApi
     public fun directlyReschedule(task: Task) {
-        runningTasks.add(task)
+        scheduledTasks.add(task)
     }
 
     /**
@@ -124,14 +167,16 @@ public class EventLoop private constructor(public val clock: Clock) {
 
         while (true) {
             // pt 1: run any scheduled tasks
-            // copy to prevent I/O starvation with continuously spawning tasks.
-            val copy = runningTasks.toMutableList()
-            runningTasks.clear()
+            // avoid a copy by using the set in-place and just allocating a new set
 
-            for (task in copy) {
+            val tasks = this.scheduledTasks
+            scheduledTasks = mutableSetOf()
+
+            for (task in tasks) {
                 task.step()
             }
 
+            // see above for why this is here
             if (root.finished) break
 
             // pt 2: gather up expired deadlines and update their state
@@ -145,16 +190,23 @@ public class EventLoop private constructor(public val clock: Clock) {
                 e.updateStateFromEventLoop(currentTime)
             }
 
-            // TODO: actually block on our I/O manager
-            if (last == null) {
-                if (runningTasks.isEmpty()) {
-                    TODO("block on I/O forever")
-                } else {
-                    // retrieve i/o events without waiting, i.e. loop io_uring_peek_cqe
+            // there's three possible paths here:
+            // 1) any tasks waiting, we only peek and never block or else those scheduled tasks will
+            //    be waiting for no reason
+            // 2) timeout, no tasks waiting, so we need to block for N seconds until the timeout
+            //    expires or I/O comes through
+            // 3) no timeout, no tasks waiting, so we can just block on I/O forever.
+
+            when {
+                scheduledTasks.isNotEmpty() -> {
+                    peekIO()
                 }
-            } else {
-                val sleepTime = clock.getSleepTime(last.effectiveDeadline)
-                nanosleep(sleepTime)
+                last != null -> {
+                    waitForIO(last.effectiveDeadline)
+                }
+                else -> {
+                    waitForIOForever()
+                }
             }
         }
 

@@ -7,6 +7,8 @@
 package tf.veriny.wishport
 
 import tf.veriny.wishport.annotations.LowLevelApi
+import tf.veriny.wishport.core.CancelScope
+import tf.veriny.wishport.core.Clock
 import tf.veriny.wishport.internals.EventLoop
 import tf.veriny.wishport.internals.Task
 import kotlin.coroutines.coroutineContext
@@ -26,9 +28,10 @@ private fun EventLoop.runWithErrorPrint() {
  */
 @OptIn(LowLevelApi::class)
 public fun <S, F : Fail> runUntilComplete(
+    clock: Clock? = null,
     fn: suspend () -> CancellableResult<S, F>,
 ): CancellableResult<S, F> {
-    val loop = EventLoop.new()
+    val loop = EventLoop.new(clock)
     val task = loop.makeRootTask(fn)
     loop.directlyReschedule(task)
 
@@ -36,20 +39,40 @@ public fun <S, F : Fail> runUntilComplete(
     return task.result()
 }
 
+// workaround for weird optin stuff
+/**
+ * Variant of [runUntilComplete] that doesn't require a [Clock].
+ */
+@OptIn(LowLevelApi::class)
+public fun <S, F : Fail> runUntilComplete(
+    fn: suspend () -> CancellableResult<S, F>
+): CancellableResult<S, F> {
+    return runUntilComplete(null, fn)
+}
+
 // XXX: Kotlin forces this overload no matter what so it's hackily renamed.
 // Not sure why this is the case.
 /**
  * Runs the specified suspend function until complete. This variant doesn't return a result.
  */
-@OptIn(LowLevelApi::class)
-public fun runUntilCompleteNoResult(fn: suspend () -> Unit) {
-    val loop = EventLoop.new()
+@LowLevelApi
+public fun runUntilCompleteNoResult(clock: Clock?, fn: suspend () -> Unit) {
+    val loop = EventLoop.new(clock)
     val task = loop.makeRootTask {
         fn(); Cancellable.empty()
     }
 
     loop.directlyReschedule(task)
     loop.runWithErrorPrint()
+}
+
+// workaround for weird optin stuff
+/**
+ * Variant of [runUntilCompleteNoResult] that doesn't require a [Clock].
+ */
+@OptIn(LowLevelApi::class)
+public fun runUntilCompleteNoResult(fn: suspend () -> Unit) {
+    runUntilCompleteNoResult(null, fn)
 }
 
 /**
@@ -170,4 +193,67 @@ public suspend fun <S, F : Fail> checkpoint(value: S): CancellableResult<S, F> {
  */
 public suspend fun checkpoint(): CancellableEmpty {
     return checkpoint(Unit)
+}
+
+// == Sleep/Timeout Helpers == //
+// structured similarly to trio
+/**
+ * Runs the specified [block] with a timeout of [nanos] nanoseconds. If the actions within do not
+ * complete in time, then the function is cancelled.
+ */
+public suspend inline fun <S, F : Fail> moveOnAfter(
+    nanos: Long, crossinline block: suspend () -> CancellableResult<S, F>
+): CancellableResult<S, F> {
+    return CancelScope { cs ->
+        cs.localDeadline = getCurrentTime() + nanos
+        block()
+    }
+}
+
+/**
+ * Runs the specified [block], timing out at the exact time specified by [nanos]. If the actions
+ * within do not complete in time, then the function is cancelled.
+ *
+ * If the time specified is in the past, then this will perform a checkpoint, and all results inside
+ * the block will be cancelled.
+ */
+public suspend inline fun <S, F : Fail> moveOnAt(
+    nanos: Long, crossinline block: suspend () -> CancellableResult<S, F>
+): CancellableResult<S, F> {
+    // note: don't need to return a cancelled here (imo) as it's less surprising the code within the
+    // block gets executed, but always returns cancelled.
+    // we do want to perform a checkpoint to allow yielding.
+    if (nanos < getCurrentTime()) {
+        checkpoint()
+    }
+
+    return CancelScope { cs ->
+        cs.localDeadline = nanos
+        block()
+    }
+}
+
+/**
+ * Sleeps forever (or, until cancelled).
+ */
+@OptIn(LowLevelApi::class)
+public suspend fun sleepForever(): CancellableEmpty {
+    return waitUntilRescheduled()
+}
+
+/**
+ * Sleeps until the specified time, in nanoseconds.
+ */
+@OptIn(LowLevelApi::class)
+public suspend fun sleepUntil(time: Long): CancellableEmpty {
+    moveOnAt(time) { sleepForever() }
+    return checkIfCancelled()
+}
+
+/**
+ * Sleeps for the specified amount of nanoseconds, returning an empty value.
+ */
+@OptIn(LowLevelApi::class)
+public suspend fun sleep(nanos: Long): CancellableEmpty {
+    return sleepUntil(getCurrentTime() + nanos)
 }

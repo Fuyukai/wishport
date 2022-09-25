@@ -10,6 +10,7 @@ package tf.veriny.wishport.cancellation
 
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.checkIfCancelled
+import tf.veriny.wishport.checkpoint
 import tf.veriny.wishport.core.CancelScope
 import tf.veriny.wishport.isCancelled
 import tf.veriny.wishport.runUntilCompleteNoResult
@@ -26,6 +27,16 @@ public class `Test Basic Cancellation` {
             assert(!checkIfCancelled().isCancelled)
             it.cancel()
             assert(checkIfCancelled().isCancelled)
+        }
+    }
+
+    @Test
+    public fun `Test cancelling after a checkpoint`() = runUntilCompleteNoResult {
+        val x = CancelScope.open {
+            checkpoint()
+            it.cancel()
+
+            assert(checkpoint().isCancelled)
         }
     }
 
