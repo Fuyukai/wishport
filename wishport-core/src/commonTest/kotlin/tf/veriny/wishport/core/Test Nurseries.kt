@@ -6,13 +6,10 @@
 
 @file:OptIn(LowLevelApi::class)
 
-package tf.veriny.wishport.nursery
+package tf.veriny.wishport.core
 
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
-import tf.veriny.wishport.core.Nursery
-import tf.veriny.wishport.core.open
-import tf.veriny.wishport.core.startSoonNoResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

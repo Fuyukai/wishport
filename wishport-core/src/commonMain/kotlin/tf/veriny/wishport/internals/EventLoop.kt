@@ -70,8 +70,11 @@ public class EventLoop private constructor(public val clock: Clock) {
     private val rootScope = CancelScope.create(this, shield = true)
     private lateinit var rootNursery: Nursery
 
-    // used for checking
+    // used for checking if the loop should exit
     private lateinit var root: Task
+
+    // task that is currently dead on waitAllTasksBlocked
+    internal var waitingAllTasksBlocked: Task? = null
 
     /**
      * Creates the root task that all tasks inherit from. This will use the root cancellation scope
@@ -94,6 +97,18 @@ public class EventLoop private constructor(public val clock: Clock) {
         return Task(coro, this, nursery.cancelScope).also { it.nursery = nursery }
     }
 
+    /** Checks for the task waiting for all other tasks to be blocking. */
+    private fun checkWaiter(): Boolean {
+        val wt = waitingAllTasksBlocked
+        if (wt != null) {
+            waitingAllTasksBlocked = null
+            directlyReschedule(wt)
+            return true
+        }
+
+        return false
+    }
+
     // I/O methods, with different semantics
     // this one: loop io_uring_peek_cqe
     /**
@@ -108,12 +123,14 @@ public class EventLoop private constructor(public val clock: Clock) {
      * Waits for I/O.
      */
     private fun waitForIO(nextDeadline: Long) {
+        if (checkWaiter()) return
+
         if (clock is AutojumpClock) {
             // we can pretend that the time happened, then peek to see if any I/O wouldve happened
             clock.autojump(nextDeadline)
             peekIO()
         } else {
-            // TODO: really
+            // TODO: actually wait on I/O
             val sleepTime = clock.getSleepTime(nextDeadline)
             nanosleep(sleepTime)
         }
@@ -122,9 +139,12 @@ public class EventLoop private constructor(public val clock: Clock) {
     // this one: io_uring_wait_cqe. we only wait for one and then peek any remaining ones off
     // to maximise i/o passes for dead tasks
     private fun waitForIOForever() {
+        if (checkWaiter()) return
+
         TODO("not implemented")
     }
 
+    // == Public API == //
 
     /**
      * Directly reschedules a task, adding it to the task queue.

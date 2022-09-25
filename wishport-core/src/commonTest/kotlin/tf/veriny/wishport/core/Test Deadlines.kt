@@ -4,11 +4,9 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-package tf.veriny.wishport.cancellation
+package tf.veriny.wishport.core
 
 import tf.veriny.wishport.annotations.LowLevelApi
-import tf.veriny.wishport.core.CancelScope
-import tf.veriny.wishport.core.NS_PER_SEC
 import tf.veriny.wishport.getCurrentTime
 import tf.veriny.wishport.isCancelled
 import tf.veriny.wishport.runUntilCompleteNoResult

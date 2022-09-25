@@ -107,7 +107,7 @@ public suspend inline fun getCurrentTask(): Task {
  */
 @LowLevelApi
 public fun reschedule(task: Task) {
-    task.context.eventLoop.directlyReschedule(task)
+    task.reschedule()
 }
 
 /**
@@ -116,7 +116,7 @@ public fun reschedule(task: Task) {
  */
 @OptIn(LowLevelApi::class)
 public suspend fun getCurrentTime(): Long {
-    return getCurrentTask().context.eventLoop.clock.getCurrentTime()
+    return EventLoop.get().clock.getCurrentTime()
 }
 
 /**
@@ -195,6 +195,23 @@ public suspend fun checkpoint(): CancellableEmpty {
     return checkpoint(Unit)
 }
 
+/**
+ * Waits until all other tasks are currently blocked (waiting to be rescheduled). This will
+ * ONLY fire if there are no possible other tasks that can run on the next iteration of
+ * the event loop.
+ */
+@OptIn(LowLevelApi::class)
+public suspend fun waitUntilAllTasksAreBlocked(): CancellableEmpty {
+    val task = getCurrentTask()
+    val loop = task.context.eventLoop
+
+    return checkIfCancelled()
+        .andThen {
+            loop.waitingAllTasksBlocked = task
+            task.suspendTask()
+        }
+}
+
 // == Sleep/Timeout Helpers == //
 // structured similarly to trio
 /**
@@ -202,7 +219,8 @@ public suspend fun checkpoint(): CancellableEmpty {
  * complete in time, then the function is cancelled.
  */
 public suspend inline fun <S, F : Fail> moveOnAfter(
-    nanos: Long, crossinline block: suspend () -> CancellableResult<S, F>
+    nanos: Long,
+    crossinline block: suspend () -> CancellableResult<S, F>
 ): CancellableResult<S, F> {
     return CancelScope { cs ->
         cs.localDeadline = getCurrentTime() + nanos
@@ -218,7 +236,8 @@ public suspend inline fun <S, F : Fail> moveOnAfter(
  * the block will be cancelled.
  */
 public suspend inline fun <S, F : Fail> moveOnAt(
-    nanos: Long, crossinline block: suspend () -> CancellableResult<S, F>
+    nanos: Long,
+    crossinline block: suspend () -> CancellableResult<S, F>
 ): CancellableResult<S, F> {
     // note: don't need to return a cancelled here (imo) as it's less surprising the code within the
     // block gets executed, but always returns cancelled.
