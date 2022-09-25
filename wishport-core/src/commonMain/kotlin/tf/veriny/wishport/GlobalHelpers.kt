@@ -96,7 +96,6 @@ public suspend fun getCurrentTime(): Long {
     return getCurrentTask().context.eventLoop.clock.getCurrentTime()
 }
 
-
 /**
  * Waits until this task is rescheduled. This returns an empty cancellation result that can be used
  * for monadic chaining.

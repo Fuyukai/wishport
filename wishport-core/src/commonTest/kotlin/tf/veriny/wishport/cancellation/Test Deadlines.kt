@@ -58,30 +58,30 @@ class `Test Deadlines` {
     }
 
     @Test
-    public fun `Test effective deadline of child scope when cancelling parent`()
-    = runUntilCompleteNoResult {
-        CancelScope.open {
-            it.cancel()
+    public fun `Test effective deadline of child scope when cancelling parent`() =
+        runUntilCompleteNoResult {
+            CancelScope.open {
+                it.cancel()
 
-            CancelScope.open { inner ->
-                assertEquals(CancelScope.ALWAYS_CANCELLED, inner.effectiveDeadline)
+                CancelScope.open { inner ->
+                    assertEquals(CancelScope.ALWAYS_CANCELLED, inner.effectiveDeadline)
+                }
             }
         }
-    }
 
     @Test
-    public fun `Test inner scope is cancelled when parent scope expires`()
-    = runUntilCompleteNoResult {
-        CancelScope.open {
-            it.localDeadline = getCurrentTime() + (2L * NS_PER_SEC)
+    public fun `Test inner scope is cancelled when parent scope expires`() =
+        runUntilCompleteNoResult {
+            CancelScope.open {
+                it.localDeadline = getCurrentTime() + (2L * NS_PER_SEC)
 
-            CancelScope.open { inner ->
-                assertTrue(waitUntilRescheduled().isCancelled)
-                assertFalse(inner.cancelCalled)
-                assertTrue(inner.permanentlyCancelled)
+                CancelScope.open { inner ->
+                    assertTrue(waitUntilRescheduled().isCancelled)
+                    assertFalse(inner.cancelCalled)
+                    assertTrue(inner.permanentlyCancelled)
+                }
             }
         }
-    }
 
     @Test
     fun `Test deadlines when it comes to shielding`() = runUntilCompleteNoResult {

@@ -59,7 +59,6 @@ public object TooManyGlobalFiles : SyscallError(ENFILE)
 /** This process has too many files open. */
 public object TooManyFiles : SyscallError(EMFILE)
 
-
 /**
  * Converts an errno into an [SyscallError].
  */
