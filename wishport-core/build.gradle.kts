@@ -16,7 +16,7 @@ kotlin {
 
     sourceSets.getByName("linuxMain").apply {
         dependencies {
-            implementation(project(":wishport-uring"))
+            implementation(project(":wishport-static-uring"))
         }
     }
 }

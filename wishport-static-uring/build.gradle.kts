@@ -28,13 +28,4 @@ kotlin {
             packageName = "external.liburing"
         }
     }
-
-    sourceSets {
-        commonMain {
-            dependencies {
-                implementation(kotlin("stdlib-common"))
-                api(project(":wishport-helpers"))
-            }
-        }
-    }
 }
