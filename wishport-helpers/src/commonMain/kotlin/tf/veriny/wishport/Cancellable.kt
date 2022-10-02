@@ -16,8 +16,15 @@ public sealed interface Cancellable<out S, out F : Fail, out T : Either<S, F>> {
         /**
          * Helper function for ``Either.ok(item).notCancelled()``.
          */
-        public fun <Success> notCancelled(item: Success): CancellableResult<Success, Nothing> {
+        public fun <Success> ok(item: Success): CancellableResult<Success, Nothing> {
             return NotCancelled(Ok(item))
+        }
+
+        /**
+         * Helper function for ``Either.err(item).notCancelled()``.
+         */
+        public fun <Failure : Fail> failed(item: Failure): CancellableResult<Nothing, Failure> {
+            return NotCancelled(Err(item))
         }
 
         /**
@@ -31,13 +38,15 @@ public sealed interface Cancellable<out S, out F : Fail, out T : Either<S, F>> {
          * Returns an empty uncancelled.
          */
         public fun empty(): CancellableEmpty {
-            return notCancelled(Unit)
+            return ok(Unit)
         }
     }
 }
 
 public typealias CancellableResult<Success, Failure> =
     Cancellable<Success, Failure, Either<Success, Failure>>
+
+public typealias CancellableSuccess<Success> = CancellableResult<Success, Nothing>
 
 public typealias CancellableEmpty = Cancellable<Unit, Nothing, Either<Unit, Nothing>>
 

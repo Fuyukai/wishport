@@ -11,6 +11,7 @@ import tf.veriny.wishport.core.CancelScope
 import tf.veriny.wishport.core.Clock
 import tf.veriny.wishport.internals.EventLoop
 import tf.veriny.wishport.internals.Task
+import tf.veriny.wishport.internals.checkIfCancelled
 import kotlin.coroutines.coroutineContext
 
 @OptIn(LowLevelApi::class)
@@ -152,11 +153,7 @@ public suspend fun waitUntilRescheduled(): CancellableEmpty {
 @LowLevelApi
 public suspend fun checkIfCancelled(): CancellableEmpty {
     val task = getCurrentTask()
-    return if (task.cancelScope!!.isEffectivelyCancelled()) {
-        Cancellable.cancelled()
-    } else {
-        Cancellable.empty()
-    }
+    return task.checkIfCancelled()
 }
 
 /**
@@ -173,15 +170,16 @@ public suspend fun checkIfCancelled(): CancellableEmpty {
  */
 @OptIn(LowLevelApi::class)
 public suspend fun <S, F : Fail> checkpoint(value: S): CancellableResult<S, F> {
-    return checkIfCancelled()
+    val task = getCurrentTask()
+
+    return task.checkIfCancelled()
         .andThen {
             // force immediate reschedule
-            val task = getCurrentTask()
             reschedule(task)
             task.suspendTask()
         }
         .andThen {
-            Cancellable.notCancelled(value)
+            Cancellable.ok(value)
         }
 }
 
@@ -196,6 +194,31 @@ public suspend fun checkpoint(): CancellableEmpty {
 }
 
 /**
+ * Causes a checkpoint that cannot be cancelled. This will allow yielding to the event loop for
+ * other tasks to do their work before returning here.
+ *
+ * This is used to enforce Wishport's cancellation semantics; either a cancellation happened, or
+ * the operation completed. A regular checkpoint can cause a cancellation even if the operation
+ * happened, leading to inconsistent state.
+ */
+@OptIn(LowLevelApi::class)
+public suspend fun <S> uncancellableCheckpoint(value: S): CancellableSuccess<S> {
+    val task = getCurrentTask()
+    task.reschedule()
+    // eat result
+    task.suspendTask()
+    return Cancellable.ok(value)
+}
+
+/**
+ * Like [uncancellableCheckpoint], but this doesn't take a value.
+ */
+@OptIn(LowLevelApi::class)
+public suspend fun uncancellableCheckpoint(): CancellableEmpty {
+    return uncancellableCheckpoint(Unit)
+}
+
+/**
  * Waits until all other tasks are currently blocked (waiting to be rescheduled). This will
  * ONLY fire if there are no possible other tasks that can run on the next iteration of
  * the event loop.
@@ -205,7 +228,7 @@ public suspend fun waitUntilAllTasksAreBlocked(): CancellableEmpty {
     val task = getCurrentTask()
     val loop = task.context.eventLoop
 
-    return checkIfCancelled()
+    return task.checkIfCancelled()
         .andThen {
             loop.waitingAllTasksBlocked = task
             task.suspendTask()

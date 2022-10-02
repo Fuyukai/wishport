@@ -8,7 +8,9 @@ package tf.veriny.wishport.core
 
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
+import tf.veriny.wishport.helpers.TaskList
 import tf.veriny.wishport.internals.Task
+import tf.veriny.wishport.internals.checkIfCancelled
 
 // https://github.com/python-trio/trio/blob/master/trio/_core/_parking_lot.py
 
@@ -17,23 +19,15 @@ import tf.veriny.wishport.internals.Task
  */
 @OptIn(LowLevelApi::class)
 public class ParkingLot {
-    // xxx: linkedhashmap has no easy way of removing the first element
-    //      so we have to reach in with the iterator directly.
-    //      the k/n impl seems to be fast enough underneath but i should replace this w/ something
-    //      better later
-    private val tasks = linkedMapOf<Task, Unit>()
+    private val tasks = TaskList<Task>()
 
     /** The number of tasks currently parked here. */
     public val parkedCount: Int get() = tasks.size
 
     private inline fun popMany(count: Int, cb: (Task) -> Unit) {
-        val it = tasks.keys.iterator()
-        var c = 0
-        while (it.hasNext() && c < count) {
-            val next = it.next()
-            it.remove()
-            cb(next)
-            c++
+        while (true) {
+            val item = tasks.removeFirst() ?: break
+            cb(item)
         }
     }
 
@@ -43,12 +37,12 @@ public class ParkingLot {
     public suspend fun park(): CancellableEmpty {
         val task = getCurrentTask()
 
-        return checkIfCancelled()
+        return task.checkIfCancelled()
             .andThen {
-                tasks[task] = Unit
+                tasks.append(task)
                 waitUntilRescheduled()
             }
-            .also { tasks.remove(task) }
+            .also { tasks.removeTask(task) }
     }
 
     /**

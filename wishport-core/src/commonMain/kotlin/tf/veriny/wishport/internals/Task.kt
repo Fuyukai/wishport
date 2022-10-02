@@ -127,3 +127,15 @@ public class Task(
         return result as CancellableResult<S, F>
     }
 }
+
+/**
+ * Checks if this task is currently cancelled, returning a [CancellableEmpty].
+ */
+@OptIn(LowLevelApi::class)
+public fun Task.checkIfCancelled(): CancellableEmpty {
+    return if (cancelScope!!.isEffectivelyCancelled()) {
+        Cancellable.cancelled()
+    } else {
+        Cancellable.empty()
+    }
+}

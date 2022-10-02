@@ -9,6 +9,7 @@ package tf.veriny.wishport.core
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.internals.Task
+import tf.veriny.wishport.internals.checkIfCancelled
 
 /** Failure object used to signify this nursery is closed. */
 public object NurseryClosed : Fail
@@ -29,14 +30,15 @@ public class Nursery @PublishedApi internal constructor(private val invokerTask:
         public suspend inline operator fun <S, F : Fail> invoke(
             block: (Nursery) -> CancellableResult<S, F>
         ): CancellableResult<S, F> {
-            val n = Nursery(getCurrentTask())
+            val invoker = getCurrentTask()
+            val n = Nursery(invoker)
             val result = block(n)
             n.waitForCompletion()
 
             // chain this so that if we get cancelled whilst waiting for the nursery to exit then the
             // result is cancelled.
             // TODO: decide if this is the result we actually want
-            return checkIfCancelled().andThen { result }
+            return invoker.checkIfCancelled().andThen { result }
         }
     }
 
