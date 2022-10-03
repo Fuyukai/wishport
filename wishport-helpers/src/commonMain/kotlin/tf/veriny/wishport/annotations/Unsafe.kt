@@ -10,6 +10,5 @@ package tf.veriny.wishport.annotations
  * Marker annotation for unsafe (i.e. leaky) operations.
  */
 @RequiresOptIn(message = "This operation is unsafe and requires explicit opt-in")
-@Target(AnnotationTarget.CLASS, AnnotationTarget.CONSTRUCTOR, AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.BINARY)
 public annotation class Unsafe

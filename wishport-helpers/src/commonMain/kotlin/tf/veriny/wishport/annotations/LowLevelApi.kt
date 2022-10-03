@@ -6,5 +6,8 @@
 
 package tf.veriny.wishport.annotations
 
+/**
+ * Marker annotation for lower-level APIs
+ */
 @RequiresOptIn(message = "This is a low-level API and should have explicit opt-in", level = RequiresOptIn.Level.WARNING)
 public annotation class LowLevelApi
