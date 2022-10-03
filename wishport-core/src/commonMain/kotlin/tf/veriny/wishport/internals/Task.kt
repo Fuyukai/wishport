@@ -100,7 +100,7 @@ public class Task(
      * Reschedules this task to be ran on the next event loop iteration.
      */
     internal fun reschedule() {
-        context.eventLoop.directlyReschedule(this)
+        loop.directlyReschedule(this)
     }
 
     /**
