@@ -25,7 +25,7 @@ public class Task(
     coro: suspend () -> CancellableResult<*, *>,
     private val loop: EventLoop,
     cancelScope: CancelScope,
-) : Continuation<CancellableResult<*, *>>, Comparable<Task> {
+) : Continuation<CancellableResult<*, *>> {
     /**
      * A special coroutine context that allows accessing the current task and event loop.
      */
@@ -73,10 +73,6 @@ public class Task(
         // disassociate to prevent being rescheduled by the cancel scope
         cancelScope = null
         nursery.taskCompleted(this)
-    }
-
-    override fun compareTo(other: Task): Int {
-        return other.cancelScope!!.effectiveDeadline.compareTo(cancelScope!!.effectiveDeadline)
     }
 
     /**
