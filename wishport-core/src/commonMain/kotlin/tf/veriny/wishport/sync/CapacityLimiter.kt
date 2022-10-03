@@ -51,6 +51,7 @@ public class CapacityLimiter<T>(
         // tasks acquire simultaneously
         if (currentTokens > 0) {
             currentTokens--
+            borrowers.add(task)
             return task.uncancellableCheckpoint(data)
         }
 
@@ -62,6 +63,7 @@ public class CapacityLimiter<T>(
                 assert(currentTokens > 0) { "i fucked up the race condition again!" }
 
                 currentTokens--
+                borrowers.add(task)
                 Cancellable.ok(data)
             }
     }
@@ -69,6 +71,7 @@ public class CapacityLimiter<T>(
     @PublishedApi
     internal fun release(task: Task) {
         currentTokens += 1
+        borrowers.remove(task)
         lot.unpark(count = 1)
     }
 

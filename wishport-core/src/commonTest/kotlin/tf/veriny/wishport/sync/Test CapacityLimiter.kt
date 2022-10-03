@@ -6,11 +6,9 @@
 
 package tf.veriny.wishport.sync
 
-import tf.veriny.wishport.Cancellable
+import tf.veriny.wishport.*
 import tf.veriny.wishport.core.Nursery
 import tf.veriny.wishport.core.open
-import tf.veriny.wishport.runUntilCompleteNoResult
-import tf.veriny.wishport.waitUntilAllTasksAreBlocked
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -50,5 +48,19 @@ class `Test CapacityLimiter` {
             waitUntilAllTasksAreBlocked()
             assertTrue(done, "second task didn't wake up when it should've")
         }
+    }
+
+    @Test
+    fun `Test capacity limiter is not reentrant`() = runUntilCompleteNoResult {
+        val limiter = CapacityLimiter(1, Unit)
+
+        val res = limiter.unwrapAndRun {
+            limiter.unwrapAndRun { Cancellable.empty() }
+        }
+
+        assertEquals(AlreadyAcquired, res.getFailure())
+
+        val res2 = limiter.unwrapAndRun { Cancellable.empty() }
+        assertTrue(res2.isSuccess)
     }
 }

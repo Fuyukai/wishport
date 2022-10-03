@@ -6,9 +6,11 @@
 
 package tf.veriny.wishport.sync
 
+import tf.veriny.wishport.Cancellable
 import tf.veriny.wishport.core.Nursery
 import tf.veriny.wishport.core.open
 import tf.veriny.wishport.core.startSoonNoResult
+import tf.veriny.wishport.getFailure
 import tf.veriny.wishport.runUntilCompleteNoResult
 import tf.veriny.wishport.waitUntilAllTasksAreBlocked
 import kotlin.test.Test
@@ -43,7 +45,7 @@ class `Test Lock` {
 
     @Test
     fun `Test that fifo locking is fair`() = runUntilCompleteNoResult {
-        val lock = Lock(Unit)
+        val lock = FIFOLock(Unit)
         val items = mutableListOf<Int>()
 
         // spawn inside lock, wait until they're all blocked, then release and watch them
@@ -60,6 +62,15 @@ class `Test Lock` {
 
             waitUntilAllTasksAreBlocked()
             assertEquals(listOf(0, 1, 2), items)
+        }
+    }
+
+    @Test
+    fun `Test that lock is not reeentrant`() = runUntilCompleteNoResult {
+        val lock = Lock(Unit)
+        lock.runWhilstLockedNoResult {
+            val res = lock.runWhilstLocked { Cancellable.empty() }
+            assertEquals(LockAlreadyOwned, res.getFailure())
         }
     }
 }
