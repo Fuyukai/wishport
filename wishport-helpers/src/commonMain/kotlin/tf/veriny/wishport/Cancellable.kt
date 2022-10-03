@@ -48,7 +48,7 @@ public typealias CancellableResult<Success, Failure> =
 
 public typealias CancellableSuccess<Success> = CancellableResult<Success, Nothing>
 
-public typealias CancellableEmpty = Cancellable<Unit, Nothing, Either<Unit, Nothing>>
+public typealias CancellableEmpty = CancellableSuccess<Unit>
 
 /**
  * Wrapper for when a function is *not* cancelled.

@@ -32,17 +32,24 @@ public class ParkingLot {
     }
 
     /**
-     * Parks the current task until a call to [unpark] is made.
+     * Parks the current task, with the task passed in. Not meant for general usage!
      */
-    public suspend fun park(): CancellableEmpty {
-        val task = getCurrentTask()
-
+    @LowLevelApi
+    public suspend fun park(task: Task): CancellableEmpty {
         return task.checkIfCancelled()
             .andThen {
                 tasks.append(task)
                 waitUntilRescheduled()
             }
             .also { tasks.removeTask(task) }
+    }
+
+    /**
+     * Parks the current task until a call to [unpark] is made.
+     */
+    public suspend fun park(): CancellableEmpty {
+        val task = getCurrentTask()
+        return park(task)
     }
 
     /**

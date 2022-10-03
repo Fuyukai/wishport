@@ -139,3 +139,33 @@ public fun Task.checkIfCancelled(): CancellableEmpty {
         Cancellable.empty()
     }
 }
+
+/**
+ * Causes a checkpoint. This will allow yielding to the event loop for other tasks to do their work
+ * before returning here.
+ */
+@OptIn(LowLevelApi::class)
+public suspend fun <S, F : Fail> Task.checkpoint(data: S): CancellableResult<S, F> {
+    return this.checkIfCancelled()
+        .andThen {
+            // force immediate reschedule
+            reschedule()
+            suspendTask()
+        }
+        .andThen {
+            Cancellable.ok(data)
+        }
+}
+
+/**
+ * Causes a checkpoint that cannot be cancelled. This will allow yielding to the event loop for
+ * other tasks to do their work before returning here.
+ */
+@OptIn(LowLevelApi::class)
+public suspend fun <S> Task.uncancellableCheckpoint(data: S): CancellableSuccess<S> {
+    reschedule()
+    // eat cancelled
+    suspendTask()
+
+    return Cancellable.ok(data)
+}

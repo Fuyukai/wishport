@@ -10,6 +10,7 @@ import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.internals.Task
 import tf.veriny.wishport.internals.checkIfCancelled
+import tf.veriny.wishport.internals.uncancellableCheckpoint
 
 /**
  * An object that can be waited upon by a task until it is set by another task.
@@ -46,7 +47,7 @@ public class Event {
         val task = getCurrentTask()
         return task.checkIfCancelled()
             .andThen {
-                if (flag) uncancellableCheckpoint()
+                if (flag) task.uncancellableCheckpoint(Unit)
                 else {
                     tasks.add(task)
                     task.suspendTask()

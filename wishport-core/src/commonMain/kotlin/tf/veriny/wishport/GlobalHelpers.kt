@@ -9,9 +9,7 @@ package tf.veriny.wishport
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.core.CancelScope
 import tf.veriny.wishport.core.Clock
-import tf.veriny.wishport.internals.EventLoop
-import tf.veriny.wishport.internals.Task
-import tf.veriny.wishport.internals.checkIfCancelled
+import tf.veriny.wishport.internals.*
 import kotlin.coroutines.coroutineContext
 
 @OptIn(LowLevelApi::class)
@@ -171,16 +169,7 @@ public suspend fun checkIfCancelled(): CancellableEmpty {
 @OptIn(LowLevelApi::class)
 public suspend fun <S, F : Fail> checkpoint(value: S): CancellableResult<S, F> {
     val task = getCurrentTask()
-
-    return task.checkIfCancelled()
-        .andThen {
-            // force immediate reschedule
-            reschedule(task)
-            task.suspendTask()
-        }
-        .andThen {
-            Cancellable.ok(value)
-        }
+    return task.checkpoint(value)
 }
 
 /**
@@ -204,10 +193,7 @@ public suspend fun checkpoint(): CancellableEmpty {
 @OptIn(LowLevelApi::class)
 public suspend fun <S> uncancellableCheckpoint(value: S): CancellableSuccess<S> {
     val task = getCurrentTask()
-    task.reschedule()
-    // eat result
-    task.suspendTask()
-    return Cancellable.ok(value)
+    return task.uncancellableCheckpoint(value)
 }
 
 /**
