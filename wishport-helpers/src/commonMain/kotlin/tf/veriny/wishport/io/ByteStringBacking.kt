@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.wishport.io
 
 /**
@@ -43,7 +49,8 @@ internal class ByteArrayHolder(private val arr: ByteArray) : ByteStringBacking {
 /** A holder that holds a slice of the underlying array. */
 internal class ByteArraySliceHolder(
     private val parent: ByteStringBacking,
-    private val start: Int, private val end: Int
+    private val start: Int,
+    private val end: Int
 ) : ByteStringBacking {
     override val size: Int
         get() = (end - start)

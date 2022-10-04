@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 @file:OptIn(ExperimentalUnsignedTypes::class)
 
 package tf.veriny.wishport.internals.io
@@ -214,7 +220,7 @@ public actual class IOManager(
             if (pollMode) {
                 throw InternalWishportError(
                     "You outran the kernel's poll thread somehow! " +
-                    "Please report this bug for a free cat picture."
+                        "Please report this bug for a free cat picture."
                 )
             } else {
                 throw InternalWishportError("sqe is null, this shouldn't happen ever")
@@ -253,7 +259,9 @@ public actual class IOManager(
      */
     @Suppress("UNCHECKED_CAST")
     private suspend fun <T : IOResult> submitAndWait(
-        task: Task, id: ULong, why: SleepingWhy
+        task: Task,
+        id: ULong,
+        why: SleepingWhy
     ): CancellableResourceResult<T> {
         // add first, idk why, just vibes
         val sleepy = SleepingTask(task, id, why)
@@ -312,7 +320,8 @@ public actual class IOManager(
      */
     @Suppress("UNCHECKED_CAST")
     public actual suspend fun openDirectoryHandle(
-        dirHandle: DirectoryHandle?, path: ByteString
+        dirHandle: DirectoryHandle?,
+        path: ByteString
     ): CancellableResourceResult<DirectoryHandle> = memScoped {
         val task = getCurrentTask()
 
@@ -343,8 +352,10 @@ public actual class IOManager(
 
     @Suppress("UNCHECKED_CAST")
     public suspend fun openFilesystemFile(
-        directory: DirectoryHandle?, path: ByteString,
-        mode: FileOpenMode, flags: Set<FileOpenFlags>
+        directory: DirectoryHandle?,
+        path: ByteString,
+        mode: FileOpenMode,
+        flags: Set<FileOpenFlags>
     ): CancellableResourceResult<FileHandle> = memScoped {
         var openFlags = O_CLOEXEC
 
@@ -411,7 +422,9 @@ public actual class IOManager(
     }
 
     private fun checkBuffers(
-        buf: ByteArray, size: UInt, offset: ULong
+        buf: ByteArray,
+        size: UInt,
+        offset: ULong
     ): CancellableResult<Unit, Fail> {
         if (size < 0U || size > buf.size.toUInt()) {
             return Cancellable.failed(TooSmall(size))
@@ -431,7 +444,10 @@ public actual class IOManager(
 
     @Suppress("UNCHECKED_CAST")
     public suspend fun read(
-        fd: Fd, out: ByteArray, size: UInt, offset: ULong
+        fd: Fd,
+        out: ByteArray,
+        size: UInt,
+        offset: ULong
     ): CancellableResourceResult<ByteCountResult> = memScoped {
         val task = getCurrentTask()
 

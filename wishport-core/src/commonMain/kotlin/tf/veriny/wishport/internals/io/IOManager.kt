@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.wishport.internals.io
 
 import tf.veriny.wishport.CancellableResourceResult
@@ -35,7 +41,6 @@ public expect class IOManager : Closeable {
      */
     public fun waitForIOUntil(timeout: Long)
 
-
     // == actual I/O methods == //
     /**
      * Opens a directory on the real filesystem, returning a directory handle. If [dirHandle] is
@@ -46,6 +51,4 @@ public expect class IOManager : Closeable {
         dirHandle: DirectoryHandle?,
         path: ByteString
     ): CancellableResourceResult<DirectoryHandle>
-
-
 }
