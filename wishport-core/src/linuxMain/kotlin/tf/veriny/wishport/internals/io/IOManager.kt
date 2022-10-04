@@ -15,6 +15,7 @@ import platform.posix.*
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
+import tf.veriny.wishport.collections.ByteString
 import tf.veriny.wishport.core.InternalWishportError
 import tf.veriny.wishport.core.NS_PER_SEC
 import tf.veriny.wishport.internals.Task
@@ -320,7 +321,7 @@ public actual class IOManager(
     @Suppress("UNCHECKED_CAST")
     public actual suspend fun openFilesystemDirectory(
         dirHandle: DirectoryHandle?,
-        path: ByteArray
+        path: ByteString
     ): CancellableResourceResult<DirectoryHandle> = memScoped {
         val task = getCurrentTask()
 
@@ -336,7 +337,7 @@ public actual class IOManager(
                     val dirfd = dirHandle?.actualFd ?: _AT_FDCWD
 
                     // we live in a world where exceptions are fatal, so this is ok.
-                    val pin = path.toNullTerminated().pin()
+                    val pin = path.pinnedTerminated()
                     defer { pin.unpin() }
                     val cPath = pin.addressOf(0)
 
@@ -352,7 +353,7 @@ public actual class IOManager(
     @Suppress("UNCHECKED_CAST")
     public actual suspend fun openFilesystemFile(
         dirHandle: DirectoryHandle?,
-        path: ByteArray,
+        path: ByteString,
         mode: FileOpenMode,
         flags: Set<FileOpenFlags>
     ): CancellableResourceResult<FileHandle> = memScoped {
@@ -407,7 +408,7 @@ public actual class IOManager(
                     how.flags = openFlags.convert()
 
                     val dirfd = dirHandle?.actualFd ?: _AT_FDCWD
-                    val pin = path.toNullTerminated().pin()
+                    val pin = path.pinnedTerminated()
                     defer { pin.unpin() }
                     val cPath = pin.addressOf(0)
 
