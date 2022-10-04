@@ -9,7 +9,6 @@ package tf.veriny.wishport
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.internals.EventLoop
-import tf.veriny.wishport.io.ByteString
 import tf.veriny.wishport.io.FileOpenMode
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -23,7 +22,7 @@ class `Test IOUring` {
         val io = EventLoop.get().ioManager
 
         val file = io.openFilesystemFile(
-            null, ByteString.Companion.from("/dev/zero"),
+            null, "/dev/zero".encodeToByteArray(),
             FileOpenMode.READ_ONLY, setOf()
         )
 

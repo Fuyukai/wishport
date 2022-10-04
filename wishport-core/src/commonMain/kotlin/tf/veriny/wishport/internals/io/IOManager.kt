@@ -12,7 +12,6 @@ import tf.veriny.wishport.Closeable
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
-import tf.veriny.wishport.io.ByteString
 import tf.veriny.wishport.io.FileOpenFlags
 import tf.veriny.wishport.io.FileOpenMode
 
@@ -53,7 +52,7 @@ public expect class IOManager : Closeable {
      */
     public suspend fun openFilesystemDirectory(
         dirHandle: DirectoryHandle?,
-        path: ByteString
+        path: ByteArray
     ): CancellableResourceResult<DirectoryHandle>
 
     /**
@@ -62,7 +61,7 @@ public expect class IOManager : Closeable {
      * semantics).
      */
     public suspend fun openFilesystemFile(
-        dirHandle: DirectoryHandle?, path: ByteString,
+        dirHandle: DirectoryHandle?, path: ByteArray,
         mode: FileOpenMode, flags: Set<FileOpenFlags>
     ): CancellableResourceResult<FileHandle>
 

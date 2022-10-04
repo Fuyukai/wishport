@@ -77,3 +77,13 @@ public fun CArrayPointer<ByteVar>.unsafeClobber(other: ByteArray) {
         this[idx] = other[idx]
     }
 }
+
+/**
+ * Creates a new [ByteArray] that is null-terminated, for passing to C functions.
+ */
+public fun ByteArray.toNullTerminated(): ByteArray {
+    if (this.last() == (0).toByte()) {
+        return this
+    }
+    return this.copyInto(ByteArray(size + 1) { 0 })
+}

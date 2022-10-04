@@ -19,7 +19,6 @@ import tf.veriny.wishport.core.InternalWishportError
 import tf.veriny.wishport.core.NS_PER_SEC
 import tf.veriny.wishport.internals.Task
 import tf.veriny.wishport.internals.checkIfCancelled
-import tf.veriny.wishport.io.ByteString
 import tf.veriny.wishport.io.FileOpenFlags
 import tf.veriny.wishport.io.FileOpenMode
 import tf.veriny.wishport.sync.CapacityLimiter
@@ -321,7 +320,7 @@ public actual class IOManager(
     @Suppress("UNCHECKED_CAST")
     public actual suspend fun openFilesystemDirectory(
         dirHandle: DirectoryHandle?,
-        path: ByteString
+        path: ByteArray
     ): CancellableResourceResult<DirectoryHandle> = memScoped {
         val task = getCurrentTask()
 
@@ -353,7 +352,7 @@ public actual class IOManager(
     @Suppress("UNCHECKED_CAST")
     public actual suspend fun openFilesystemFile(
         dirHandle: DirectoryHandle?,
-        path: ByteString,
+        path: ByteArray,
         mode: FileOpenMode,
         flags: Set<FileOpenFlags>
     ): CancellableResourceResult<FileHandle> = memScoped {
