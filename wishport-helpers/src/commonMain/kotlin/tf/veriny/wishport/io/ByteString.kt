@@ -51,6 +51,39 @@ private constructor(private val backing: ByteStringBacking) : Collection<Byte> {
         return unwrap().iterator()
     }
 
+    public fun get(index: Int): Byte? {
+        return backing.get(index)
+    }
+
+    /**
+     * Checks if this ByteString starts with a the byte [other].
+     */
+    public fun startsWith(other: Byte): Boolean {
+        return backing.get(0) == other
+    }
+
+    /**
+     * Checks if this ByteString starts with a different ByteString.
+     */
+    public fun startsWith(other: ByteString): Boolean {
+        if (other.size > size) return false
+
+        for (idx in other.indices) {
+            val ours = get(idx)
+            val theirs = other.get(idx)
+            if (ours != theirs) return false
+        }
+
+        return true
+    }
+
+    /**
+     * Decodes this [ByteString] to a UTF-8 [String].
+     */
+    public fun decode(): String {
+        return backing.decode()
+    }
+
     /**
      * Unwraps the underlying [ByteArray] for this [ByteString]. This is unsafe as it may expose
      * the internal array directly, violating immutability.
@@ -92,4 +125,24 @@ private constructor(private val backing: ByteStringBacking) : Collection<Byte> {
 
         return ByteString(ByteArraySliceHolder(backing, from, to))
     }
+
+    /**
+     * Gets the escaped String for this [ByteString].
+     */
+    public fun escapedString(): String {
+        return joinToString("") {
+            if (it in 32..126) it.toInt().toChar().toString()
+            else "\\x" + it.toUByte().toString(16).padStart(2, '0')
+        }
+    }
+
+    override fun toString(): String {
+        val s = joinToString("") {
+            if (it in 32..126) it.toInt().toChar().toString()
+            else "\\x" + it.toUByte().toString(16).padStart(2, '0')
+        }
+        return "b(\"$s\")"
+    }
 }
+
+public inline fun b(data: String): ByteString = ByteString.from(data)

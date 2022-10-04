@@ -25,6 +25,11 @@ internal sealed interface ByteStringBacking {
     fun containsAll(elements: Collection<Byte>): Boolean {
         return elements.all { contains(it) }
     }
+
+    /**
+     * Decodes to a surrogateescape String.
+     */
+    fun decode(): String
 }
 
 /** A holder that just uses an array directly. */
@@ -43,6 +48,10 @@ internal class ByteArrayHolder(private val arr: ByteArray) : ByteStringBacking {
 
     override fun contains(other: Byte): Boolean {
         return arr.contains(other)
+    }
+
+    override fun decode(): String {
+        return arr.decodeToString(throwOnInvalidSequence = false)
     }
 }
 
@@ -77,5 +86,9 @@ internal class ByteArraySliceHolder(
     override fun containsAll(elements: Collection<Byte>): Boolean {
         val ba = unwrap()
         return elements.all { ba.contains(it) }
+    }
+
+    override fun decode(): String {
+        return unwrap().decodeToString(throwOnInvalidSequence = false)
     }
 }
