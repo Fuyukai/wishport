@@ -14,8 +14,12 @@ kotlin {
 
         val getrandom by main.cinterops.creating {
             defFile("src/cinterop/getrandom.def")
-            includeDirs("src/include")
             packageName = "external.getrandom"
+        }
+
+        val extras by main.cinterops.creating {
+            defFile("src/cinterop/extras.def")
+            packageName = "platform.extra"
         }
     }
 }

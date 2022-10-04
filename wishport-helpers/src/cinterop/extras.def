@@ -1,0 +1,8 @@
+package = platform.extra
+noStringConversion = strlen strnlen
+---
+#include <stddef.h>
+
+// Avoids the fucking auto-string conversion!
+extern size_t strlen(const char *s);
+extern size_t strnlen(const char *s, size_t maxlen);
