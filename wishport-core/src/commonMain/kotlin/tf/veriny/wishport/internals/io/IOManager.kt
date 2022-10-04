@@ -7,10 +7,14 @@
 package tf.veriny.wishport.internals.io
 
 import tf.veriny.wishport.CancellableResourceResult
+import tf.veriny.wishport.CancellableResult
 import tf.veriny.wishport.Closeable
+import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.io.ByteString
+import tf.veriny.wishport.io.FileOpenFlags
+import tf.veriny.wishport.io.FileOpenMode
 
 // TODO: Rethink if this should be responsible for I/O dispatching itself, or if that functionality
 //       should be moved to the event loop, which can then poll this.
@@ -47,8 +51,30 @@ public expect class IOManager : Closeable {
      * provided, the directory will be opened relative to the other directory (using openat()
      * semantics).
      */
-    public suspend fun openDirectoryHandle(
+    public suspend fun openFilesystemDirectory(
         dirHandle: DirectoryHandle?,
         path: ByteString
     ): CancellableResourceResult<DirectoryHandle>
+
+    /**
+     * Opens a file on the real filesystem, returning a file handle. If [dirHandle] is
+     * provided, the file will be opened relative to the provided directory (using openat()
+     * semantics).
+     */
+    public suspend fun openFilesystemFile(
+        dirHandle: DirectoryHandle?, path: ByteString,
+        mode: FileOpenMode, flags: Set<FileOpenFlags>
+    ): CancellableResourceResult<FileHandle>
+
+    /**
+     * Reads [size] bytes from a [ReadableHandle] into [out], starting at [fileOffset] from the
+     * file's current position, and at [bufferOffset] into the provided buffer.
+     */
+    public suspend fun read(
+        handle: ReadableHandle,
+        out: ByteArray,
+        size: UInt,
+        fileOffset: ULong,
+        bufferOffset: Int,
+    ): CancellableResult<ByteCountResult, Fail>
 }

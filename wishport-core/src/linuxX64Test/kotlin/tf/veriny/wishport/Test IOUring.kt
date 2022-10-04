@@ -32,7 +32,9 @@ class `Test IOUring` {
 
         // fill with 1s so we know reading was successful
         val buf = ByteArray(8) { 1 }
-        val result = io.read(fd, buf, 8U, 0UL)
+        val result = io.read(
+            fd, buf, 8U, 0UL, 0
+        )
         assertTrue(result.isSuccess, "file read failed with ${result.getFailure()}")
         assertEquals(8, result.get()?.count)
         assertContentEquals(byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0), buf)

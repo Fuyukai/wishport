@@ -12,7 +12,11 @@ import tf.veriny.wishport.Closeable
 
 public actual sealed interface IOResult
 
-public class Fd(public val actualFd: Int) : Closeable, IOResult {
+public actual interface ReadableHandle {
+    public val actualFd: Int
+}
+
+public class Fd(public override val actualFd: Int) : Closeable, IOResult, ReadableHandle {
     private var closed = false
 
     override fun close() {

@@ -319,7 +319,7 @@ public actual class IOManager(
      * Opens a new handle to a directory.
      */
     @Suppress("UNCHECKED_CAST")
-    public actual suspend fun openDirectoryHandle(
+    public actual suspend fun openFilesystemDirectory(
         dirHandle: DirectoryHandle?,
         path: ByteString
     ): CancellableResourceResult<DirectoryHandle> = memScoped {
@@ -351,8 +351,8 @@ public actual class IOManager(
     }
 
     @Suppress("UNCHECKED_CAST")
-    public suspend fun openFilesystemFile(
-        directory: DirectoryHandle?,
+    public actual suspend fun openFilesystemFile(
+        dirHandle: DirectoryHandle?,
         path: ByteString,
         mode: FileOpenMode,
         flags: Set<FileOpenFlags>
@@ -407,7 +407,7 @@ public actual class IOManager(
                     memset(how.ptr, 0, sizeOf<open_how>().convert())
                     how.flags = openFlags.convert()
 
-                    val dirfd = directory?.actualFd ?: _AT_FDCWD
+                    val dirfd = dirHandle?.actualFd ?: _AT_FDCWD
                     val pin = path.toNullTerminated().pin()
                     defer { pin.unpin() }
                     val cPath = pin.addressOf(0)
@@ -424,13 +424,13 @@ public actual class IOManager(
     private fun checkBuffers(
         buf: ByteArray,
         size: UInt,
-        offset: ULong
+        offset: Int
     ): CancellableResult<Unit, Fail> {
         if (size < 0U || size > buf.size.toUInt()) {
             return Cancellable.failed(TooSmall(size))
         }
 
-        if (offset < 0UL || offset >= buf.size.toULong()) {
+        if (offset < 0 || offset >= buf.size) {
             return Cancellable.failed(IndexOutOfRange(offset.toUInt()))
         }
 
@@ -443,22 +443,25 @@ public actual class IOManager(
     }
 
     @Suppress("UNCHECKED_CAST")
-    public suspend fun read(
-        fd: Fd,
+    public actual suspend fun read(
+        handle: ReadableHandle,
         out: ByteArray,
         size: UInt,
-        offset: ULong
+        fileOffset: ULong,
+        bufferOffset: Int,
     ): CancellableResult<ByteCountResult, Fail> = memScoped {
         val task = getCurrentTask()
 
         return task.checkIfCancelled()
-            .andThen { checkBuffers(out, size, offset) }
+            .andThen { checkBuffers(out, size, bufferOffset) }
             .andThen {
                 limiter.unwrapAndRun {
                     val sqe = getsqe()
                     val buf = out.pin()
 
-                    io_uring_prep_read(sqe, fd.actualFd, buf.addressOf(0), size, offset)
+                    io_uring_prep_read(
+                        sqe, handle.actualFd, buf.addressOf(bufferOffset), size, fileOffset
+                    )
                     io_uring_sqe_set_data64(sqe, counter++)
                     submitAndWait<ByteCountResult>(
                         task,
