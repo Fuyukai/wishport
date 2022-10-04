@@ -448,7 +448,7 @@ public actual class IOManager(
         out: ByteArray,
         size: UInt,
         offset: ULong
-    ): CancellableResourceResult<ByteCountResult> = memScoped {
+    ): CancellableResult<ByteCountResult, Fail> = memScoped {
         val task = getCurrentTask()
 
         return task.checkIfCancelled()
@@ -466,7 +466,7 @@ public actual class IOManager(
                         SleepingWhy.OPEN_FILE
                     )
                 }
-            } as CancellableResourceResult<ByteCountResult>
+            }
     }
 
     override fun close() {
