@@ -10,22 +10,18 @@ kotlin {
     val aarch64 = linuxArm64()
 
     listOf(amd64, aarch64).forEach {
-        val main by it.compilations.getting {
-            val sourceSet = defaultSourceSetName
-            val libPath = "src/$sourceSet/$LIB_NAME.a"
-            val staticLib = project.file(libPath)
-            val path = staticLib.absolutePath
-
-            kotlinOptions {
-                freeCompilerArgs = listOf("-include-binary", path)
-            }
-        }
-
+        val main = it.compilations.getByName("main")
+        val sourceSet = main.defaultSourceSetName
+        val libPath = "src/$sourceSet"
+        val staticLib = project.file(libPath)
+        val path = staticLib.absolutePath
 
         val interop by main.cinterops.creating {
             defFile("src/cinterop/$LIB_NAME.def")
             includeDirs("src/include")
             packageName = "external.liburing"
+
+            extraOpts("-libraryPath", path)
         }
     }
 }
