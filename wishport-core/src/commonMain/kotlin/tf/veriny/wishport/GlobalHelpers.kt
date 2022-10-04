@@ -19,6 +19,8 @@ private fun EventLoop.runWithErrorPrint() {
     } catch (e: Throwable) {
         e.printStackTrace()
         throw e
+    } finally {
+        close()
     }
 }
 

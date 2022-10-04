@@ -7,13 +7,16 @@
 package tf.veriny.wishport.internals
 
 import tf.veriny.wishport.CancellableResult
+import tf.veriny.wishport.Closeable
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.LowLevelApi
+import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.core.AutojumpClock
 import tf.veriny.wishport.core.CancelScope
 import tf.veriny.wishport.core.Clock
 import tf.veriny.wishport.core.Nursery
 import tf.veriny.wishport.internals.EventLoop.Companion.get
+import tf.veriny.wishport.internals.io.IOManager
 import kotlin.coroutines.coroutineContext
 
 /**
@@ -24,8 +27,9 @@ import kotlin.coroutines.coroutineContext
  * which will retrieve the event loop variable that is stored implicitly in every asynchronous
  * function's hidden context variable.
  */
+@OptIn(Unsafe::class)
 @LowLevelApi
-public class EventLoop private constructor(public val clock: Clock) {
+public class EventLoop private constructor(public val clock: Clock) : Closeable {
     public companion object {
         internal fun new(clock: Clock? = PlatformClock): EventLoop {
             val c = clock ?: PlatformClock
@@ -76,6 +80,8 @@ public class EventLoop private constructor(public val clock: Clock) {
     // task that is currently dead on waitAllTasksBlocked
     internal var waitingAllTasksBlocked: Task? = null
 
+    public val ioManager: IOManager = IOManager.default()
+
     /**
      * Creates the root task that all tasks inherit from. This will use the root cancellation scope
      * and the root nursery.
@@ -115,7 +121,7 @@ public class EventLoop private constructor(public val clock: Clock) {
      * Consumes all available I/O events from the completion queue.
      */
     private fun peekIO() {
-        // TODO: implement this
+        ioManager.pollIO()
     }
 
     // this one: io_uring_wait_cqes with max queue length and a timeout.
@@ -132,7 +138,7 @@ public class EventLoop private constructor(public val clock: Clock) {
         } else {
             // TODO: actually wait on I/O
             val sleepTime = clock.getSleepTime(nextDeadline)
-            nanosleep(sleepTime)
+            ioManager.waitForIOUntil(sleepTime)
         }
     }
 
@@ -141,7 +147,7 @@ public class EventLoop private constructor(public val clock: Clock) {
     private fun waitForIOForever() {
         if (checkWaiter()) return
 
-        TODO("not implemented")
+        ioManager.waitForIO()
     }
 
     // == Public API == //
@@ -182,8 +188,6 @@ public class EventLoop private constructor(public val clock: Clock) {
         // would rather have the event loop code work than this.
         // In the future we may need internal pipes, so this could be revisited as a mechanism
         // anyway, as an additional safety check.
-
-        // TODO: Check for I/O waiting tasks
 
         while (true) {
             // pt 1: run any scheduled tasks
@@ -231,5 +235,9 @@ public class EventLoop private constructor(public val clock: Clock) {
         }
 
         assert(deadlines.isEmpty()) { "main task exited, but there are still pending scopes!" }
+    }
+
+    override fun close() {
+        ioManager.close()
     }
 }
