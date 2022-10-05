@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.wishport.collections
 
 import kotlinx.cinterop.Pinned
@@ -57,6 +63,10 @@ private actual constructor(private val backing: ByteArray) : Collection<Byte> {
         return backing.hashCode()
     }
 
+    override fun toString(): String {
+        return escapedString()
+    }
+
     // useful methods
     public actual operator fun get(idx: Int): Byte? {
         if (idx > size) return null
@@ -65,6 +75,17 @@ private actual constructor(private val backing: ByteArray) : Collection<Byte> {
 
     public actual fun getUnsafe(idx: Int): Byte {
         return backing[idx]
+    }
+
+    @OptIn(Unsafe::class)
+    public actual operator fun plus(other: ByteString): ByteString {
+        val buf = backing + other.backing
+        return uncopied(buf)
+    }
+
+    @Unsafe
+    public actual fun unwrap(): ByteArray {
+        return backing
     }
 
     /**

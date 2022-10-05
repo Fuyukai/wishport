@@ -1,6 +1,14 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.wishport.collections
 
 import tf.veriny.wishport.annotations.Unsafe
+
+// TODO: we need ByteStringBuilder, or a Buffer, or anything like that.
 
 /**
  * An immutable sequence of bytes in a string-like container.
@@ -33,6 +41,15 @@ private constructor(backing: ByteArray) : Collection<Byte> {
      */
     @Unsafe
     public fun getUnsafe(idx: Int): Byte
+
+    @Unsafe
+    internal fun unwrap(): ByteArray
+
+    /**
+     * Appends another [ByteString] to this one, producing a new ByteString that is independent
+     * of the other two.
+     */
+    public operator fun plus(other: ByteString): ByteString
 }
 
 public inline fun b(s: String): ByteString = ByteString(s)
@@ -119,7 +136,7 @@ public fun ByteString.split(delim: ByteString): List<ByteString> {
     // exited the loop, add anything left in the current cursor to the list
     // (as it didn't match fully)
     if (currentCursor > 0) {
-        val copy = ByteString(current.copyOfRange (0, currentCursor))
+        val copy = ByteString(current.copyOfRange(0, currentCursor))
         working.add(copy)
     }
     return working

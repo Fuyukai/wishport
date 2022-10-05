@@ -62,8 +62,10 @@ public expect class IOManager : Closeable {
      * semantics).
      */
     public suspend fun openFilesystemFile(
-        dirHandle: DirectoryHandle?, path: ByteString,
-        mode: FileOpenMode, flags: Set<FileOpenFlags>
+        dirHandle: DirectoryHandle?,
+        path: ByteString,
+        mode: FileOpenMode,
+        flags: Set<FileOpenFlags>
     ): CancellableResourceResult<FileHandle>
 
     /**
