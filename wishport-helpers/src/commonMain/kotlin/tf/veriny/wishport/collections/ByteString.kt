@@ -183,3 +183,10 @@ public fun ByteString.hexlify(): String {
 
     return buf.toString()
 }
+
+public fun ByteString.escapedString(): String {
+    return joinToString("") {
+        if (it in 32..126) it.toInt().toChar().toString()
+        else "\\x" + it.toUByte().toString(16).padStart(2, '0')
+    }
+}

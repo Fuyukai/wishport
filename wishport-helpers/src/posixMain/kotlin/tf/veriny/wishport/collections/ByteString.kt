@@ -46,6 +46,17 @@ private actual constructor(private val backing: ByteArray) : Collection<Byte> {
         return elements.all { backing.contains(it) }
     }
 
+    override fun equals(other: Any?): Boolean {
+        if (other !is ByteString) return false
+        if (other === this) return true
+
+        return other.backing.contentEquals(backing)
+    }
+
+    override fun hashCode(): Int {
+        return backing.hashCode()
+    }
+
     // useful methods
     public actual operator fun get(idx: Int): Byte? {
         if (idx > size) return null
