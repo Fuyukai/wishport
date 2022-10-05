@@ -126,6 +126,18 @@ public fun ByteString.split(delim: ByteString): List<ByteString> {
 }
 
 /**
+ * Returns the index of the first byte [b] in the [ByteString], or -1 if it is not found.
+ */
+@OptIn(Unsafe::class)
+public fun ByteString.find(b: Byte): Int {
+    for (idx in this.indices) {
+        if (getUnsafe(idx) == b) return idx
+    }
+
+    return -1
+}
+
+/**
  * Joins an iterable of [ByteString] together with the specified [delim].
  */
 @OptIn(Unsafe::class)
