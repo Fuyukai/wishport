@@ -1,13 +1,11 @@
 
 import com.diffplug.gradle.spotless.SpotlessExtension
-import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
 import org.jetbrains.kotlin.gradle.dsl.ExplicitApiMode
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import java.nio.file.Path
 
 plugins {
-    id("org.jetbrains.kotlin.multiplatform").version("1.7.20-Beta").apply(false)
+    id("org.jetbrains.kotlin.multiplatform").version("1.7.20").apply(false)
     id("com.diffplug.spotless").version("6.6.1").apply(false)
     id("com.github.ben-manes.versions").version("0.39.0").apply(false)
     id("maven-publish")

@@ -65,6 +65,17 @@ public fun ByteString.startsWith(other: ByteString): Boolean {
     return true
 }
 
+/**
+ * Checks if this [ByteString] starts with the specified [other] byte.
+ */
+@OptIn(Unsafe::class)
+public fun ByteString.startsWith(other: Byte): Boolean {
+    // what?
+    if (isEmpty()) return false
+
+    return getUnsafe(0) == other
+}
+
 // TODO: This is not very efficient.
 //  I believe a proper search alg would be faster. But that's for another day.
 /**
