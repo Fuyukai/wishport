@@ -7,9 +7,11 @@
 package tf.veriny.wishport
 
 import tf.veriny.wishport.annotations.LowLevelApi
+import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.core.CancelScope
 import tf.veriny.wishport.core.Clock
 import tf.veriny.wishport.internals.*
+import tf.veriny.wishport.internals.io.IOManager
 import kotlin.coroutines.coroutineContext
 
 @OptIn(LowLevelApi::class)
@@ -101,6 +103,15 @@ public suspend inline fun getCurrentTask(): Task {
             e
         )
     }
+}
+
+/**
+ * Gets the current I/O manager.
+ */
+@Unsafe
+@LowLevelApi
+public suspend inline fun getIOManager(): IOManager {
+    return EventLoop.get().ioManager
 }
 
 /**
