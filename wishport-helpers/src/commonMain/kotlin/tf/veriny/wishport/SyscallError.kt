@@ -17,11 +17,8 @@ public sealed interface ResourceError : Fail
 // https://github.com/Fuyukai/Tinlok/blob/642a7d3083e937891d897510e2a5e50e8ed6378f/tinlok-core/src/commonMain/kotlin/tf/lotte/tinlok/exc/OSException.kt
 // my previous error hierachy
 
-public const val EPERM: Int = 1
-public const val ENOMEM: Int = 12
-public const val EINVAL: Int = 22
-public const val ENFILE: Int = 23
-public const val EMFILE: Int = 24
+
+
 
 /** Returned when trying to use a resource that has already been closed. */
 public object AlreadyClosedError : ResourceError
@@ -44,33 +41,11 @@ public sealed class SyscallError(
  */
 public class UnknownError(errno: Int) : SyscallError(errno)
 
-/** The operation in question was not permitted. Meaning varies based on syscall. */
-public object OperationNotPermitted : SyscallError(EPERM)
-
-/** The kernel is out of memory. */
-public object OutOfMemory : SyscallError(ENOMEM)
-
-/** An invalid argument was provided to a system function. */
-public object InvalidArgument : SyscallError(EINVAL)
-
-/** The entire system has too many files open. */
-public object TooManyGlobalFiles : SyscallError(ENFILE)
-
-/** This process has too many files open. */
-public object TooManyFiles : SyscallError(EMFILE)
-
 /**
  * Converts an errno into an [SyscallError].
  */
 public fun Int.toSysError(): SyscallError =
-    when (this) {
-        EPERM -> OperationNotPermitted
-        ENOMEM -> OutOfMemory
-        EINVAL -> InvalidArgument
-        ENFILE -> TooManyGlobalFiles
-        EMFILE -> TooManyFiles
-        else -> UnknownError(this)
-    }
+    ERRNO_MAPPING[this]
 
 /**
  * Converts an errno into an [ResourceResult].

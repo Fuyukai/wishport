@@ -178,6 +178,11 @@ public interface PurePath<Flavour : PurePath<Flavour>> {
     public fun resolveChild(path: Flavour): Flavour
 }
 
+/**
+ * The [PurePath] type that the current system natively uses.
+ */
+public expect class SystemPurePath : PurePath<SystemPurePath>
+
 // error types
 /**
  * Returned from PurePath creation methods if an illegal character is in the path provided.

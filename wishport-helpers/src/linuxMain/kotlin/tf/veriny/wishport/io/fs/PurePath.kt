@@ -10,3 +10,5 @@ import tf.veriny.wishport.collections.ByteString
 import tf.veriny.wishport.collections.b
 
 public actual val PATH_SEP: ByteString = b("/")
+
+public actual typealias SystemPurePath = PosixPurePath
