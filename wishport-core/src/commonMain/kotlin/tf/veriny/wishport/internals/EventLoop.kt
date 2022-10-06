@@ -10,6 +10,7 @@ import tf.veriny.wishport.CancellableResult
 import tf.veriny.wishport.Closeable
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.LowLevelApi
+import tf.veriny.wishport.annotations.StableApi
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.core.AutojumpClock
 import tf.veriny.wishport.core.CancelScope
@@ -29,6 +30,7 @@ import kotlin.coroutines.coroutineContext
  */
 @OptIn(Unsafe::class)
 @LowLevelApi
+@StableApi
 public class EventLoop private constructor(public val clock: Clock) : Closeable {
     public companion object {
         internal fun new(clock: Clock? = PlatformClock): EventLoop {
@@ -80,6 +82,9 @@ public class EventLoop private constructor(public val clock: Clock) : Closeable 
     // task that is currently dead on waitAllTasksBlocked
     internal var waitingAllTasksBlocked: Task? = null
 
+    /**
+     * The I/O manager for the current event loop.
+     */
     public val ioManager: IOManager = IOManager.default()
 
     /**
@@ -156,6 +161,7 @@ public class EventLoop private constructor(public val clock: Clock) : Closeable 
      * Directly reschedules a task, adding it to the task queue.
      */
     @LowLevelApi
+    @StableApi
     public fun directlyReschedule(task: Task) {
         scheduledTasks.add(task)
     }
@@ -163,6 +169,7 @@ public class EventLoop private constructor(public val clock: Clock) : Closeable 
     /**
      * Runs the event loop until all tasks have been completed.
      */
+    @StableApi
     public fun runUntilComplete() {
         // This is structured peculiarly, but for a good reason.
         //

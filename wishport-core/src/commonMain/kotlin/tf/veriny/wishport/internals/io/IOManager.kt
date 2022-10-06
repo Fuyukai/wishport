@@ -66,7 +66,7 @@ public expect class IOManager : Closeable {
         path: ByteString,
         mode: FileOpenMode,
         flags: Set<FileOpenFlags>
-    ): CancellableResourceResult<FileHandle>
+    ): CancellableResourceResult<RawFileHandle>
 
     /**
      * Reads [size] bytes from a [ReadableHandle] into [out], starting at [fileOffset] from the

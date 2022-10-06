@@ -28,6 +28,6 @@ public class Fd(public override val actualFd: Int) : Closeable, IOResult, Readab
 }
 
 public actual typealias DirectoryHandle = Fd
-public actual typealias FileHandle = Fd
+public actual typealias RawFileHandle = Fd
 
 public actual value class ByteCountResult(public val count: Int) : IOResult

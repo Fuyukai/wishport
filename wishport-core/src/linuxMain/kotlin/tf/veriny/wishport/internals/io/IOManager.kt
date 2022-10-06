@@ -12,6 +12,10 @@ import external.liburing.*
 import kotlinx.cinterop.*
 import platform.extra.*
 import platform.posix.*
+import platform.posix.EAGAIN
+import platform.posix.EBUSY
+import platform.posix.EINTR
+import platform.posix.ETIME
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
@@ -356,7 +360,7 @@ public actual class IOManager(
         path: ByteString,
         mode: FileOpenMode,
         flags: Set<FileOpenFlags>
-    ): CancellableResourceResult<FileHandle> = memScoped {
+    ): CancellableResourceResult<RawFileHandle> = memScoped {
         var openFlags = O_CLOEXEC
 
         for (flag in flags) {
@@ -414,11 +418,11 @@ public actual class IOManager(
 
                     io_uring_prep_openat2(sqe, dirfd, cPath, how.ptr)
                     io_uring_sqe_set_data64(sqe, counter++)
-                    submitAndWait<FileHandle>(
+                    submitAndWait<RawFileHandle>(
                         task, sqe.pointed.user_data, SleepingWhy.OPEN_FILE
                     )
                 }
-            } as CancellableResourceResult<FileHandle>
+            } as CancellableResourceResult<RawFileHandle>
     }
 
     private fun checkBuffers(
