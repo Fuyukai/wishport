@@ -12,7 +12,7 @@ import tf.veriny.wishport.Closeable
 
 public actual sealed interface IOResult
 
-public actual interface ReadableHandle {
+public actual interface ReadableHandle : Closeable {
     public val actualFd: Int
 }
 
