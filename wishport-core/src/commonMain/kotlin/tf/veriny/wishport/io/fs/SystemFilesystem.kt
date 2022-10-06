@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.wishport.io.fs
 
 import tf.veriny.wishport.*
@@ -15,7 +21,9 @@ import tf.veriny.wishport.io.FileOpenMode
 public object SystemFilesystem : Filesystem<SystemPurePath> {
     @Unsafe
     override suspend fun getFileHandle(
-        path: SystemPurePath, openMode: FileOpenMode, flags: Set<FileOpenFlags>
+        path: SystemPurePath,
+        openMode: FileOpenMode,
+        flags: Set<FileOpenFlags>
     ): CancellableResourceResult<SystemFileHandle> {
         val manager = EventLoop.get().ioManager
         return manager.openFilesystemFile(

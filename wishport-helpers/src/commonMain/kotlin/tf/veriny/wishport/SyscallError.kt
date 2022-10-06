@@ -17,9 +17,6 @@ public sealed interface ResourceError : Fail
 // https://github.com/Fuyukai/Tinlok/blob/642a7d3083e937891d897510e2a5e50e8ed6378f/tinlok-core/src/commonMain/kotlin/tf/lotte/tinlok/exc/OSException.kt
 // my previous error hierachy
 
-
-
-
 /** Returned when trying to use a resource that has already been closed. */
 public object AlreadyClosedError : ResourceError
 

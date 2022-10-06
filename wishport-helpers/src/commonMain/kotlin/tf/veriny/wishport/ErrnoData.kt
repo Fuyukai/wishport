@@ -1,15 +1,21 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.wishport
 
 // auto-generated from asm-generic/errno.h
-public const val EPERM: Int =  1
-public const val ENOENT: Int =  2
-public const val ESRCH: Int =  3
-public const val EINTR: Int =  4
-public const val EIO: Int =  5
-public const val ENXIO: Int =  6
-public const val E2BIG: Int =  7
-public const val ENOEXEC: Int =  8
-public const val EBADF: Int =  9
+public const val EPERM: Int = 1
+public const val ENOENT: Int = 2
+public const val ESRCH: Int = 3
+public const val EINTR: Int = 4
+public const val EIO: Int = 5
+public const val ENXIO: Int = 6
+public const val E2BIG: Int = 7
+public const val ENOEXEC: Int = 8
+public const val EBADF: Int = 9
 public const val ECHILD: Int = 10
 public const val EAGAIN: Int = 11
 public const val ENOMEM: Int = 12

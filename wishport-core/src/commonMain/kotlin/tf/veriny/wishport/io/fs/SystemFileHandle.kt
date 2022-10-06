@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.wishport.io.fs
 
 import tf.veriny.wishport.CancellableResult
@@ -32,7 +38,10 @@ internal constructor(
 
     @OptIn(Unsafe::class, LowLevelApi::class)
     override suspend fun readInto(
-        buf: ByteArray, size: UInt, bufferOffset: Int, fileOffset: ULong
+        buf: ByteArray,
+        size: UInt,
+        bufferOffset: Int,
+        fileOffset: ULong
     ): CancellableResult<ByteCountResult, Fail> {
         val io = getIOManager()
         return io.read(raw, buf, size, fileOffset, bufferOffset)

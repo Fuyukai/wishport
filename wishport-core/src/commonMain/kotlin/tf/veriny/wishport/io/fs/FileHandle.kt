@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.wishport.io.fs
 
 import tf.veriny.wishport.*
@@ -7,7 +13,6 @@ import tf.veriny.wishport.internals.io.ByteCountResult
 import tf.veriny.wishport.internals.io.ReadableHandle
 import tf.veriny.wishport.io.FileOpenFlags
 import tf.veriny.wishport.io.FileOpenMode
-
 
 /**
  * A handle to an opened file on a filesystem. This provides methods to perform I/O based on the
@@ -43,6 +48,9 @@ public interface FileHandle<F : PurePath<F>> : Closeable {
      * If any of these are out of bounds, then this will return [IndexOutOfRange] or [TooSmall].
      */
     public suspend fun readInto(
-        buf: ByteArray, size: UInt, bufferOffset: Int, fileOffset: ULong
+        buf: ByteArray,
+        size: UInt,
+        bufferOffset: Int,
+        fileOffset: ULong
     ): CancellableResult<ByteCountResult, Fail>
 }
