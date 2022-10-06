@@ -40,6 +40,10 @@ public interface ClosingScope : Closeable {
     public fun remove(closeable: Closeable)
 }
 
+// ideally you'd delegate with `constructor (scope: ClosingScope) : ClosingScope by scope`
+// but if ur really stupid ur gonna make a ClosingScope impl yourself so this is there to avoid
+// footgunning w/ IdentitySet.
+
 /**
  * Implementation of a closing scope that can be (unsafely) directly constructed.
  */
@@ -69,4 +73,26 @@ public class ClosingScopeImpl @Unsafe constructor() : ClosingScope {
 
         if (lastException != null) throw lastException
     }
+}
+
+/**
+ * Adds the underlying successful result of an [Either] to this [ClosingScope], and returns the
+ * Either.
+ */
+public inline fun <S : Closeable, F : Fail> Either<S, F>.andAddTo(
+    scope: ClosingScope
+): Either<S, F> {
+    if (isSuccess) scope.add(get()!!)
+    return this
+}
+
+/**
+ * Adds the underlying successful result of an [Cancellable] to this [ClosingScope], and returns the
+ * Cancellable.
+ */
+public inline fun <S : Closeable, F : Fail> CancellableResult<S, F>.andAddTo(
+    scope: ClosingScope
+): CancellableResult<S, F> {
+    if (isSuccess) scope.add(get()!!)
+    return this
 }
