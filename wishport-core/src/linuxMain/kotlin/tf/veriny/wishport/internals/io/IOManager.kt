@@ -41,7 +41,6 @@ private val MISSING_NODROP = """
 /**
  * Provides asynchronous access to the io_uring kernel interface, via liburing.
  */
-@Unsafe
 @LowLevelApi
 public actual class IOManager(
     size: Int,
@@ -147,6 +146,12 @@ public actual class IOManager(
                 val readCount = unwrapped.res
                 if (readCount < 0) Cancellable.failed(abs(readCount).toSysError())
                 else Cancellable.ok(ByteCountResult(readCount))
+            }
+
+            SleepingWhy.FSYNC -> {
+                val result = unwrapped.res
+                if (result < 0) Cancellable.failed(abs(result).toSysError())
+                else Cancellable.ok(Empty)
             }
         }
 
@@ -322,6 +327,7 @@ public actual class IOManager(
     /**
      * Opens a new handle to a directory.
      */
+    @Unsafe
     @Suppress("UNCHECKED_CAST")
     public actual suspend fun openFilesystemDirectory(
         dirHandle: DirectoryHandle?,
@@ -354,6 +360,7 @@ public actual class IOManager(
             } as CancellableResourceResult<DirectoryHandle>
     }
 
+    @Unsafe
     @Suppress("UNCHECKED_CAST")
     public actual suspend fun openFilesystemFile(
         dirHandle: DirectoryHandle?,
@@ -446,9 +453,8 @@ public actual class IOManager(
         return Cancellable.empty()
     }
 
-    @Suppress("UNCHECKED_CAST")
     public actual suspend fun read(
-        handle: ReadableHandle,
+        handle: IOHandle,
         out: ByteArray,
         size: UInt,
         fileOffset: ULong,
@@ -474,6 +480,56 @@ public actual class IOManager(
                     )
                 }
             }
+    }
+
+    public actual suspend fun write(
+        handle: IOHandle,
+        buf: ByteArray,
+        size: UInt,
+        fileOffset: ULong,
+        bufferOffset: Int
+    ): CancellableResult<ByteCountResult, Fail> = memScoped {
+        val task = getCurrentTask()
+
+        return task.checkIfCancelled()
+            .andThen { checkBuffers(buf, size, bufferOffset) }
+            .andThen {
+                limiter.unwrapAndRun {
+                    val sqe = getsqe()
+                    val buf = buf.pin()
+
+                    io_uring_prep_write(
+                        sqe,
+                        handle.actualFd,
+                        buf.addressOf(bufferOffset),
+                        size,
+                        fileOffset
+                    )
+                    val seq = counter++
+                    io_uring_sqe_set_data64(sqe, seq)
+                    submitAndWait<ByteCountResult>(task, seq, SleepingWhy.READ_WRITE)
+                }
+            }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    public actual suspend fun fsync(
+        handle: IOHandle, withMetadata: Boolean
+    ): CancellableResourceResult<Empty> {
+        val task = getCurrentTask()
+
+        return task.checkIfCancelled()
+            .andThen {
+                limiter.unwrapAndRun {
+                    val sqe = getsqe()
+
+                    val flags = if (withMetadata) IORING_FSYNC_DATASYNC else 0u
+                    io_uring_prep_fsync(sqe, handle.actualFd, flags)
+                    val seq = counter++
+                    io_uring_sqe_set_data64(sqe, seq)
+                    submitAndWait<Empty>(task, seq, SleepingWhy.FSYNC)
+                }
+            } as CancellableResourceResult<Empty>
     }
 
     override fun close() {

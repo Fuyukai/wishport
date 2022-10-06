@@ -8,15 +8,12 @@ package tf.veriny.wishport.internals.io
 
 import tf.veriny.wishport.CancellableResourceResult
 import tf.veriny.wishport.annotations.LowLevelApi
-import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.internals.Task
 
 /**
  * Wraps the state of a task currently waiting for an io_uring event.
  */
-@LowLevelApi
-@Unsafe
-internal data class SleepingTask(
+internal data class SleepingTask @OptIn(LowLevelApi::class) constructor(
     val task: Task,
     val id: ULong,
     val why: SleepingWhy
@@ -33,6 +30,7 @@ internal enum class SleepingWhy {
     OPEN_DIRECTORY,
     OPEN_FILE,
     READ_WRITE,
+    FSYNC,
 
     ;
 }

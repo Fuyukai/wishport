@@ -24,7 +24,6 @@ import tf.veriny.wishport.io.FileOpenMode
  * per-platform, and is responsible internally for its own set of suspended tasks.
  */
 @LowLevelApi
-@Unsafe
 public expect class IOManager : Closeable {
     public companion object {
         public fun default(): IOManager
@@ -46,11 +45,14 @@ public expect class IOManager : Closeable {
     public fun waitForIOUntil(timeout: Long)
 
     // == actual I/O methods == //
+    // CreateFileEx isn't async so we have to punt it off to a worker on windows.
+
     /**
      * Opens a directory on the real filesystem, returning a directory handle. If [dirHandle] is
      * provided, the directory will be opened relative to the other directory (using openat()
      * semantics).
      */
+    @Unsafe
     public suspend fun openFilesystemDirectory(
         dirHandle: DirectoryHandle?,
         path: ByteString
@@ -61,6 +63,7 @@ public expect class IOManager : Closeable {
      * provided, the file will be opened relative to the provided directory (using openat()
      * semantics).
      */
+    @Unsafe
     public suspend fun openFilesystemFile(
         dirHandle: DirectoryHandle?,
         path: ByteString,
@@ -69,14 +72,36 @@ public expect class IOManager : Closeable {
     ): CancellableResourceResult<RawFileHandle>
 
     /**
-     * Reads [size] bytes from a [ReadableHandle] into [out], starting at [fileOffset] from the
+     * Reads [size] bytes from a [IOHandle] into [out], starting at [fileOffset] from the
      * file's current position, and at [bufferOffset] into the provided buffer.
      */
     public suspend fun read(
-        handle: ReadableHandle,
+        handle: IOHandle,
         out: ByteArray,
         size: UInt,
         fileOffset: ULong,
         bufferOffset: Int,
     ): CancellableResult<ByteCountResult, Fail>
+
+    /**
+     * Writes [size] bytes from [buf] into an [IOHandle], starting from [bufferOffset] in the
+     * provided buffer, and into [fileOffset] from the file's current position.
+     */
+    public suspend fun write(
+        handle: IOHandle,
+        buf: ByteArray,
+        size: UInt,
+        fileOffset: ULong,
+        bufferOffset: Int
+    ): CancellableResult<ByteCountResult, Fail>
+
+    // FlushFileEx is not async
+    /**
+     * Forces a file flush for the specified [handle]. If [withMetadata] is specified, then all
+     * metadata will be flushed too. Otherwise, only metadata required for read consistency is
+     * flushed. (This can be thought of as like fsync() vs fdatasync()).
+     */
+    public suspend fun fsync(
+        handle: IOHandle, withMetadata: Boolean
+    ):  CancellableResourceResult<Empty>
 }

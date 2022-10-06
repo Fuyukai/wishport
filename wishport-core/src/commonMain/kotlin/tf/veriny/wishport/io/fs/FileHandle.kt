@@ -10,12 +10,13 @@ import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.internals.io.ByteCountResult
-import tf.veriny.wishport.internals.io.ReadableHandle
+import tf.veriny.wishport.internals.io.Empty
+import tf.veriny.wishport.internals.io.IOHandle
 import tf.veriny.wishport.io.FileOpenFlags
 import tf.veriny.wishport.io.FileOpenMode
 
 /**
- * A handle to an opened file on a filesystem. This provides methods to perform I/O based on the
+ * A handle to an opened file on a filesystem.
  */
 public interface FileHandle<F : PurePath<F>> : Closeable {
     public companion object;
@@ -25,7 +26,7 @@ public interface FileHandle<F : PurePath<F>> : Closeable {
 
     /** The raw system file handle for this FileHandle, for usage in backend I/O. */
     @LowLevelApi
-    public val raw: ReadableHandle
+    public val raw: IOHandle
 
     /** The path to this file. */
     public val path: F
@@ -53,4 +54,21 @@ public interface FileHandle<F : PurePath<F>> : Closeable {
         bufferOffset: Int,
         fileOffset: ULong
     ): CancellableResult<ByteCountResult, Fail>
+
+    /**
+     * Writes data from [buf] into the specified file handle. The data will be read from the buffer
+     * at offset [bufferOffset], into the file at [fileOffset], for [size] bytes.
+     *
+     * If any of these are out of bounds, then this will return [IndexOutOfRange] or [TooSmall].
+     */
+    public suspend fun writeFrom(
+        buf: ByteArray, size: UInt, bufferOffset: Int, fileOffset: ULong
+    ): CancellableResult<ByteCountResult, Fail>
+
+    /**
+     * Flushes the data written into this file to disk. If [withMetadata] is true, then all file
+     * metadata will be flushed; otherwise, only essential metadata relating to write consistency
+     * will be flushed.
+     */
+    public suspend fun flush(withMetadata: Boolean = true): CancellableResourceResult<Empty>
 }

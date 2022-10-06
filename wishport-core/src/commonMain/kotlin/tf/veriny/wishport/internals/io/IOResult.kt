@@ -14,7 +14,7 @@ import tf.veriny.wishport.Closeable
  * A readable handle for usage in I/O methods.
  */
 // marker interfaces
-public expect interface ReadableHandle : Closeable
+public expect interface IOHandle : Closeable
 
 /**
  * Hierachy over the possible I/O results returned from an IO manager.
@@ -22,16 +22,21 @@ public expect interface ReadableHandle : Closeable
 public expect sealed interface IOResult
 
 /**
+ * An empty result for system calls that don't return anything.
+ */
+public expect object Empty : IOResult
+
+/**
  * A handle to an open directory on a filesystem. This may be a real directory on the default
  * filesystem or a directory in a customised filesystem.
  */
-public expect class DirectoryHandle : IOResult, ReadableHandle
+public expect class DirectoryHandle : IOResult, IOHandle
 
 /**
  * A handle to an open file on a filesystem. This may be a real file on the default filesystem or a
  * file in a customised filesystem.
  */
-public expect class RawFileHandle : IOResult, ReadableHandle
+public expect class RawFileHandle : IOResult, IOHandle
 
 /**
  * The result of a read/write operation.

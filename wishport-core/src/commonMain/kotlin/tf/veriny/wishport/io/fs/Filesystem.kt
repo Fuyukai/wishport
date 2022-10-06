@@ -39,6 +39,7 @@ public interface Filesystem<Flavour : PurePath<Flavour>> {
     /**
      * Gets a relative file handle from the specified [handle].
      */
+    @Unsafe
     public suspend fun getRelativeFileHandle(
         handle: FileHandle<Flavour>,
         path: Flavour,

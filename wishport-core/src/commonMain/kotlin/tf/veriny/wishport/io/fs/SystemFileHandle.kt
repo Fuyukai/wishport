@@ -6,13 +6,15 @@
 
 package tf.veriny.wishport.io.fs
 
+import tf.veriny.wishport.CancellableResourceResult
 import tf.veriny.wishport.CancellableResult
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.getIOManager
 import tf.veriny.wishport.internals.io.ByteCountResult
-import tf.veriny.wishport.internals.io.ReadableHandle
+import tf.veriny.wishport.internals.io.Empty
+import tf.veriny.wishport.internals.io.IOHandle
 import tf.veriny.wishport.io.FileOpenFlags
 import tf.veriny.wishport.io.FileOpenMode
 
@@ -23,7 +25,7 @@ public class SystemFileHandle
 @OptIn(LowLevelApi::class)
 internal constructor(
     public override val filesystem: Filesystem<SystemPurePath>,
-    public override val raw: ReadableHandle,
+    public override val raw: IOHandle,
     public override val path: SystemPurePath,
 ) : FileHandle<SystemPurePath> {
 
@@ -36,7 +38,7 @@ internal constructor(
         return filesystem.getRelativeFileHandle(this, path, mode, flags)
     }
 
-    @OptIn(Unsafe::class, LowLevelApi::class)
+    @OptIn(LowLevelApi::class)
     override suspend fun readInto(
         buf: ByteArray,
         size: UInt,
@@ -45,6 +47,20 @@ internal constructor(
     ): CancellableResult<ByteCountResult, Fail> {
         val io = getIOManager()
         return io.read(raw, buf, size, fileOffset, bufferOffset)
+    }
+
+    @OptIn(LowLevelApi::class)
+    override suspend fun writeFrom(
+        buf: ByteArray, size: UInt, bufferOffset: Int, fileOffset: ULong
+    ): CancellableResult<ByteCountResult, Fail> {
+        val io = getIOManager()
+        return io.write(raw, buf, size, fileOffset, bufferOffset)
+    }
+
+    @OptIn(LowLevelApi::class)
+    override suspend fun flush(withMetadata: Boolean): CancellableResourceResult<Empty> {
+        val io = getIOManager()
+        return io.fsync(raw, withMetadata)
     }
 
     override fun close() {
