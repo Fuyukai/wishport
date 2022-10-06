@@ -34,18 +34,18 @@ public interface Filesystem<Flavour : PurePath<Flavour>> {
         path: Flavour,
         openMode: FileOpenMode,
         flags: Set<FileOpenFlags> = setOf(),
-    ): CancellableResourceResult<FileHandle<Flavour>>
+    ): CancellableResourceResult<FilesystemHandle<Flavour>>
 
     /**
      * Gets a relative file handle from the specified [handle].
      */
     @Unsafe
     public suspend fun getRelativeFileHandle(
-        handle: FileHandle<Flavour>,
+        handle: FilesystemHandle<Flavour>,
         path: Flavour,
         openMode: FileOpenMode,
         flags: Set<FileOpenFlags> = setOf(),
-    ): CancellableResult<FileHandle<Flavour>, Fail>
+    ): CancellableResult<FilesystemHandle<Flavour>, Fail>
 }
 
 // workaround for lack of Self types, otherwise FileHandle would be FileHandle<Flavour, Filesystem>.

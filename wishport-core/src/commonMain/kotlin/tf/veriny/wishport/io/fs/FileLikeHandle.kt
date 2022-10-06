@@ -6,41 +6,22 @@
 
 package tf.veriny.wishport.io.fs
 
-import tf.veriny.wishport.*
+import tf.veriny.wishport.CancellableResult
+import tf.veriny.wishport.Fail
+import tf.veriny.wishport.IndexOutOfRange
+import tf.veriny.wishport.TooSmall
 import tf.veriny.wishport.annotations.LowLevelApi
-import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.internals.io.ByteCountResult
-import tf.veriny.wishport.internals.io.Empty
 import tf.veriny.wishport.internals.io.IOHandle
-import tf.veriny.wishport.io.FileOpenFlags
-import tf.veriny.wishport.io.FileOpenMode
 
 /**
- * A handle to an opened file on a filesystem.
+ * Defines any object that is file-like, i.e. allows reading and writing as if it was a file.
+ * This includes filesystem files, sockets, pipes, and certain Linux APIs.
  */
-public interface FileHandle<F : PurePath<F>> : Closeable {
-    public companion object;
-
-    /** The filesystem this handle is open on. */
-    public val filesystem: Filesystem<F>
-
+public interface FileLikeHandle {
     /** The raw system file handle for this FileHandle, for usage in backend I/O. */
     @LowLevelApi
     public val raw: IOHandle
-
-    /** The path to this file. */
-    public val path: F
-
-    /**
-     * Opens a file relative to this file if (and only if) this file is a directory. This will
-     * fail with ENOTDIR otherwise.
-     */
-    @Unsafe
-    public suspend fun openRelative(
-        path: F,
-        mode: FileOpenMode,
-        flags: Set<FileOpenFlags>
-    ): CancellableResult<FileHandle<F>, Fail>
 
     /**
      * Reads data from the file handle into the specified [buf]. The data will be read from the file
@@ -62,13 +43,9 @@ public interface FileHandle<F : PurePath<F>> : Closeable {
      * If any of these are out of bounds, then this will return [IndexOutOfRange] or [TooSmall].
      */
     public suspend fun writeFrom(
-        buf: ByteArray, size: UInt, bufferOffset: Int, fileOffset: ULong
+        buf: ByteArray,
+        size: UInt,
+        bufferOffset: Int,
+        fileOffset: ULong
     ): CancellableResult<ByteCountResult, Fail>
-
-    /**
-     * Flushes the data written into this file to disk. If [withMetadata] is true, then all file
-     * metadata will be flushed; otherwise, only essential metadata relating to write consistency
-     * will be flushed.
-     */
-    public suspend fun flush(withMetadata: Boolean = true): CancellableResourceResult<Empty>
 }

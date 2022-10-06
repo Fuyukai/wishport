@@ -514,7 +514,8 @@ public actual class IOManager(
 
     @Suppress("UNCHECKED_CAST")
     public actual suspend fun fsync(
-        handle: IOHandle, withMetadata: Boolean
+        handle: IOHandle,
+        withMetadata: Boolean
     ): CancellableResourceResult<Empty> {
         val task = getCurrentTask()
 

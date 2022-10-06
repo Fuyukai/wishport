@@ -6,7 +6,7 @@
 
 package tf.veriny.wishport
 
-import tf.veriny.wishport.io.fs.FileHandle
+import tf.veriny.wishport.io.fs.FilesystemHandle
 import tf.veriny.wishport.io.fs.PosixPurePath
 import tf.veriny.wishport.io.fs.openFile
 import kotlin.test.Test
@@ -23,7 +23,7 @@ class `Test Reading Zero` {
     fun `Test reading dev zero`() = runUntilCompleteNoResult {
         ClosingScope {
             val path = PosixPurePath.from("/dev/zero").get()!!
-            val res = FileHandle.openFile(it, path)
+            val res = FilesystemHandle.openFile(it, path)
             assertTrue(res.isSuccess)
             val handle = res.get()!!
             val buf = ByteArray(8) { 1 }

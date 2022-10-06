@@ -17,12 +17,12 @@ import tf.veriny.wishport.io.FileOpenMode
  * Opens a file on the system filesystem and adds it to the specified [ClosingScope].
  */
 @OptIn(Unsafe::class)
-public suspend fun FileHandle.Companion.openFile(
+public suspend fun FilesystemHandle.Companion.openFile(
     scope: ClosingScope,
     path: SystemPurePath,
     fileOpenMode: FileOpenMode = FileOpenMode.READ_ONLY,
     flags: Set<FileOpenFlags> = setOf()
-): CancellableResult<SystemFileHandle, Fail> {
+): CancellableResult<SystemFilesystemHandle, Fail> {
     return SystemFilesystem.getFileHandle(path, fileOpenMode, flags)
         .andAddTo(scope)
 }
@@ -36,6 +36,6 @@ public suspend fun <Flavour : PurePath<Flavour>> Filesystem<Flavour>.openFile(
     path: Flavour,
     fileOpenMode: FileOpenMode = FileOpenMode.READ_ONLY,
     flags: Set<FileOpenFlags> = setOf()
-): CancellableResourceResult<FileHandle<Flavour>> {
+): CancellableResourceResult<FilesystemHandle<Flavour>> {
     return getFileHandle(path, fileOpenMode, flags).andAddTo(scope)
 }

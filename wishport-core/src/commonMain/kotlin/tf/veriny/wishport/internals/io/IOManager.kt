@@ -102,6 +102,7 @@ public expect class IOManager : Closeable {
      * flushed. (This can be thought of as like fsync() vs fdatasync()).
      */
     public suspend fun fsync(
-        handle: IOHandle, withMetadata: Boolean
-    ):  CancellableResourceResult<Empty>
+        handle: IOHandle,
+        withMetadata: Boolean
+    ): CancellableResourceResult<Empty>
 }
