@@ -6,12 +6,10 @@
 
 package tf.veriny.wishport.io.fs
 
-import tf.veriny.wishport.CancellableResourceResult
-import tf.veriny.wishport.CancellableResult
-import tf.veriny.wishport.Fail
+import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
-import tf.veriny.wishport.getIOManager
+import tf.veriny.wishport.core.CancelScope
 import tf.veriny.wishport.internals.io.ByteCountResult
 import tf.veriny.wishport.internals.io.Empty
 import tf.veriny.wishport.internals.io.IOHandle
@@ -66,7 +64,11 @@ internal constructor(
         return io.fsync(raw, withMetadata)
     }
 
-    override fun close() {
-        raw.close()
+    @OptIn(LowLevelApi::class)
+    override suspend fun close(): CancellableResult<Unit, Fail> {
+        return CancelScope(shield = true) {
+            val io = getIOManager()
+            io.closeHandle(raw)
+        }.andThen { Cancellable.empty() }
     }
 }

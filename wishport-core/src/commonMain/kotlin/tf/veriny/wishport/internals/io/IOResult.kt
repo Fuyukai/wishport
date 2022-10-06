@@ -8,13 +8,11 @@
 
 package tf.veriny.wishport.internals.io
 
-import tf.veriny.wishport.Closeable
-
 /**
  * A readable handle for usage in I/O methods.
  */
 // marker interfaces
-public expect interface IOHandle : Closeable
+public expect interface IOHandle
 
 /**
  * Hierachy over the possible I/O results returned from an IO manager.

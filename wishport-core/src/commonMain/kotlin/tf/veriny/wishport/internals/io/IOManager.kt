@@ -45,6 +45,13 @@ public expect class IOManager : Closeable {
     public fun waitForIOUntil(timeout: Long)
 
     // == actual I/O methods == //
+
+    /**
+     * Closes an [IOHandle] asynchronously. This method is uncancellable; you must wait for it to
+     * return.
+     */
+    public suspend fun closeHandle(handle: IOHandle): CancellableResourceResult<Empty>
+
     // CreateFileEx isn't async so we have to punt it off to a worker on windows.
 
     /**

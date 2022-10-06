@@ -18,7 +18,7 @@ import tf.veriny.wishport.io.FileOpenMode
  */
 @OptIn(Unsafe::class)
 public suspend fun FilesystemHandle.Companion.openFile(
-    scope: ClosingScope,
+    scope: AsyncClosingScope,
     path: SystemPurePath,
     fileOpenMode: FileOpenMode = FileOpenMode.READ_ONLY,
     flags: Set<FileOpenFlags> = setOf()
@@ -32,7 +32,7 @@ public suspend fun FilesystemHandle.Companion.openFile(
  */
 @OptIn(Unsafe::class)
 public suspend fun <Flavour : PurePath<Flavour>> Filesystem<Flavour>.openFile(
-    scope: ClosingScope,
+    scope: AsyncClosingScope,
     path: Flavour,
     fileOpenMode: FileOpenMode = FileOpenMode.READ_ONLY,
     flags: Set<FileOpenFlags> = setOf()

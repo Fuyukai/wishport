@@ -127,6 +127,7 @@ public actual class IOManager(
         }
 
         // gross!
+        // TODO: replace this with enum methods maybe
         val data: CancellableResourceResult<IOResult> = when (task.why) {
             // ignore cancellation requests
             SleepingWhy.CANCEL -> {
@@ -148,7 +149,7 @@ public actual class IOManager(
                 else Cancellable.ok(ByteCountResult(readCount))
             }
 
-            SleepingWhy.FSYNC -> {
+            SleepingWhy.FSYNC, SleepingWhy.CLOSE -> {
                 val result = unwrapped.res
                 if (result < 0) Cancellable.failed(abs(result).toSysError())
                 else Cancellable.ok(Empty)
@@ -324,6 +325,23 @@ public actual class IOManager(
     //       as it could return AlreadyAcquired.
     //       but we know that's not the case, so we just cast it and override it.
 
+    @Suppress("UNCHECKED_CAST")
+    public actual suspend fun closeHandle(handle: IOHandle): CancellableResourceResult<Empty> {
+        val task = getCurrentTask()
+        assert(!task.checkIfCancelled().isCancelled) {
+            "closeHandle should never be called from a cancelled context!"
+        }
+
+        return limiter.unwrapAndRun {
+            val sqe = getsqe()
+            io_uring_prep_close(sqe, handle.actualFd)
+            val seq = counter++
+            io_uring_sqe_set_data64(sqe, seq)
+
+            submitAndWait<Empty>(task, seq, SleepingWhy.CLOSE)
+        } as CancellableResourceResult<Empty>
+    }
+
     /**
      * Opens a new handle to a directory.
      */
@@ -473,7 +491,7 @@ public actual class IOManager(
                         sqe, handle.actualFd, buf.addressOf(bufferOffset), size, fileOffset
                     )
                     io_uring_sqe_set_data64(sqe, counter++)
-                    submitAndWait<ByteCountResult>(
+                    submitAndWait(
                         task,
                         sqe.pointed.user_data,
                         SleepingWhy.OPEN_FILE

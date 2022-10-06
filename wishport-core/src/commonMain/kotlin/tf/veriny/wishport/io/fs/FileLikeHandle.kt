@@ -6,10 +6,7 @@
 
 package tf.veriny.wishport.io.fs
 
-import tf.veriny.wishport.CancellableResult
-import tf.veriny.wishport.Fail
-import tf.veriny.wishport.IndexOutOfRange
-import tf.veriny.wishport.TooSmall
+import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.internals.io.ByteCountResult
 import tf.veriny.wishport.internals.io.IOHandle
@@ -18,7 +15,7 @@ import tf.veriny.wishport.internals.io.IOHandle
  * Defines any object that is file-like, i.e. allows reading and writing as if it was a file.
  * This includes filesystem files, sockets, pipes, and certain Linux APIs.
  */
-public interface FileLikeHandle {
+public interface FileLikeHandle : AsyncCloseable {
     /** The raw system file handle for this FileHandle, for usage in backend I/O. */
     @LowLevelApi
     public val raw: IOHandle

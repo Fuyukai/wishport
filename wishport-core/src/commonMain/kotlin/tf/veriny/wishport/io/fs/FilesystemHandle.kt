@@ -8,7 +8,6 @@ package tf.veriny.wishport.io.fs
 
 import tf.veriny.wishport.CancellableResourceResult
 import tf.veriny.wishport.CancellableResult
-import tf.veriny.wishport.Closeable
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.internals.io.Empty
@@ -18,7 +17,7 @@ import tf.veriny.wishport.io.FileOpenMode
 /**
  * A handle to an opened file on a filesystem.
  */
-public interface FilesystemHandle<F : PurePath<F>> : Closeable, FileLikeHandle {
+public interface FilesystemHandle<F : PurePath<F>> : FileLikeHandle {
     public companion object;
 
     /** The filesystem this handle is open on. */

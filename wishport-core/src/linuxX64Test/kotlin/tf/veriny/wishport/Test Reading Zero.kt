@@ -21,7 +21,7 @@ import kotlin.test.assertTrue
 class `Test Reading Zero` {
     @Test
     fun `Test reading dev zero`() = runUntilCompleteNoResult {
-        ClosingScope {
+        AsyncClosingScope {
             val path = PosixPurePath.from("/dev/zero").get()!!
             val res = FilesystemHandle.openFile(it, path)
             assertTrue(res.isSuccess)
