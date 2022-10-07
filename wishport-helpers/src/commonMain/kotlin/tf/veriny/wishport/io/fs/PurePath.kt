@@ -183,6 +183,16 @@ public interface PurePath<Flavour : PurePath<Flavour>> {
  */
 public expect class SystemPurePath : PurePath<SystemPurePath>
 
+/**
+ * Gets a [SystemPurePath] for the specified [s]tring.
+ */
+public expect fun systemPathFor(s: String): PathResult<SystemPurePath>
+
+/**
+ * Gets a [SystemPurePath] for the specified ByteString.
+ */
+public expect fun systemPathFor(bs: ByteString): PathResult<SystemPurePath>
+
 // error types
 /**
  * Returned from PurePath creation methods if an illegal character is in the path provided.
