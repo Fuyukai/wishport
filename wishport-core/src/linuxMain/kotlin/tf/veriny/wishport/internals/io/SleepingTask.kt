@@ -35,6 +35,7 @@ internal enum class SleepingWhy {
     POLL_ADD,
     POLL_UPDATE,
     MKDIR,
+    UNLINK,
 
     ;
 }

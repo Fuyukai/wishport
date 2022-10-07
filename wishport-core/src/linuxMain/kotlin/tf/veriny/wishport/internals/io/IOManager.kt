@@ -165,7 +165,9 @@ public actual class IOManager(
                 Cancellable.ok(PollResult(intoFlags(result)))
             }
 
-            SleepingWhy.FSYNC, SleepingWhy.CLOSE, SleepingWhy.POLL_UPDATE, SleepingWhy.MKDIR -> {
+            SleepingWhy.FSYNC, SleepingWhy.CLOSE,
+            SleepingWhy.POLL_UPDATE, SleepingWhy.MKDIR,
+            SleepingWhy.UNLINK -> {
                 Cancellable.ok(Empty)
             }
         }
@@ -547,7 +549,7 @@ public actual class IOManager(
                     )
                     val seq = counter++
                     io_uring_sqe_set_data64(sqe, seq)
-                    submitAndWait<ByteCountResult>(task, seq, SleepingWhy.READ_WRITE)
+                    submitAndWait(task, seq, SleepingWhy.READ_WRITE)
                 }
             }
     }
@@ -633,6 +635,34 @@ public actual class IOManager(
                     val seq = counter++
                     io_uring_sqe_set_data64(sqe, seq)
                     submitAndWait<Empty>(task, seq, SleepingWhy.MKDIR)
+                }
+            } as CancellableResourceResult<Empty>
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    @OptIn(Unsafe::class)
+    public actual suspend fun unlinkAt(
+        dirHandle: DirectoryHandle?,
+        path: ByteString,
+        removeDir: Boolean,
+    ): CancellableResourceResult<Empty> = memScoped {
+        val task = getCurrentTask()
+
+        return task.checkIfCancelled()
+            .andThen {
+                limiter.unwrapAndRun {
+                    val sqe = getsqe()
+
+                    val dirFd = dirHandle?.actualFd ?: _AT_FDCWD
+                    val buf = path.pinnedTerminated()
+                    defer { buf.unpin() }
+
+                    val flags = if (!removeDir) 0 else _AT_REMOVEDIR
+
+                    io_uring_prep_unlinkat(sqe, dirFd, buf.addressOf(0), flags)
+                    val seq = counter++
+                    io_uring_sqe_set_data64(sqe, seq)
+                    submitAndWait<Empty>(task, seq, SleepingWhy.UNLINK)
                 }
             } as CancellableResourceResult<Empty>
     }

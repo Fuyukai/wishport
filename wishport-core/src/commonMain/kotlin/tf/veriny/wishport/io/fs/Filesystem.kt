@@ -10,6 +10,7 @@ import tf.veriny.wishport.CancellableResourceResult
 import tf.veriny.wishport.CancellableResult
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.Unsafe
+import tf.veriny.wishport.internals.io.Empty
 import tf.veriny.wishport.io.FileOpenFlags
 import tf.veriny.wishport.io.FileOpenMode
 
@@ -46,6 +47,23 @@ public interface Filesystem<Flavour : PurePath<Flavour>> {
         openMode: FileOpenMode,
         flags: Set<FileOpenFlags> = setOf(),
     ): CancellableResult<FilesystemHandle<Flavour>, Fail>
+
+    /**
+     * Unlinks a file from this filesystem. If [removeDir] is true, and the path is an empty
+     * directory, then the directory will be removed; otherwise, this will fail with EISDIR.
+     */
+    public suspend fun unlink(
+        path: Flavour, removeDir: Boolean = false
+    ): CancellableResourceResult<Empty>
+
+    /**
+     * Unlinks a file from this filesystem, relative to [otherHandle].
+     */
+    public suspend fun unlinkRelative(
+        otherHandle: FilesystemHandle<Flavour>,
+        path: Flavour,
+        removeDir: Boolean = false
+    ): CancellableResult<Empty, Fail>
 }
 
 // workaround for lack of Self types, otherwise FileHandle would be FileHandle<Flavour, Filesystem>.

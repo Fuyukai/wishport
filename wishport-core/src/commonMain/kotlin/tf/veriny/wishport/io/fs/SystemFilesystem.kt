@@ -9,10 +9,12 @@ package tf.veriny.wishport.io.fs
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
-import tf.veriny.wishport.internals.EventLoop
 import tf.veriny.wishport.internals.io.DirectoryHandle
+import tf.veriny.wishport.internals.io.Empty
 import tf.veriny.wishport.io.FileOpenFlags
 import tf.veriny.wishport.io.FileOpenMode
+
+private typealias SysFsHandle = FilesystemHandle<SystemPurePath>
 
 /**
  * The filesystem for the main operating system namespace.
@@ -25,7 +27,7 @@ public object SystemFilesystem : Filesystem<SystemPurePath> {
         openMode: FileOpenMode,
         flags: Set<FileOpenFlags>
     ): CancellableResourceResult<SystemFilesystemHandle> {
-        val manager = EventLoop.get().ioManager
+        val manager = getIOManager()
         return manager.openFilesystemFile(
             null, path.toByteString(), openMode, flags
         )
@@ -36,7 +38,7 @@ public object SystemFilesystem : Filesystem<SystemPurePath> {
 
     @Unsafe
     override suspend fun getRelativeFileHandle(
-        handle: FilesystemHandle<SystemPurePath>,
+        handle: SysFsHandle,
         path: SystemPurePath,
         openMode: FileOpenMode,
         flags: Set<FileOpenFlags>
@@ -46,12 +48,31 @@ public object SystemFilesystem : Filesystem<SystemPurePath> {
         if (handle.raw !is DirectoryHandle) return Cancellable.failed(NotADirectory)
         if (handle.filesystem != this) return Cancellable.failed(WrongFilesystemError)
 
-        val manager = EventLoop.get().ioManager
+        val manager = getIOManager()
         return manager.openFilesystemFile(
             handle.raw as DirectoryHandle, path.toByteString(), openMode, flags
         )
             .andThen {
                 return Cancellable.ok(SystemFilesystemHandle(this, it, path))
             }
+    }
+
+    override suspend fun unlink(
+        path: SystemPurePath, removeDir: Boolean
+    ): CancellableResourceResult<Empty> {
+        val manager = getIOManager()
+        return manager.unlinkAt(null, path.toByteString(), removeDir)
+    }
+
+    override suspend fun unlinkRelative(
+        otherHandle: SysFsHandle,
+        path: SystemPurePath,
+        removeDir: Boolean
+    ): CancellableResult<Empty, Fail> {
+        if (otherHandle.raw !is DirectoryHandle) return Cancellable.failed(NotADirectory)
+        if (otherHandle.filesystem != this) return Cancellable.failed(WrongFilesystemError)
+
+        val manager = getIOManager()
+        return manager.unlinkAt(otherHandle.raw as DirectoryHandle, path.toByteString(), removeDir)
     }
 }

@@ -55,9 +55,11 @@ public expect class IOManager : Closeable {
     // CreateFileEx isn't async so we have to punt it off to a worker on windows.
 
     /**
-     * Opens a directory on the real filesystem, returning a directory handle. If [dirHandle] is
-     * provided, the directory will be opened relative to the other directory (using openat()
-     * semantics).
+     * Opens a directory on the real filesystem, returning a directory handle.
+     *
+     * If [dirHandle] is provided, the directory will be opened relative to it. If null is provided,
+     * then the directory will be opened relative to the current working directory. If path is an
+     * absolute path, then the provided handle is ignored.
      */
     @Unsafe
     public suspend fun openFilesystemDirectory(
@@ -66,9 +68,11 @@ public expect class IOManager : Closeable {
     ): CancellableResourceResult<DirectoryHandle>
 
     /**
-     * Opens a file on the real filesystem, returning a file handle. If [dirHandle] is
-     * provided, the file will be opened relative to the provided directory (using openat()
-     * semantics).
+     * Opens a file on the real filesystem, returning a file handle.
+     *
+     * If [dirHandle] is provided, the file will be opened relative to it. If null is provided,
+     * then the file will be opened relative to the current working directory. If path is an
+     * absolute path, then the provided handle is ignored.
      */
     @Unsafe
     public suspend fun openFilesystemFile(
@@ -131,12 +135,30 @@ public expect class IOManager : Closeable {
     ): CancellableResourceResult<PollResult>
 
     /**
-     * Creates a new directory relative to the specified directory. If null is provided, then the
-     * new directory will be relative to the current working directory. If path is an absolute
-     * path, then the provided handle is ignored.
+     * Creates a new directory.
+     *
+     * If [dirHandle] is provided, the new directory will be relative to it. If null is provided,
+     * then the new directory will be relative to the current working directory. If path is an
+     * absolute path, then the provided handle is ignored.
      */
     public suspend fun makeDirectoryAt(
         dirHandle: DirectoryHandle?,
         path: ByteString,
+    ): CancellableResourceResult<Empty>
+
+    /**
+     * Removes or unlinks a file relative to the specified directory.
+     *
+     * If [dirHandle] is provided, the unlinked file will be relative to it. If null is provided,
+     * then the unlinked file will be relative to the current working directory. If path is an
+     * absolute path, then the provided handle is ignored.
+     *
+     * If [removeDir] is true, then if this path refers to an empty directory, it will be deleted.
+     * Otherwise, it will error with EISDIR.
+     */
+    public suspend fun unlinkAt(
+        dirHandle: DirectoryHandle?,
+        path: ByteString,
+        removeDir: Boolean,
     ): CancellableResourceResult<Empty>
 }

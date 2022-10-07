@@ -9,3 +9,4 @@ static const int _AT_FDCWD = AT_FDCWD;
 static const int _O_DIRECT = O_DIRECT;
 static const int _O_NOATIME = O_NOATIME;
 static const int _O_TMPFILE = O_TMPFILE;
+static const int _AT_REMOVEDIR = AT_REMOVEDIR;

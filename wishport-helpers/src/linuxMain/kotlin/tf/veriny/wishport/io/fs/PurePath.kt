@@ -12,3 +12,6 @@ import tf.veriny.wishport.collections.b
 public actual val PATH_SEP: ByteString = b("/")
 
 public actual typealias SystemPurePath = PosixPurePath
+
+public actual fun systemPathFor(s: String): PathResult<SystemPurePath> = PosixPurePath.from(s)
+public actual fun systemPathFor(bs: ByteString): PathResult<SystemPurePath> = PosixPurePath.from(bs)
