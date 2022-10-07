@@ -11,6 +11,8 @@ package tf.veriny.wishport.internals.io
 import external.liburing.*
 import kotlinx.cinterop.*
 import platform.extra.*
+import platform.linux.EPOLLIN
+import platform.linux.EPOLLOUT
 import platform.posix.*
 import platform.posix.EAGAIN
 import platform.posix.EBUSY
@@ -110,6 +112,9 @@ public actual class IOManager(
         }
     }
 
+    public val pendingItems: Int
+        get() = tasks.size
+
     private fun handleCqe(cqe: CPointerVar<io_uring_cqe>) {
         val unwrapped = cqe.pointed!!
         val task = tasks[unwrapped.user_data]
@@ -119,10 +124,19 @@ public actual class IOManager(
             return
         }
 
+        task.completed = true
+        val result = unwrapped.res
+
         // successful cancellation
-        if (unwrapped.res == -EINTR) {
-            task.completed = true
-            task.wakeupData = Cancellable.cancelled()
+        if (result < 0) {
+            if (result == -EINTR || result == -tf.veriny.wishport.ECANCELED) {
+                task.wakeupData = Cancellable.cancelled()
+                tasks.remove(task.id)
+                return
+            }
+
+            task.wakeupData = Cancellable.failed(abs(unwrapped.res).toSysError())
+            tasks.remove(task.id)
             return
         }
 
@@ -133,31 +147,32 @@ public actual class IOManager(
             SleepingWhy.CANCEL -> {
                 task.completed = true
                 task.wakeupData = Cancellable.cancelled()
+                tasks.remove(task.id)
                 return
             }
 
             // impl note, these are the same (openat2) on linux
             SleepingWhy.OPEN_DIRECTORY, SleepingWhy.OPEN_FILE -> {
                 val fd = unwrapped.res
-                if (fd < 0) Cancellable.failed(abs(fd).toSysError())
-                else Cancellable.ok(Fd(fd))
+                Cancellable.ok(Fd(fd))
             }
 
             SleepingWhy.READ_WRITE -> {
-                val readCount = unwrapped.res
-                if (readCount < 0) Cancellable.failed(abs(readCount).toSysError())
-                else Cancellable.ok(ByteCountResult(readCount))
+                Cancellable.ok(ByteCountResult(result))
             }
 
-            SleepingWhy.FSYNC, SleepingWhy.CLOSE -> {
-                val result = unwrapped.res
-                if (result < 0) Cancellable.failed(abs(result).toSysError())
-                else Cancellable.ok(Empty)
+            SleepingWhy.POLL_ADD -> {
+                Cancellable.ok(PollResult(intoFlags(result)))
+            }
+
+            SleepingWhy.FSYNC, SleepingWhy.CLOSE, SleepingWhy.POLL_UPDATE -> {
+                Cancellable.ok(Empty)
             }
         }
 
         task.completed = true
         task.wakeupData = data
+        tasks.remove(task.id)
         task.task.reschedule()
     }
 
@@ -297,8 +312,15 @@ public actual class IOManager(
         val sleep2 = SleepingTask(task, cancellationId, why)
         tasks[cancellationId] = sleep2
 
+        // for poll events, we can't use prep_cancel (... as far as I know, anyway)
+        // so we have to use poll_remove. it's the same thing, according to the man pages.
         val sqe = getsqe()
-        io_uring_prep_cancel64(sqe, id, 0)
+        if (why == SleepingWhy.POLL_ADD) {
+            io_uring_prep_poll_remove(sqe, id)
+        } else {
+            io_uring_prep_cancel64(sqe, id, 0)
+        }
+
         io_uring_sqe_set_data64(sqe, cancellationId)
         submit()
 
@@ -549,6 +571,44 @@ public actual class IOManager(
                     submitAndWait<Empty>(task, seq, SleepingWhy.FSYNC)
                 }
             } as CancellableResourceResult<Empty>
+    }
+
+    private fun pollFlags(fl: Set<Poll>): UInt {
+        var flags = 0
+        for (item in fl) {
+            when (item) {
+                Poll.POLL_READ -> {
+                    flags = flags.or(EPOLLIN)
+                }
+                Poll.POLL_WRITE -> {
+                    flags = flags.or(EPOLLOUT)
+                }
+                // ignore
+                else -> {}
+            }
+        }
+        return flags.convert()
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    public actual suspend fun pollHandle(
+        handle: IOHandle, what: Set<Poll>
+    ): CancellableResourceResult<PollResult> {
+        val task = getCurrentTask()
+
+        return task.checkIfCancelled()
+            .andThen {
+                limiter.unwrapAndRun {
+                    val flags = pollFlags(what)
+                    val sqe = getsqe()
+
+                    io_uring_prep_poll_add(sqe, handle.actualFd, flags)
+                    val seq = counter++
+                    io_uring_sqe_set_data64(sqe, seq)
+
+                    submitAndWait<PollResult>(task, seq, SleepingWhy.POLL_ADD)
+                }
+            } as CancellableResourceResult<PollResult>
     }
 
     override fun close() {

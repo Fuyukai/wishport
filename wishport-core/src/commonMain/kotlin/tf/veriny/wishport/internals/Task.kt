@@ -47,13 +47,15 @@ public class Task(
 
     internal lateinit var nursery: Nursery
 
+    internal var suspended = Throwable().stackTraceToString()
+
     // public properties
     /** If this task is the currently running (i.e. primary) task. */
     public var running: Boolean = false
         private set
 
     /** The cancellation scope currently associated with this task. */
-    public var cancelScope: CancelScope? = cancelScope
+    public var cancelScope: CancelScope? = null
         internal set(value) {
             val old = field
             field = value
@@ -61,6 +63,12 @@ public class Task(
             old?.tasks?.remove(this)
             value?.tasks?.add(this)
         }
+
+    // https://youtrack.jetbrains.com/issue/KT-6624
+    // this downright retarded behaviour caused me like an entire night of anguish
+    init {
+        this.cancelScope = cancelScope
+    }
 
     override fun resumeWith(result: Result<CancellableResult<*, *>>) {
         if (result.isFailure) {
@@ -103,6 +111,7 @@ public class Task(
      * Suspends the current task.
      */
     internal suspend fun suspendTask(): CancellableEmpty {
+        suspended = Throwable().stackTraceToString()
         suspendCoroutine {
             this.continuation = it
         }

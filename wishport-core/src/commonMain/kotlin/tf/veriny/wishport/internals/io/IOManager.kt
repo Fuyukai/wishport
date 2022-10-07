@@ -112,4 +112,20 @@ public expect class IOManager : Closeable {
         handle: IOHandle,
         withMetadata: Boolean
     ): CancellableResourceResult<Empty>
+
+    // io_uring has io_uring_prep_poll_add/poll_remove
+    // but windows has these absolute bastard methods in winsock that suck fuck to use
+    // WSAPoll 1) only supports 512 sockets (not true) 2) is O(n) (lol)
+    // WaitForEvent shit is just terrible overall
+    // IOCP doesn't work properly by default!
+    // so instead we just do what all the cool kids (read: trio) does and talk directly to AFD, the
+    // kernel socket driver. if M$ doesn't want us doing this stuff, they should stop encouraging
+    // usage of the Nt functions in their docs instead.
+
+    /**
+     * Polls a handle for readiness. Returns the set of events the handle is ready for.
+     */
+    public suspend fun pollHandle(
+        handle: IOHandle, what: Set<Poll>
+    ): CancellableResourceResult<PollResult>
 }

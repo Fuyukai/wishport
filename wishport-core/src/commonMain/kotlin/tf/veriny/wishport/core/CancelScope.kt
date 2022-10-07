@@ -265,6 +265,6 @@ private constructor(
     override fun toString(): String {
         return "CancelScope[cancelled=$permanentlyCancelled, " +
             "local=$localDeadline, " +
-            "effective=$effectiveDeadline]"
+            "effective=$effectiveDeadline, children=${children.size}]"
     }
 }

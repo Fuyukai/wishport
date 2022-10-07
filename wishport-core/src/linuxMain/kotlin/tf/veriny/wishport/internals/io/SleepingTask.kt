@@ -32,6 +32,8 @@ internal enum class SleepingWhy {
     OPEN_FILE,
     READ_WRITE,
     FSYNC,
+    POLL_ADD,
+    POLL_UPDATE,
 
     ;
 }

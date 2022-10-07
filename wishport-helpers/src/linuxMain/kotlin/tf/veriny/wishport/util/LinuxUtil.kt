@@ -8,6 +8,7 @@ package tf.veriny.wishport.util
 
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.toKString
 import kotlinx.cinterop.usePinned
 import platform.posix.strerror_r
 
@@ -20,5 +21,5 @@ public fun kstrerror(errno: Int): String = memScoped {
     }
 
     // le
-    return buf.decodeToString()
+    return buf.toKString()
 }

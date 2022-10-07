@@ -22,7 +22,7 @@ public expect sealed interface IOResult
 /**
  * An empty result for system calls that don't return anything.
  */
-public expect object Empty : IOResult
+public object Empty : IOResult
 
 /**
  * A handle to an open directory on a filesystem. This may be a real directory on the default
@@ -39,4 +39,9 @@ public expect class RawFileHandle : IOResult, IOHandle
 /**
  * The result of a read/write operation.
  */
-public expect value class ByteCountResult(public val count: Int) : IOResult
+public value class ByteCountResult(public val count: Int) : IOResult
+
+/**
+ * The result of a poll operation.
+ */
+public value class PollResult(public val polled: Set<Poll>) : IOResult
