@@ -22,7 +22,7 @@ public suspend fun FilesystemHandle.Companion.openFile(
     path: SystemPurePath,
     fileOpenMode: FileOpenMode = FileOpenMode.READ_ONLY,
     flags: Set<FileOpenFlags> = setOf()
-): CancellableResult<SystemFilesystemHandle, Fail> {
+): CancellableResourceResult<SystemFilesystemHandle> {
     return SystemFilesystem.getFileHandle(path, fileOpenMode, flags)
         .andAddTo(scope)
 }
