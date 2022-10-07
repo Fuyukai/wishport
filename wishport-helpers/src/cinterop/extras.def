@@ -1,8 +1,14 @@
 package = platform.extra
 noStringConversion = strlen strnlen
 ---
+#define _GNU_SOURCE
 #include <stddef.h>
+#include <stdlib.h>
 
 // Avoids the fucking auto-string conversion!
 extern size_t strlen(const char *s);
 extern size_t strnlen(const char *s, size_t maxlen);
+
+// not exported by default platform libs
+// we link against glibc 2.19 but this was in 2.17 so its all good
+extern char* secure_getenv(const char* name);
