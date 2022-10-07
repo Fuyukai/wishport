@@ -7,6 +7,7 @@
 package tf.veriny.wishport
 
 import tf.veriny.wishport.annotations.Unsafe
+import tf.veriny.wishport.io.fs.SystemPurePath
 
 // https://github.com/rust-lang/rust/issues/90308
 
@@ -21,3 +22,8 @@ public expect fun getEnvironmentVariable(name: String, default: String? = null):
  */
 @Unsafe
 public expect fun setEnvironmentVariable(name: String, value: String)
+
+/**
+ * Gets the current working directory.
+ */
+public expect fun getWorkingDirectory(): ResourceResult<SystemPurePath>
