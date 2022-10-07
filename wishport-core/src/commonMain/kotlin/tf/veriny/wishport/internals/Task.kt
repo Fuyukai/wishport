@@ -47,8 +47,6 @@ public class Task(
 
     internal lateinit var nursery: Nursery
 
-    internal var suspended = Throwable().stackTraceToString()
-
     // public properties
     /** If this task is the currently running (i.e. primary) task. */
     public var running: Boolean = false
@@ -111,7 +109,6 @@ public class Task(
      * Suspends the current task.
      */
     internal suspend fun suspendTask(): CancellableEmpty {
-        suspended = Throwable().stackTraceToString()
         suspendCoroutine {
             this.continuation = it
         }
