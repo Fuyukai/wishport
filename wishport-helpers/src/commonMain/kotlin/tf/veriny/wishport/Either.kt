@@ -6,6 +6,8 @@
 
 package tf.veriny.wishport
 
+import kotlin.experimental.ExperimentalTypeInference
+
 /**
  * Marker interface for all failure types. Named Fail to avoid conflicting with kotlin.Error.
  */
@@ -63,11 +65,40 @@ public inline fun <Success, Failure : Fail> Either<Success, Failure>.getFailure(
  * If this is a success, then call the provided function with the unwrapped value. Otherwise,
  * return the failure. This is sometimes confusingly known as ``flatMap``.
  */
+@OptIn(ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
 public inline fun <Success, NewSuccess, Failure : Fail> Either<Success, Failure>.andThen(
     block: (Success) -> Either<NewSuccess, Failure>
 ): Either<NewSuccess, Failure> =
     when (this) {
         is Ok<Success> -> block(value)
+        is Err<Failure> -> this
+    }
+
+@OptIn(ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+public inline fun <Success, NewSuccess, Failure : Fail> Either<Success, Failure>.andThen(
+    block: (Success) -> CancellableResult<NewSuccess, Failure>
+): CancellableResult<NewSuccess, Failure> =
+    when (this) {
+        is Ok<Success> -> block(value)
+        is Err<Failure> -> NotCancelled(this)
+    }
+
+/**
+ * If this is a success, then call the provided function with the unwrapped value and then return
+ * this either. If the provided function returns a failure, then instead return that failure.
+ */
+public inline fun <Success, Failure : Fail> Either<Success, Failure>.andAlso(
+    block: (Success) -> Either<Any, Failure>
+): Either<Success, Failure> =
+    when (this) {
+        is Ok<Success> -> {
+            val res = block(value)
+            // safe cast, <Success> isn't part of us.
+            if (res.isSuccess) this
+            else res as Either<Success, Failure>
+        }
         is Err<Failure> -> this
     }
 

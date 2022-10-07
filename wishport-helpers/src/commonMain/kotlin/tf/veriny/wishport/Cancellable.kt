@@ -131,6 +131,28 @@ public inline fun <NewSuccess, S, F : Fail> CancellableResult<S, F>.andThen(
     }
 
 /**
+ * If this is a success, then call the provided function with the unwrapped value and then return
+ * this either. If the provided function returns a failure, then instead return that failure.
+ */
+public inline fun <Success, Failure : Fail> CancellableResult<Success, Failure>.andAlso(
+    block: (Success) -> CancellableResult<Any, Failure>
+): CancellableResult<Success, Failure> =
+    when (this) {
+        is Cancelled -> this
+        is NotCancelled<Success, Failure, Either<Success, Failure>> -> {
+            when (wrapped) {
+                is Ok<Success> -> {
+                    val res = block(wrapped.value)
+                    // safe cast, <Success> isn't part of us.
+                    if (res.isSuccess) this
+                    else res as CancellableResult<Success, Failure>
+                }
+                is Err<Failure> -> this
+            }
+        }
+    }
+
+/**
  * If this is a non-cancelled success, then return the unwrapped value. Otherwise, return the
  * constant provided to this function.
  */
