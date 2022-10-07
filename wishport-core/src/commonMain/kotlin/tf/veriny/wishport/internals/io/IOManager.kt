@@ -126,6 +126,7 @@ public expect class IOManager : Closeable {
      * Polls a handle for readiness. Returns the set of events the handle is ready for.
      */
     public suspend fun pollHandle(
-        handle: IOHandle, what: Set<Poll>
+        handle: IOHandle,
+        what: Set<Poll>
     ): CancellableResourceResult<PollResult>
 }

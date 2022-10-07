@@ -23,7 +23,6 @@ public class Fd(public override val actualFd: Int) : IOResult, IOHandle
 public actual typealias DirectoryHandle = Fd
 public actual typealias RawFileHandle = Fd
 
-
 /**
  * Converts a [PollResult] into a set of [Poll] flags.
  */

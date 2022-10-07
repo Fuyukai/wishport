@@ -592,7 +592,8 @@ public actual class IOManager(
 
     @Suppress("UNCHECKED_CAST")
     public actual suspend fun pollHandle(
-        handle: IOHandle, what: Set<Poll>
+        handle: IOHandle,
+        what: Set<Poll>
     ): CancellableResourceResult<PollResult> {
         val task = getCurrentTask()
 
