@@ -8,13 +8,9 @@ package tf.veriny.wishport.io.fs
 
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
-import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.core.CancelScope
 import tf.veriny.wishport.internals.io.ByteCountResult
-import tf.veriny.wishport.internals.io.Empty
 import tf.veriny.wishport.internals.io.IOHandle
-import tf.veriny.wishport.io.FileOpenFlags
-import tf.veriny.wishport.io.FileOpenMode
 
 /**
  * A file handle to a file on the system filehandle.
@@ -26,16 +22,6 @@ internal constructor(
     public override val raw: IOHandle,
     public override val path: SystemPurePath,
 ) : FilesystemHandle<SystemPurePath> {
-
-    @Unsafe
-    override suspend fun openRelative(
-        path: SystemPurePath,
-        mode: FileOpenMode,
-        flags: Set<FileOpenFlags>,
-    ): CancellableResult<FilesystemHandle<SystemPurePath>, Fail> {
-        return filesystem.getRelativeFileHandle(this, path, mode, flags)
-    }
-
     @OptIn(LowLevelApi::class)
     override suspend fun readInto(
         buf: ByteArray,
@@ -56,12 +42,6 @@ internal constructor(
     ): CancellableResult<ByteCountResult, Fail> {
         val io = getIOManager()
         return io.write(raw, buf, size, fileOffset, bufferOffset)
-    }
-
-    @OptIn(LowLevelApi::class)
-    override suspend fun flush(withMetadata: Boolean): CancellableResourceResult<Empty> {
-        val io = getIOManager()
-        return io.fsync(raw, withMetadata)
     }
 
     @OptIn(LowLevelApi::class)

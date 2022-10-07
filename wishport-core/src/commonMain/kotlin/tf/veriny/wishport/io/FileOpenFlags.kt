@@ -39,6 +39,21 @@ public enum class FileOpenFlags {
      */
     DIRECT,
 
+    // linux: O_DIRECTORY
+    /**
+     * When this flag is provided, opening the file will fail if the file path does not refer to
+     * a directory.
+     */
+    DIRECTORY,
+
+    // linux: O_PATH
+    /**
+     * When this flag is provided, then the file will be opened as a path. Most normal operations
+     * will fail, such as reading or writing, but it can be used as a file handle for opening
+     * other files relative to it.
+     */
+    PATH,
+
     // linux: O_NOATIME, windows: n/a
     /**
      * When this flag is provided, a best effort is attempted at not editing the access time for

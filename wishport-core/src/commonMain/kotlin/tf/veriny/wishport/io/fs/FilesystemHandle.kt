@@ -6,14 +6,6 @@
 
 package tf.veriny.wishport.io.fs
 
-import tf.veriny.wishport.CancellableResourceResult
-import tf.veriny.wishport.CancellableResult
-import tf.veriny.wishport.Fail
-import tf.veriny.wishport.annotations.Unsafe
-import tf.veriny.wishport.internals.io.Empty
-import tf.veriny.wishport.io.FileOpenFlags
-import tf.veriny.wishport.io.FileOpenMode
-
 /**
  * A handle to an opened file on a filesystem.
  */
@@ -25,22 +17,4 @@ public interface FilesystemHandle<F : PurePath<F>> : FileLikeHandle {
 
     /** The path to this file. */
     public val path: F
-
-    /**
-     * Opens a file relative to this file if (and only if) this file is a directory. This will
-     * fail with ENOTDIR otherwise.
-     */
-    @Unsafe
-    public suspend fun openRelative(
-        path: F,
-        mode: FileOpenMode,
-        flags: Set<FileOpenFlags>
-    ): CancellableResult<FilesystemHandle<F>, Fail>
-
-    /**
-     * Flushes the data written into this file to disk. If [withMetadata] is true, then all file
-     * metadata will be flushed; otherwise, only essential metadata relating to write consistency
-     * will be flushed.
-     */
-    public suspend fun flush(withMetadata: Boolean = true): CancellableResourceResult<Empty>
 }

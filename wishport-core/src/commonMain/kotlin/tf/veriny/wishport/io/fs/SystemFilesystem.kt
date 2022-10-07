@@ -57,8 +57,36 @@ public object SystemFilesystem : Filesystem<SystemPurePath> {
             }
     }
 
+    override suspend fun flushFile(
+        handle: FilesystemHandle<SystemPurePath>,
+        withMetadata: Boolean
+    ): CancellableResult<Empty, Fail> {
+        if (handle.filesystem != this) return Cancellable.failed(WrongFilesystemError)
+
+        val manager = getIOManager()
+        return manager.fsync(handle.raw, withMetadata = withMetadata)
+    }
+
+    override suspend fun mkdir(path: SystemPurePath): CancellableResourceResult<Empty> {
+        return getIOManager().makeDirectoryAt(null, path.toByteString())
+    }
+
+    override suspend fun mkdirRelative(
+        otherHandle: FilesystemHandle<SystemPurePath>,
+        path: SystemPurePath
+    ): CancellableResult<Empty, Fail> {
+        if (otherHandle.raw !is DirectoryHandle) return Cancellable.failed(NotADirectory)
+        if (otherHandle.filesystem != this) return Cancellable.failed(WrongFilesystemError)
+
+        return getIOManager().makeDirectoryAt(
+            otherHandle.raw as DirectoryHandle,
+            path.toByteString()
+        )
+    }
+
     override suspend fun unlink(
-        path: SystemPurePath, removeDir: Boolean
+        path: SystemPurePath,
+        removeDir: Boolean
     ): CancellableResourceResult<Empty> {
         val manager = getIOManager()
         return manager.unlinkAt(null, path.toByteString(), removeDir)

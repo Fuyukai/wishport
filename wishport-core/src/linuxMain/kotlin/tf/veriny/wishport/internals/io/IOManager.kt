@@ -374,32 +374,11 @@ public actual class IOManager(
     public actual suspend fun openFilesystemDirectory(
         dirHandle: DirectoryHandle?,
         path: ByteString
-    ): CancellableResourceResult<DirectoryHandle> = memScoped {
-        val task = getCurrentTask()
-
-        return task.checkIfCancelled()
-            .andThen {
-                limiter.unwrapAndRun {
-                    val sqe = getsqe()
-                    val how = alloc<open_how>()
-                    // see openat(2), this is mandatory
-                    memset(how.ptr, 0, sizeOf<open_how>().convert())
-                    how.flags = flags(O_RDWR, _O_PATH, O_CLOEXEC, O_DIRECTORY).convert()
-
-                    val dirfd = dirHandle?.actualFd ?: _AT_FDCWD
-
-                    // we live in a world where exceptions are fatal, so this is ok.
-                    val pin = path.pinnedTerminated()
-                    defer { pin.unpin() }
-                    val cPath = pin.addressOf(0)
-
-                    io_uring_prep_openat2(sqe, dirfd, cPath, how.ptr)
-                    io_uring_sqe_set_data64(sqe, counter++)
-                    submitAndWait<DirectoryHandle>(
-                        task, sqe.pointed.user_data, SleepingWhy.OPEN_DIRECTORY
-                    )
-                }
-            } as CancellableResourceResult<DirectoryHandle>
+    ): CancellableResourceResult<DirectoryHandle> {
+        return openFilesystemFile(
+            dirHandle, path, FileOpenMode.READ_WRITE,
+            setOf(FileOpenFlags.PATH, FileOpenFlags.DIRECTORY)
+        )
     }
 
     @Unsafe
@@ -425,6 +404,12 @@ public actual class IOManager(
                 }
                 FileOpenFlags.DIRECT -> {
                     openFlags = openFlags.or(_O_DIRECT).or(O_SYNC)
+                }
+                FileOpenFlags.DIRECTORY -> {
+                    openFlags = openFlags.or(O_DIRECTORY)
+                }
+                FileOpenFlags.PATH -> {
+                    openFlags = openFlags.or(_O_PATH)
                 }
                 FileOpenFlags.NO_ACCESS_TIME -> {
                     openFlags = openFlags.or(_O_NOATIME)

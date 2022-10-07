@@ -38,22 +38,46 @@ public interface Filesystem<Flavour : PurePath<Flavour>> {
     ): CancellableResourceResult<FilesystemHandle<Flavour>>
 
     /**
-     * Gets a relative file handle from the specified [handle].
+     * Gets a relative file handle from the specified [otherHandle].
      */
     @Unsafe
     public suspend fun getRelativeFileHandle(
-        handle: FilesystemHandle<Flavour>,
+        otherHandle: FilesystemHandle<Flavour>,
         path: Flavour,
         openMode: FileOpenMode,
         flags: Set<FileOpenFlags> = setOf(),
     ): CancellableResult<FilesystemHandle<Flavour>, Fail>
 
     /**
+     * Flushes the data written into the specified file to disk. If [withMetadata] is true, then all file
+     * metadata will be flushed; otherwise, only essential metadata relating to write consistency
+     * will be flushed.
+     */
+    public suspend fun flushFile(
+        handle: FilesystemHandle<Flavour>,
+        withMetadata: Boolean = true
+    ): CancellableResult<Empty, Fail>
+
+    /**
+     * Creates a new, empty directory at [path].
+     */
+    public suspend fun mkdir(path: Flavour): CancellableResourceResult<Empty>
+
+    /**
+     * Creates a new, empty directory at the [path] relative to the directory at [otherHandle].
+     */
+    public suspend fun mkdirRelative(
+        otherHandle: FilesystemHandle<Flavour>,
+        path: Flavour
+    ): CancellableResult<Empty, Fail>
+
+    /**
      * Unlinks a file from this filesystem. If [removeDir] is true, and the path is an empty
      * directory, then the directory will be removed; otherwise, this will fail with EISDIR.
      */
     public suspend fun unlink(
-        path: Flavour, removeDir: Boolean = false
+        path: Flavour,
+        removeDir: Boolean = false
     ): CancellableResourceResult<Empty>
 
     /**
