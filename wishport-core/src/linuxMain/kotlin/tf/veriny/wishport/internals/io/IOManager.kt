@@ -165,7 +165,7 @@ public actual class IOManager(
                 Cancellable.ok(PollResult(intoFlags(result)))
             }
 
-            SleepingWhy.FSYNC, SleepingWhy.CLOSE, SleepingWhy.POLL_UPDATE -> {
+            SleepingWhy.FSYNC, SleepingWhy.CLOSE, SleepingWhy.POLL_UPDATE, SleepingWhy.MKDIR -> {
                 Cancellable.ok(Empty)
             }
         }
@@ -610,6 +610,31 @@ public actual class IOManager(
                     submitAndWait<PollResult>(task, seq, SleepingWhy.POLL_ADD)
                 }
             } as CancellableResourceResult<PollResult>
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    @OptIn(Unsafe::class)
+    public actual suspend fun makeDirectoryAt(
+        dirHandle: DirectoryHandle?,
+        path: ByteString
+    ): CancellableResourceResult<Empty> = memScoped {
+        val task = getCurrentTask()
+
+        return task.checkIfCancelled()
+            .andThen {
+                limiter.unwrapAndRun {
+                    val sqe = getsqe()
+
+                    val dirFd = dirHandle?.actualFd ?: _AT_FDCWD
+                    val buf = path.pinnedTerminated()
+                    defer { buf.unpin() }
+
+                    io_uring_prep_mkdirat(sqe, dirFd, buf.addressOf(0), 511 /* 0777 */)
+                    val seq = counter++
+                    io_uring_sqe_set_data64(sqe, seq)
+                    submitAndWait<Empty>(task, seq, SleepingWhy.MKDIR)
+                }
+            } as CancellableResourceResult<Empty>
     }
 
     override fun close() {

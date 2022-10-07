@@ -129,4 +129,14 @@ public expect class IOManager : Closeable {
         handle: IOHandle,
         what: Set<Poll>
     ): CancellableResourceResult<PollResult>
+
+    /**
+     * Creates a new directory relative to the specified directory. If null is provided, then the
+     * new directory will be relative to the current working directory. If path is an absolute
+     * path, then the provided handle is ignored.
+     */
+    public suspend fun makeDirectoryAt(
+        dirHandle: DirectoryHandle?,
+        path: ByteString,
+    ): CancellableResourceResult<Empty>
 }

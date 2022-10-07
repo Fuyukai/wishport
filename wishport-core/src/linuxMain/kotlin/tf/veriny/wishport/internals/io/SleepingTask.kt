@@ -34,6 +34,7 @@ internal enum class SleepingWhy {
     FSYNC,
     POLL_ADD,
     POLL_UPDATE,
+    MKDIR,
 
     ;
 }
