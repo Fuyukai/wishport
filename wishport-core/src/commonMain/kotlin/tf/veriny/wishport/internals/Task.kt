@@ -37,6 +37,9 @@ public class Task(
     // allows us to get the event loop from any suspendable function
     override val context: TaskContext = TaskContext()
 
+    // marker variable used inside CancelScope to avoid extra reschedules
+    internal var wasRescheduledForCancellation = false
+
     // guard
     public var finished: Boolean = false
         private set
@@ -91,6 +94,7 @@ public class Task(
         val lastContinuation = this.continuation
         running = true
         lastContinuation.resume(Unit)
+        wasRescheduledForCancellation = false
         running = false
 
         assert(finished || lastContinuation != continuation) {
@@ -102,6 +106,7 @@ public class Task(
      * Reschedules this task to be ran on the next event loop iteration.
      */
     internal fun reschedule() {
+        assert(!finished) { "cannot reschedule a finished task!" }
         loop.directlyReschedule(this)
     }
 
