@@ -13,6 +13,8 @@ import tf.veriny.wishport.annotations.Unsafe
 public actual class ByteString
 private actual constructor(private val backing: ByteArray) : Collection<Byte> {
     public actual companion object {
+        public actual val EMPTY: ByteString = ByteString(byteArrayOf())
+
         /**
          * Creates a new [ByteString] from a [ByteArray].
          */

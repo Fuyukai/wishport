@@ -125,18 +125,20 @@ public actual class IOManager(
         }
 
         task.completed = true
+        tasks.remove(task.id)
         val result = unwrapped.res
 
-        // successful cancellation
+        // potential error result
         if (result < 0) {
+            // successful cancellation
             if (result == -EINTR || result == -tf.veriny.wishport.ECANCELED) {
                 task.wakeupData = Cancellable.cancelled()
-                tasks.remove(task.id)
+                task.task.reschedule()
                 return
             }
 
             task.wakeupData = Cancellable.failed(abs(unwrapped.res).toSysError())
-            tasks.remove(task.id)
+            task.task.reschedule()
             return
         }
 
@@ -147,7 +149,6 @@ public actual class IOManager(
             SleepingWhy.CANCEL -> {
                 task.completed = true
                 task.wakeupData = Cancellable.cancelled()
-                tasks.remove(task.id)
                 return
             }
 
@@ -174,7 +175,6 @@ public actual class IOManager(
 
         task.completed = true
         task.wakeupData = data
-        tasks.remove(task.id)
         task.task.reschedule()
     }
 
@@ -391,16 +391,26 @@ public actual class IOManager(
     ): CancellableResourceResult<RawFileHandle> = memScoped {
         var openFlags = O_CLOEXEC
 
+        // cool fucking fact!
+        // O_CREAT is not compatible with O_TMPFILE
+        // hijack the flags because this is NOT documented
+
         for (flag in flags) {
             when (flag) {
                 FileOpenFlags.APPEND -> {
                     openFlags = openFlags.or(O_APPEND)
                 }
                 FileOpenFlags.CREATE_IF_NOT_EXISTS -> {
-                    openFlags = openFlags.or(O_CREAT)
+                    if (FileOpenFlags.TEMPORARY_FILE !in flags) {
+                        openFlags = openFlags.or(O_CREAT)
+                    }
                 }
                 FileOpenFlags.MUST_CREATE -> {
-                    openFlags = openFlags.or(O_CREAT).or(O_EXCL)
+                    openFlags = if (FileOpenFlags.TEMPORARY_FILE in flags) {
+                        openFlags.or(O_EXCL)
+                    } else {
+                        openFlags.or(O_CREAT).or(O_EXCL)
+                    }
                 }
                 FileOpenFlags.DIRECT -> {
                     openFlags = openFlags.or(_O_DIRECT).or(O_SYNC)
@@ -452,6 +462,7 @@ public actual class IOManager(
 
                     io_uring_prep_openat2(sqe, dirfd, cPath, how.ptr)
                     io_uring_sqe_set_data64(sqe, counter++)
+
                     submitAndWait<RawFileHandle>(
                         task, sqe.pointed.user_data, SleepingWhy.OPEN_FILE
                     )

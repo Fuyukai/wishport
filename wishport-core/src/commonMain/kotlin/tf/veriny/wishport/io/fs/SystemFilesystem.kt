@@ -38,19 +38,19 @@ public object SystemFilesystem : Filesystem<SystemPurePath> {
 
     @Unsafe
     override suspend fun getRelativeFileHandle(
-        handle: SysFsHandle,
+        otherHandle: SysFsHandle,
         path: SystemPurePath,
         openMode: FileOpenMode,
         flags: Set<FileOpenFlags>
     ): CancellableResult<SystemFilesystemHandle, Fail> {
         // NB: on linux this will still go to io_uring due to DirectoryHandle and FileHandle being
         // identical (and then return the error), but on Windows it'll fail.
-        if (handle.raw !is DirectoryHandle) return Cancellable.failed(NotADirectory)
-        if (handle.filesystem != this) return Cancellable.failed(WrongFilesystemError)
+        if (otherHandle.raw !is DirectoryHandle) return Cancellable.failed(NotADirectory)
+        if (otherHandle.filesystem != this) return Cancellable.failed(WrongFilesystemError)
 
         val manager = getIOManager()
         return manager.openFilesystemFile(
-            handle.raw as DirectoryHandle, path.toByteString(), openMode, flags
+            otherHandle.raw as DirectoryHandle, path.toByteString(), openMode, flags
         )
             .andThen {
                 return Cancellable.ok(SystemFilesystemHandle(this, it, path))

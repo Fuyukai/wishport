@@ -28,9 +28,9 @@ public interface FileLikeHandle : AsyncCloseable {
      */
     public suspend fun readInto(
         buf: ByteArray,
-        size: UInt,
-        bufferOffset: Int,
-        fileOffset: ULong
+        size: UInt = buf.size.toUInt(),
+        bufferOffset: Int = 0,
+        fileOffset: ULong = 0UL
     ): CancellableResult<ByteCountResult, Fail>
 
     /**
@@ -41,8 +41,8 @@ public interface FileLikeHandle : AsyncCloseable {
      */
     public suspend fun writeFrom(
         buf: ByteArray,
-        size: UInt,
-        bufferOffset: Int,
-        fileOffset: ULong
+        size: UInt = buf.size.toUInt(),
+        bufferOffset: Int = 0,
+        fileOffset: ULong = 0UL
     ): CancellableResult<ByteCountResult, Fail>
 }

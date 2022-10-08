@@ -36,10 +36,14 @@ public actual fun getWorkingDirectory(): ResourceResult<PosixPurePath> {
         }
 
         return if (res != null) {
-            val bs = ByteString(buffer.toNullTerminated())
+            val nullTerminated = buffer.indexOf(0)
+            val bs = ByteString(buffer.copyOfRange(0, nullTerminated))
             // safe get(), as getWorkingDirectory won't give us a null byte.
             // if it does, that is a panic-worthy bug.
-            Either.ok(PosixPurePath.from(bs).get()!!)
+            Either.ok(
+                PosixPurePath.from(bs).get()
+                ?: error("getcwd() returned the invalid path $bs!")
+            )
         } else {
             val errno = posix_errno()
 

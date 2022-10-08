@@ -102,6 +102,21 @@ public inline fun <Success, Failure : Fail> Either<Success, Failure>.andAlso(
         is Err<Failure> -> this
     }
 
+@OptIn(ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+public inline fun <Success, Failure : Fail> Either<Success, Failure>.andAlso(
+    block: (Success) -> CancellableResult<Any, Failure>
+): CancellableResult<Success, Failure> =
+    when (this) {
+        is Ok<Success> -> {
+            val res = block(value)
+            // safe cast, <Success> isn't part of us.
+            if (res.isSuccess) this.notCancelled()
+            else res as CancellableResult<Success, Failure>
+        }
+        is Err<Failure> -> this.notCancelled()
+    }
+
 /**
  * If this is a success, then return the unwrapped value. Otherwise, return the constant provided
  * to this function.

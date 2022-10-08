@@ -11,6 +11,7 @@ import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.ByteString
 import tf.veriny.wishport.collections.b
 import tf.veriny.wishport.collections.startsWith
+import tf.veriny.wishport.get
 
 /**
  * A [PurePath] that implements POSIX semantics.
@@ -30,6 +31,9 @@ public open class PosixPurePath(
         private const val SEP = '/'.code.toByte()
         private const val NULL: Byte = 0
         private const val DOT: Byte = '.'.code.toByte()
+
+        /** The path representing the current directory. */
+        public val CURRENT_DIR: PosixPurePath = from(".").get()!!
 
         public fun from(s: String): PathResult<PosixPurePath> {
             return from(b(s))
@@ -95,7 +99,9 @@ public open class PosixPurePath(
                 cursor++
             }
 
-            if (bufferSize > 0) {
+            if (state == ParserState.FIRST_DOT) components.add(PathComponent.CurrentDir)
+            else if (state == ParserState.SECOND_DOT) components.add(PathComponent.PreviousDir)
+            else if (bufferSize > 0) {
                 val data = buffer.copyOfRange(0, bufferSize)
                 val component = PathComponent.Normal(ByteString.uncopied(data))
                 components.add(component)

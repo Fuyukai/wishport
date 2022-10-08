@@ -56,7 +56,7 @@ public suspend fun <F : PurePath<F>> FilesystemHandle<F>.openRelative(
 
 /**
  * Opens a file relative to this file if (and only if) this file is a directory, and then
- * adds it to
+ * adds it to the specified [scope].
  */
 @OptIn(Unsafe::class)
 public suspend fun <F : PurePath<F>> FilesystemHandle<F>.openRelative(

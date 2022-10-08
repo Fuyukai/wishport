@@ -16,6 +16,8 @@ import tf.veriny.wishport.annotations.Unsafe
 public expect class ByteString
 private constructor(backing: ByteArray) : Collection<Byte> {
     public companion object {
+        public val EMPTY: ByteString
+
         /**
          * Creates a new [ByteString] from a [ByteArray].
          */
