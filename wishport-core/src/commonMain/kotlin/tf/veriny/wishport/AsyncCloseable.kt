@@ -20,7 +20,8 @@ public interface AsyncCloseable {
      * This function can still return Cancelled, but it does not actually mean the operation was
      * cancelled.
      *
-     * This method is idempotent; calling it multiple times has no effect.
+     * This method is idempotent; calling it multiple times has no effect. Subsequent calls will
+     * not count as a suspension point.
      */
     public suspend fun close(): CancellableResult<Unit, Fail>
 }

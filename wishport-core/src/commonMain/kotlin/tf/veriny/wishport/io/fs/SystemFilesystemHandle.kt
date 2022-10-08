@@ -22,6 +22,8 @@ internal constructor(
     public override val raw: IOHandle,
     public override val path: SystemPurePath,
 ) : FilesystemHandle<SystemPurePath> {
+    private var closed = false
+
     @OptIn(LowLevelApi::class)
     override suspend fun readInto(
         buf: ByteArray,
@@ -46,9 +48,11 @@ internal constructor(
 
     @OptIn(LowLevelApi::class)
     override suspend fun close(): CancellableResult<Unit, Fail> {
+        if (closed) return Cancellable.empty()
+
         return CancelScope(shield = true) {
             val io = getIOManager()
             io.closeHandle(raw)
-        }.andThen { Cancellable.empty() }
+        }.andThen { closed = true; Cancellable.empty() }
     }
 }
