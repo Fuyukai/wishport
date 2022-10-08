@@ -31,13 +31,13 @@ public sealed interface Either<out Success, out Failure : Fail> {
  * A successful result.
  */
 @PublishedApi
-internal data class Ok<out Success>(public val value: Success) : Either<Success, Nothing>
+internal data class Ok<out Success>(val value: Success) : Either<Success, Nothing>
 
 /**
  * A non-successful result.
  */
 @PublishedApi
-internal data class Err<out Failure : Fail>(public val value: Failure) : Either<Nothing, Failure>
+internal data class Err<out Failure : Fail>(val value: Failure) : Either<Nothing, Failure>
 
 // helper extensions
 public inline val Either<*, *>.isSuccess: Boolean get() = this is Ok<*>

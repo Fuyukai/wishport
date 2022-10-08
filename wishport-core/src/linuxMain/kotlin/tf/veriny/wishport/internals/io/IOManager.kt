@@ -461,10 +461,11 @@ public actual class IOManager(
                     val cPath = pin.addressOf(0)
 
                     io_uring_prep_openat2(sqe, dirfd, cPath, how.ptr)
-                    io_uring_sqe_set_data64(sqe, counter++)
+                    val seq = counter++
+                    io_uring_sqe_set_data64(sqe, seq)
 
                     submitAndWait<RawFileHandle>(
-                        task, sqe.pointed.user_data, SleepingWhy.OPEN_FILE
+                        task, seq, SleepingWhy.OPEN_FILE
                     )
                 }
             } as CancellableResourceResult<RawFileHandle>
@@ -510,12 +511,9 @@ public actual class IOManager(
                     io_uring_prep_read(
                         sqe, handle.actualFd, buf.addressOf(bufferOffset), size, fileOffset
                     )
-                    io_uring_sqe_set_data64(sqe, counter++)
-                    submitAndWait(
-                        task,
-                        sqe.pointed.user_data,
-                        SleepingWhy.OPEN_FILE
-                    )
+                    val seq = counter++
+                    io_uring_sqe_set_data64(sqe, seq)
+                    submitAndWait(task, seq, SleepingWhy.OPEN_FILE)
                 }
             }
     }
