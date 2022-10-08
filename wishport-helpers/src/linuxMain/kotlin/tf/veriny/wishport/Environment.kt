@@ -42,7 +42,7 @@ public actual fun getWorkingDirectory(): ResourceResult<PosixPurePath> {
             // if it does, that is a panic-worthy bug.
             Either.ok(
                 PosixPurePath.from(bs).get()
-                ?: error("getcwd() returned the invalid path $bs!")
+                    ?: error("getcwd() returned the invalid path $bs!")
             )
         } else {
             val errno = posix_errno()

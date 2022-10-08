@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.wishport.io.fs
 
 import tf.veriny.wishport.AsyncClosingScope
@@ -6,7 +12,6 @@ import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.ProvisionalApi
 import tf.veriny.wishport.io.FileOpenFlags
 import tf.veriny.wishport.io.FileOpenMode
-
 
 /**
  * Opens a new temporary file in an available temporary directory, adds it to the specified

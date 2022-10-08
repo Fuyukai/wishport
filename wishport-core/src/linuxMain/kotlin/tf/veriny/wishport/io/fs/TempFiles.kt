@@ -42,13 +42,8 @@ private fun getCandidateDirectories(): List<SystemPurePath> {
         if (result.isSuccess) dirs.add(result.get()!!)
     }
 
-    val osInfo = Platform.osFamily
-    if (osInfo == OsFamily.WINDOWS) {
-        TODO("windows get candidates")
-    } else {
-        dirs.add(systemPathFor("/tmp").get()!!)
-        dirs.add(systemPathFor("/var/tmp").get()!!)
-    }
+    dirs.add(systemPathFor("/tmp").get()!!)
+    dirs.add(systemPathFor("/var/tmp").get()!!)
 
     // use current dir as a fallback
     getWorkingDirectory().get()?.also { dirs.add(it) }
@@ -108,7 +103,6 @@ public actual suspend fun openTemporaryFile(
     mode: FileOpenMode,
     flags: Set<FileOpenFlags>
 ): CancellableResult<FilesystemHandle<SystemPurePath>, Fail> {
-    val fileName = TempFileNamer.next()
     val realFlags = flags + setOf(
         FileOpenFlags.MUST_CREATE, FileOpenFlags.TEMPORARY_FILE
     )
