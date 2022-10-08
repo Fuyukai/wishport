@@ -22,7 +22,8 @@ internal constructor(
     public override val raw: IOHandle,
     public override val path: SystemPurePath,
 ) : FilesystemHandle<SystemPurePath> {
-    private var closed = false
+    public override var closed: Boolean = false
+        private set
 
     @OptIn(LowLevelApi::class)
     override suspend fun readInto(
@@ -31,6 +32,8 @@ internal constructor(
         bufferOffset: Int,
         fileOffset: ULong
     ): CancellableResult<ByteCountResult, Fail> {
+        if (closed) return Cancellable.failed(ResourceClosed)
+
         val io = getIOManager()
         return io.read(raw, buf, size, fileOffset, bufferOffset)
     }
@@ -42,6 +45,8 @@ internal constructor(
         bufferOffset: Int,
         fileOffset: ULong
     ): CancellableResult<ByteCountResult, Fail> {
+        if (closed) return Cancellable.failed(ResourceClosed)
+
         val io = getIOManager()
         return io.write(raw, buf, size, fileOffset, bufferOffset)
     }

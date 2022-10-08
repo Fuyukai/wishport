@@ -59,6 +59,9 @@ public interface AsyncClosingScope : AsyncCloseable {
  * Implementation of a closing scope that can be (unsafely) directly constructed.
  */
 public class AsyncClosingScopeImpl @Unsafe constructor() : AsyncClosingScope {
+    override var closed: Boolean = false
+        private set
+
     // Note: This is an identity set to ensure that two objects which may be equal are both added
     // to the set.
     // This ensures that they both get closed.
@@ -82,6 +85,8 @@ public class AsyncClosingScopeImpl @Unsafe constructor() : AsyncClosingScope {
 
     @OptIn(LowLevelApi::class)
     override suspend fun close(): CancellableResult<Unit, Fail> {
+        if (closed) return Cancellable.failed(AlreadyClosedError)
+
         // open our own shield to protect against improperly written closes
         CancelScope.open(shield = true) {
             for (item in toClose) {

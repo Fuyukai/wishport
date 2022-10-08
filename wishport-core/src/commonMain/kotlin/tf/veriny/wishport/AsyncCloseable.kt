@@ -12,6 +12,9 @@ package tf.veriny.wishport
  * An interface for all objects that are asynchronously closeable.
  */
 public interface AsyncCloseable {
+    /** Gets if this [AsyncCloseable] is closed. */
+    public val closed: Boolean
+
     /**
      * Closes this object. This is a unique function in that it is the only one that completely
      * ignores cancellation; all cancellations will simply be suppressed until the close operation
@@ -35,3 +38,8 @@ public suspend inline fun <S : AsyncCloseable, R> S.use(
         close()
     }
 }
+
+/**
+ * Error object for trying to use an object that's already been closed.
+ */
+public object ResourceClosed : Fail
