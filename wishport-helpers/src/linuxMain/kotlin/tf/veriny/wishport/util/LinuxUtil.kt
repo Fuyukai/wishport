@@ -10,9 +10,9 @@ import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.toKString
 import kotlinx.cinterop.usePinned
+import platform.posix.EINVAL
+import platform.posix.ERANGE
 import platform.posix.strerror_r
-import tf.veriny.wishport.EINVAL
-import tf.veriny.wishport.ERANGE
 
 /**
  * Converts an integer [errno] into a human-readable string.

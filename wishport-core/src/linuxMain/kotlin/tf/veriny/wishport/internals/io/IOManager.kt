@@ -14,10 +14,6 @@ import platform.extra.*
 import platform.linux.EPOLLIN
 import platform.linux.EPOLLOUT
 import platform.posix.*
-import platform.posix.EAGAIN
-import platform.posix.EBUSY
-import platform.posix.EINTR
-import platform.posix.ETIME
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
@@ -131,7 +127,7 @@ public actual class IOManager(
         // potential error result
         if (result < 0) {
             // successful cancellation
-            if (result == -EINTR || result == -tf.veriny.wishport.ECANCELED) {
+            if (result == -EINTR || result == -ECANCELED) {
                 task.wakeupData = Cancellable.cancelled()
                 task.task.reschedule()
                 return

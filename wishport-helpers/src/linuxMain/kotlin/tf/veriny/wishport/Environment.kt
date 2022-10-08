@@ -9,6 +9,7 @@ package tf.veriny.wishport
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
 import platform.extra.secure_getenv
+import platform.posix.ERANGE
 import platform.posix.posix_errno
 import platform.posix.setenv
 import tf.veriny.wishport.annotations.Unsafe
