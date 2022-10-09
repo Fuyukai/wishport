@@ -10,3 +10,6 @@ static const int _O_DIRECT = O_DIRECT;
 static const int _O_NOATIME = O_NOATIME;
 static const int _O_TMPFILE = O_TMPFILE;
 static const int _AT_REMOVEDIR = AT_REMOVEDIR;
+
+// this has a completely mangled export in the default platform lib?
+extern int eventfd(unsigned int initval, int flags);

@@ -32,7 +32,7 @@ public object SystemFilesystem : Filesystem<SystemPurePath> {
             null, path.toByteString(), openMode, flags
         )
             .andThen {
-                return Cancellable.ok(SystemFilesystemHandle(this, it, path))
+                Cancellable.ok(SystemFilesystemHandle(this, it, path))
             }
     }
 
@@ -53,7 +53,7 @@ public object SystemFilesystem : Filesystem<SystemPurePath> {
             otherHandle.raw as DirectoryHandle, path.toByteString(), openMode, flags
         )
             .andThen {
-                return Cancellable.ok(SystemFilesystemHandle(this, it, path))
+                Cancellable.ok(SystemFilesystemHandle(this, it, path))
             }
     }
 

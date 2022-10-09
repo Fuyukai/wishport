@@ -296,3 +296,19 @@ public suspend fun sleepUntil(time: Long): CancellableEmpty {
 public suspend fun sleep(nanos: Long): CancellableEmpty {
     return sleepUntil(getCurrentTime() + nanos)
 }
+
+/**
+ * Runs the specified [block] asynchronously in a separate worker thread.
+ *
+ * This will call [producer] to capture any local variables that may be required, then pass the
+ * return result to [block].
+ */
+@OptIn(LowLevelApi::class)
+public suspend fun <P, S, F : Fail> runSynchronouslyOffThread(
+    producer: () -> P,
+    cancellable: Boolean = false,
+    block: (P) -> Either<S, F>
+): CancellableResult<S, F> {
+    val loop = EventLoop.get()
+    return loop.workerPool.runSyncInThread(cancellable, producer, block)
+}

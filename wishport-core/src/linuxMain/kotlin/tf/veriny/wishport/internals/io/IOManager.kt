@@ -11,8 +11,7 @@ package tf.veriny.wishport.internals.io
 import external.liburing.*
 import kotlinx.cinterop.*
 import platform.extra.*
-import platform.linux.EPOLLIN
-import platform.linux.EPOLLOUT
+import platform.linux.*
 import platform.posix.*
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
@@ -45,6 +44,10 @@ public actual class IOManager(
     private val pollMode: Boolean = false,
 ) : Closeable {
     public actual companion object {
+        // even if you handle 1 million events per second, the SQE counter wouldn't roll over
+        // to this value for 580_000 years.
+        private const val EFD_SQE = 0xFFFF_FFFF_FFFF_0000UL
+
         public actual fun default(): IOManager {
             return IOManager(2048, false)
         }
@@ -56,13 +59,16 @@ public actual class IOManager(
     // THE io_uring
     private val ring = alloca.alloc<io_uring>()
     // blatantly ignoring my own safety rules here
-    private val limiter = CapacityLimiter(size, Unit)
+    private val limiter = CapacityLimiter(size - 1, Unit)
 
     // used for associating tasks and cqes
     private var counter = 0UL
     // todo: replace this with a generificified longmap, or hell perhaps even another ring
     // buffer.
     private val tasks = mutableMapOf<ULong, SleepingTask>()
+
+    // used for thread-side wake ups
+    private val efd = eventfd(0, EFD_CLOEXEC)
 
     init {
         memScoped {
@@ -105,14 +111,27 @@ public actual class IOManager(
                 close()
                 throw InternalWishportError(MISSING_NODROP)
             }
+
+            setupEventFdPoller()
         }
     }
 
     public val pendingItems: Int
         get() = tasks.size
 
+    private fun setupEventFdPoller() {
+        val sqe = getsqe()
+        io_uring_prep_poll_multishot(sqe, efd, EPOLLIN.toUInt().or(EPOLLET))
+        io_uring_sqe_set_data64(sqe, EFD_SQE)
+        submit()
+    }
+
     private fun handleCqe(cqe: CPointerVar<io_uring_cqe>) {
         val unwrapped = cqe.pointed!!
+
+        // ignore the eventfd writes, this is just to wake us up.
+        if (unwrapped.user_data == EFD_SQE) { return }
+
         val task = tasks[unwrapped.user_data]
         if (task == null) {
             // TODO: don't println
@@ -232,6 +251,11 @@ public actual class IOManager(
             io_uring_wait_cqe_timeout(ring.ptr, it.ptr, ts.ptr)
         }
     }
+
+    public actual fun forceWakeUp() {
+        eventfd_write(efd, 1)
+    }
+
 
     // todo: see if we can outrun the poller at some point.
     @Suppress("FoldInitializerAndIfToElvis")

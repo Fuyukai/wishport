@@ -44,6 +44,12 @@ public expect class IOManager : Closeable {
      */
     public fun waitForIOUntil(timeout: Long)
 
+    /**
+     * Forces a wake up of the I/O manager, either now (if it is blocked on I/O) or at the next
+     * iteration of the event loop.
+     */
+    public fun forceWakeUp()
+
     // == actual I/O methods == //
 
     /**

@@ -17,6 +17,8 @@ public class Promise<T : Any> {
     private val event = Event()
     private lateinit var item: T
 
+    public val flag: Boolean by event::flag
+
     /** The number of tasks currently waiting on this event. */
     public val waiters: Int by event::waiters
 

@@ -82,6 +82,12 @@ public class EventLoop private constructor(public val clock: Clock) : Closeable 
     // task that is currently dead on waitAllTasksBlocked
     internal var waitingAllTasksBlocked: Task? = null
 
+    @OptIn(ExperimentalStdlibApi::class)
+    private val workerLazy = lazy {
+        WorkerPool(this, Platform.getAvailableProcessors())
+    }
+    public val workerPool: WorkerPool by workerLazy
+
     /**
      * The I/O manager for the current event loop.
      */
@@ -219,6 +225,11 @@ public class EventLoop private constructor(public val clock: Clock) : Closeable 
             // finish.
             for (e in expired) {
                 e.updateStateFromEventLoop(currentTime)
+            }
+
+            // check for worker thread completion
+            if (workerLazy.isInitialized()) {
+                workerPool.checkThreads()
             }
 
             // there's three possible paths here:
