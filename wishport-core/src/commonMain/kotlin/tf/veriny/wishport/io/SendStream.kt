@@ -15,9 +15,9 @@ public interface SendStream : AsyncCloseable {
     /**
      * Marks this stream as damaged or not.
      *
-     * A damaged stream is one that has been cancelled during [sendAll]. Such streams (for example,
-     * TLS streams) become essentially useless after this, as it's not easily possible to know what
-     * (if any) data was sent or how to retry the operation.
+     * A damaged stream is one that has been cancelled or otherwise failed during [sendAll].
+     * Such streams (for example, TLS streams) become essentially useless after this, as it's not
+     * easily possible to know what (if any) data was sent or how to retry the operation.
      *
      * If a stream has been damaged, then all attempts at [sendAll] will return [StreamDamaged]
      * rather than sending any data.

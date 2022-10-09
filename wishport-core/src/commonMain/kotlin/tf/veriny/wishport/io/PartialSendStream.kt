@@ -22,6 +22,10 @@ public interface PartialSendStream : SendStream {
      * This interface should only be implemented by streams that do support cancellation in
      * the middle of sending a message. Streams with complex framing requirements (e.g. TLS or
      * websockets) must not implement this.
+     *
+     * If this method encounters an error, but data has already been sent, it will return a
+     * [SendMostFailed] that wraps the original error as well as the total number of bytes that
+     * was written before the error occurred. Otherwise, it will just directly return the error.
      */
     public suspend fun sendMost(
         buffer: ByteArray,
@@ -29,3 +33,8 @@ public interface PartialSendStream : SendStream {
         bufferOffset: Int = 0
     ): CancellableResult<ByteCountResult, Fail>
 }
+
+/**
+ * Returned when [PartialSendStream.sendMost] fails.
+ */
+public class SendMostFailed(public val why: Fail, public val byteCount: Int) : Fail

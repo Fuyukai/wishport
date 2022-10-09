@@ -164,7 +164,7 @@ public actual class IOManager(
 
             SleepingWhy.FSYNC, SleepingWhy.CLOSE,
             SleepingWhy.POLL_UPDATE, SleepingWhy.MKDIR,
-            SleepingWhy.UNLINK -> {
+            SleepingWhy.UNLINK, SleepingWhy.SHUTDOWN -> {
                 Cancellable.ok(Empty)
             }
         }
@@ -360,6 +360,31 @@ public actual class IOManager(
 
             submitAndWait<Empty>(task, seq, SleepingWhy.CLOSE)
         } as CancellableResourceResult<Empty>
+    }
+
+    public actual suspend fun shutdown(
+        handle: IOHandle, how: ShutdownHow
+    ): CancellableResourceResult<Empty> {
+        val task = getCurrentTask()
+
+        val why = when (how) {
+            ShutdownHow.READ -> SHUT_RD
+            ShutdownHow.WRITE -> SHUT_WR
+            ShutdownHow.BOTH -> SHUT_RDWR
+        }
+
+        return task.checkIfCancelled()
+            .andThen {
+                limiter.unwrapAndRun {
+                    val sqe = getsqe()
+
+                    io_uring_prep_shutdown(sqe, handle.actualFd, why)
+                    val seq = counter++
+                    io_uring_sqe_set_data64(sqe, seq)
+
+                    submitAndWait<Empty>(task, seq, SleepingWhy.SHUTDOWN)
+                }
+            } as CancellableResourceResult<Empty>
     }
 
     /**

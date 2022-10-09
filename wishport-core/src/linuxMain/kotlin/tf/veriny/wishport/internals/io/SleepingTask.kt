@@ -27,6 +27,7 @@ internal data class SleepingTask @OptIn(LowLevelApi::class) constructor(
 /** Enumeration of what the task is sleeping on. */
 internal enum class SleepingWhy {
     CLOSE,
+    SHUTDOWN,
     CANCEL,
     OPEN_DIRECTORY,
     OPEN_FILE,
