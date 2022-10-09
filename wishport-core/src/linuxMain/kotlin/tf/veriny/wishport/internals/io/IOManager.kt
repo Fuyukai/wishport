@@ -363,7 +363,8 @@ public actual class IOManager(
     }
 
     public actual suspend fun shutdown(
-        handle: IOHandle, how: ShutdownHow
+        handle: IOHandle,
+        how: ShutdownHow
     ): CancellableResourceResult<Empty> {
         val task = getCurrentTask()
 

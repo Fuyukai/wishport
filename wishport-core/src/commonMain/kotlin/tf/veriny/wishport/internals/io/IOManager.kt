@@ -56,7 +56,8 @@ public expect class IOManager : Closeable {
      * Shuts down one or both sides of an [IOHandle], without closing it.
      */
     public suspend fun shutdown(
-        handle: IOHandle, how: ShutdownHow
+        handle: IOHandle,
+        how: ShutdownHow
     ): CancellableResourceResult<Empty>
 
     // CreateFileEx isn't async so we have to punt it off to a worker on windows.
