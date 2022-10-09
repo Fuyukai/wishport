@@ -256,7 +256,6 @@ public actual class IOManager(
         eventfd_write(efd, 1)
     }
 
-
     // todo: see if we can outrun the poller at some point.
     @Suppress("FoldInitializerAndIfToElvis")
     private inline fun getsqe(): CPointer<io_uring_sqe> {

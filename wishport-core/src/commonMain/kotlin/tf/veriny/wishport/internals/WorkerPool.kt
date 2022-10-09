@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.wishport.internals
 
 import tf.veriny.wishport.*
@@ -19,7 +25,6 @@ import kotlin.native.concurrent.Worker
 // then, the event loop checks every loop iteration for if off-thread tasks are completed w/ simple
 // iteration over the list of futures. this prevents any annoying interleaving with successive
 // write calls to eventfd not going through properly.
-
 
 @LowLevelApi
 public class WorkerPool(public val loop: EventLoop, public val size: Int) {
