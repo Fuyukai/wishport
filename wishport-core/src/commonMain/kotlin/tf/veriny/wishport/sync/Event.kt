@@ -8,21 +8,21 @@ package tf.veriny.wishport.sync
 
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
-import tf.veriny.wishport.internals.Task
-import tf.veriny.wishport.internals.checkIfCancelled
-import tf.veriny.wishport.internals.uncancellableCheckpoint
+import tf.veriny.wishport.core.ParkingLot
+import tf.veriny.wishport.internals.checkpoint
 
 /**
  * An object that can be waited upon by a task until it is set by another task.
  */
 @OptIn(LowLevelApi::class)
 public class Event {
-    private val tasks = mutableSetOf<Task>()
+    private val lot = ParkingLot()
+
     public var flag: Boolean = false
         private set
 
     /** The number of tasks currently waiting on this event. */
-    public val waiters: Int get() = tasks.size
+    public val waiters: Int get() = lot.parkedCount
 
     /**
      * Sets the flag for this event, and wakes up any tasks that are waiting for it.
@@ -31,12 +31,7 @@ public class Event {
         if (flag) return
         flag = true
 
-        for (task in tasks) {
-            task.reschedule()
-        }
-
-        // empty strong refs
-        tasks.clear()
+        lot.unparkAll()
     }
 
     /**
@@ -45,13 +40,8 @@ public class Event {
      */
     public suspend fun wait(): CancellableEmpty {
         val task = getCurrentTask()
-        return task.checkIfCancelled()
-            .andThen {
-                if (flag) task.uncancellableCheckpoint(Unit)
-                else {
-                    tasks.add(task)
-                    task.suspendTask()
-                }
-            }.also { tasks.remove(task) } // only relevant if waitUntilRescheduled gets cancelled
+
+        return if (flag) task.checkpoint(Unit)
+        else lot.park(task)
     }
 }
