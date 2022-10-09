@@ -710,6 +710,7 @@ public actual class IOManager(
         if (closed) return
 
         io_uring_queue_exit(ring.ptr)
+        close(efd)
         alloca.clear()
         closed = true
     }
