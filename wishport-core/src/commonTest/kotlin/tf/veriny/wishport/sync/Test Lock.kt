@@ -4,9 +4,12 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+@file:OptIn(LowLevelApi::class)
+
 package tf.veriny.wishport.sync
 
 import tf.veriny.wishport.Cancellable
+import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.core.Nursery
 import tf.veriny.wishport.core.open
 import tf.veriny.wishport.core.startSoonNoResult
@@ -59,10 +62,9 @@ class `Test Lock` {
                 waitUntilAllTasksAreBlocked()
                 assertTrue(items.isEmpty(), "items should be empty but isn't")
             }
-
-            waitUntilAllTasksAreBlocked()
-            assertEquals(listOf(0, 1, 2), items)
         }
+
+        assertEquals(listOf(0, 1, 2), items)
     }
 
     @Test

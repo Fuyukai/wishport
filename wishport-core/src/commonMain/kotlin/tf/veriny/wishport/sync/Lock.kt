@@ -46,10 +46,13 @@ public class Lock<T>(private val data: T) : Closeable {
                     }
 
                     task -> Cancellable.failed(LockAlreadyOwned)
-                    else -> lot.park(task)
+                    else -> {
+                        lot.park(task)
+                    }
                 }
             }
             .andThen {
+                owner = task
                 Cancellable.ok(data)
             }
     }
