@@ -25,9 +25,11 @@ public class ParkingLot {
     public val parkedCount: Int get() = tasks.size
 
     private inline fun popMany(count: Int, cb: (Task) -> Unit) {
-        while (true) {
+        var cursor = 0
+        while (cursor < count) {
             val item = tasks.removeFirst() ?: break
             cb(item)
+            cursor++
         }
     }
 
