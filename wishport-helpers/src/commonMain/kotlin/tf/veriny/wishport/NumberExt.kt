@@ -408,3 +408,24 @@ public fun Byte.bit(idx: Int): Boolean = toLong().bit(idx)
  * Checks if the bit [idx] (one-indexed) is flagged in this [UByte].
  */
 public fun UByte.bit(idx: Int): Boolean = toLong().bit(idx)
+
+@Suppress("ConvertTwoComparisonsToRangeCheck")
+public fun Char.isHex(): Boolean {
+    return ((this >= 'a' && this <= 'f') || (this >= 'A' && this <= 'F') || (this >= '0' && this <= '9'))
+}
+
+/**
+ * Converts a hexadecimal char into an [Int].
+ */
+@Suppress("ConvertTwoComparisonsToRangeCheck")
+public fun Char.toIntHex(): Int {
+    return if (this >= 'a' && this <= 'f') {
+        code - 87 // 'a' is ordinal 97
+    } else if (this >= 'A' && this <= 'F') {
+        code - 55 // 'f' is ordinal 65
+    } else if (this >= '0' && this <= '9') {
+        code - 48 // '0' is ordinal 48
+    } else {
+        throw IllegalArgumentException("Not a hexadecimal digit: $this")
+    }
+}

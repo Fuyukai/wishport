@@ -7,6 +7,7 @@
 package tf.veriny.wishport.collections
 
 import tf.veriny.wishport.annotations.Unsafe
+import tf.veriny.wishport.collections.ByteString.Companion.uncopied
 
 // TODO: we need ByteStringBuilder, or a Buffer, or anything like that.
 
@@ -68,7 +69,7 @@ public fun ByteString.slice(from: Int, to: Int): ByteString? {
         ba[i] = getUnsafe(i)
     }
 
-    return ByteString.uncopied(ba)
+    return uncopied(ba)
 }
 
 /**
@@ -184,7 +185,7 @@ public fun Collection<ByteString>.join(delim: ByteString): ByteString {
         }
     }
 
-    return ByteString.uncopied(final)
+    return uncopied(final)
 }
 
 /**
@@ -221,3 +222,8 @@ public fun ByteString.escapedString(): String {
         else "\\x" + it.toUByte().toString(16).padStart(2, '0')
     }
 }
+
+public fun ByteArray.toByteString(): ByteString = ByteString(this)
+
+@OptIn(Unsafe::class)
+public fun Collection<Byte>.toByteString(): ByteString = uncopied(toByteArray())
