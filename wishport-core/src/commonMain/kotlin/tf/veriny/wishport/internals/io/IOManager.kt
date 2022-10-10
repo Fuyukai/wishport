@@ -13,8 +13,8 @@ import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.ByteString
-import tf.veriny.wishport.io.FileOpenFlags
-import tf.veriny.wishport.io.FileOpenMode
+import tf.veriny.wishport.io.fs.FileOpenFlags
+import tf.veriny.wishport.io.fs.FileOpenMode
 
 // TODO: Rethink if this should be responsible for I/O dispatching itself, or if that functionality
 //       should be moved to the event loop, which can then poll this.

@@ -10,8 +10,6 @@ import tf.veriny.wishport.AsyncClosingScope
 import tf.veriny.wishport.CancellableResult
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.ProvisionalApi
-import tf.veriny.wishport.io.FileOpenFlags
-import tf.veriny.wishport.io.FileOpenMode
 
 /**
  * Opens a new temporary file in an available temporary directory, adds it to the specified

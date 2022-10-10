@@ -21,8 +21,8 @@ import tf.veriny.wishport.core.InternalWishportError
 import tf.veriny.wishport.core.NS_PER_SEC
 import tf.veriny.wishport.internals.Task
 import tf.veriny.wishport.internals.checkIfCancelled
-import tf.veriny.wishport.io.FileOpenFlags
-import tf.veriny.wishport.io.FileOpenMode
+import tf.veriny.wishport.io.fs.FileOpenFlags
+import tf.veriny.wishport.io.fs.FileOpenMode
 import tf.veriny.wishport.sync.CapacityLimiter
 import tf.veriny.wishport.util.kstrerror
 
@@ -330,7 +330,7 @@ public actual class IOManager(
         // sad path, we have to send a cancel request
         // io_uring cancellation is.... complicated
         val cancellationId = counter++
-        val sleep2 = SleepingTask(task, cancellationId, why)
+        val sleep2 = SleepingTask(task, cancellationId, SleepingWhy.CANCEL)
         tasks[cancellationId] = sleep2
 
         // for poll events, we can't use prep_cancel (... as far as I know, anyway)

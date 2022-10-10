@@ -11,8 +11,6 @@ import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.internals.io.DirectoryHandle
 import tf.veriny.wishport.internals.io.Empty
-import tf.veriny.wishport.io.FileOpenFlags
-import tf.veriny.wishport.io.FileOpenMode
 
 private typealias SysFsHandle = FilesystemHandle<SystemPurePath>
 

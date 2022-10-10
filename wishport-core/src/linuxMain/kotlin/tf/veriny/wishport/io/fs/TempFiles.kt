@@ -10,8 +10,6 @@ import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.ProvisionalApi
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.core.InternalWishportError
-import tf.veriny.wishport.io.FileOpenFlags
-import tf.veriny.wishport.io.FileOpenMode
 
 // inspired heavily by python tempfile.
 

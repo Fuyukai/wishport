@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-package tf.veriny.wishport.io
+package tf.veriny.wishport.io.fs
 
 /**
  * Enumeration of possible ways to open a file.

@@ -9,8 +9,6 @@ package tf.veriny.wishport.io.fs
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.internals.io.Empty
-import tf.veriny.wishport.io.FileOpenFlags
-import tf.veriny.wishport.io.FileOpenMode
 
 // can't wait for multiple receivers
 
