@@ -20,7 +20,7 @@ public object NurseryClosed : Fail
  * of a Nursery, however, is that the function that opened the nursery will not return until
  * all nursery tasks have completed. This is known as *structured concurrency*.
  */
-@OptIn(LowLevelApi::class)
+@LowLevelApi
 public class Nursery @PublishedApi internal constructor(private val invokerTask: Task) {
     public companion object {
         /**
@@ -124,6 +124,7 @@ public class Nursery @PublishedApi internal constructor(private val invokerTask:
 /**
  * Opens a new nursery without requiring an Either return.
  */
+@LowLevelApi
 public suspend inline fun Nursery.Companion.open(
     crossinline fn: suspend (Nursery) -> Unit
 ): CancellableEmpty {
@@ -135,6 +136,7 @@ public suspend inline fun Nursery.Companion.open(
  *
  * Your function should be returning a CancellableResult, but this is a helper that wraps it safely.
  */
+@LowLevelApi
 public inline fun Nursery.startSoonNoResult(
     crossinline fn: suspend () -> Unit
 ): Either<Unit, NurseryClosed> {
