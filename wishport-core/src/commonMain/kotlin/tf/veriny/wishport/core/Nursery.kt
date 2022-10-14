@@ -10,9 +10,15 @@ import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.internals.Task
 import tf.veriny.wishport.internals.checkIfCancelled
+import tf.veriny.wishport.sync.Promise
+
+public sealed interface NurseryError : Fail
+
+/** Returned if a task was cancelled during a .start() call. */
+public object StartTaskWasCancelled : NurseryError
 
 /** Failure object used to signify this nursery is closed. */
-public object NurseryClosed : Fail
+public object NurseryClosed : NurseryError
 
 /**
  * A nursery is a construct that allows for running multiple tasks simultaneously. A nursery is
@@ -119,6 +125,53 @@ public class Nursery @PublishedApi internal constructor(private val invokerTask:
 
         return Either.ok(Unit)
     }
+
+    /**
+     * Spawns a new task and waits for it to call [TaskStatus.started]. This will return the value
+     * provided, or ``null`` if the task never called it.
+     */
+    public suspend fun <T, S, F : Fail> start(
+        fn: suspend (TaskStatus<T>) -> CancellableResult<S, F>
+    ): CancellableResult<T?, NurseryError> {
+        if (cancelScope.permanentlyCancelled) {
+            closed = true
+            return Cancellable.failed(NurseryClosed)
+        }
+        if (closed) return Cancellable.failed(NurseryClosed)
+
+        val status = TaskStatus<T>()
+
+        // if the function gets cancelled before .started() is called, then we have to signal to
+        // the outer task that it got cancelled somehow.
+        // we use the StartTaskWasCancelled marker error for this purpose.
+        startSoon {
+            val result = fn(status)
+            if (result.isCancelled) {
+                status.taskInternallyWasCancelled = true
+            }
+            // prevent wait() from dying forever
+            status.started(null)
+            result
+        }
+
+        return status.wait()
+    }
+}
+
+public class TaskStatus<T> internal constructor() {
+    private val event = Promise<T>()
+    // XXX: https://github.com/python-trio/trio/issues/2258
+    internal var taskInternallyWasCancelled = false
+
+    internal suspend fun wait(): CancellableResult<T?, StartTaskWasCancelled> {
+        val result = event.wait()
+        return if (taskInternallyWasCancelled) Cancellable.failed(StartTaskWasCancelled)
+        else result
+    }
+
+    public fun started(data: T?) {
+        event.set(data)
+    }
 }
 
 /**
@@ -128,7 +181,7 @@ public class Nursery @PublishedApi internal constructor(private val invokerTask:
 public suspend inline fun Nursery.Companion.open(
     crossinline fn: suspend (Nursery) -> Unit
 ): CancellableEmpty {
-    return Nursery { fn(it); Cancellable.empty() }
+    return Nursery { fn(it); checkIfCancelled() }
 }
 
 /**

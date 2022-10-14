@@ -5,6 +5,7 @@
  */
 
 @file:OptIn(LowLevelApi::class)
+@file:Suppress("ClassName")
 
 package tf.veriny.wishport.core
 
@@ -14,16 +15,17 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-public class `Test Nurseries` {
+@OptIn(LowLevelApi::class)
+class `Test Nurseries` {
     @Test
-    public fun `Test opening an empty nursery`() = runUntilCompleteNoResult {
+    fun `Test opening an empty nursery`() = runUntilCompleteNoResult {
         Nursery.open {
             Cancellable.empty()
         }
     }
 
     @Test
-    public fun `Test spawning multiple child tasks`() = runUntilCompleteNoResult {
+    fun `Test spawning multiple child tasks`() = runUntilCompleteNoResult {
         var result = 0
 
         Nursery.open {
@@ -38,7 +40,7 @@ public class `Test Nurseries` {
     }
 
     @Test
-    public fun `Test that cancelling a nursery cancels child tasks`() = runUntilCompleteNoResult {
+    fun `Test that cancelling a nursery cancels child tasks`() = runUntilCompleteNoResult {
         var result = 0
 
         Nursery.open {
@@ -59,7 +61,7 @@ public class `Test Nurseries` {
     }
 
     @Test
-    public fun `Test that trying to spawn in a closed nursery fails`() = runUntilCompleteNoResult {
+    fun `Test that trying to spawn in a closed nursery fails`() = runUntilCompleteNoResult {
         val n = Nursery { Either.ok(it).notCancelled() }
         assertTrue(n.isSuccess)
         val nursery = n.get()!!
@@ -72,4 +74,37 @@ public class `Test Nurseries` {
             assertTrue(it.startSoonNoResult {}.isFailure)
         }
     }
+
+    @Test
+    fun `Test Nursery start`() = runUntilCompleteNoResult {
+        Nursery.open {
+            val result = it.start { ts: TaskStatus<Int> ->
+                ts.started(1)
+                sleepForever()
+            }
+
+            assertTrue(result.isSuccess)
+            assertEquals(1, result.get())
+            // make sure the internal task is still running
+            assertEquals(1, it.openTasks)
+            // now kill it
+            it.cancelScope.cancel()
+        }
+    }
+
+    @Test
+    fun `Test Nursery start with cancellation`() = runUntilCompleteNoResult {
+        Nursery.open { n ->
+            // open shielded child scope to prevent the cancellation propagating out to us
+            CancelScope.open(shield = true) { _ ->
+                val result = n.start { ts: TaskStatus<Unit> ->
+                    n.cancelScope.cancel()
+                    sleepForever()
+                }
+                assertTrue(result.isFailure)
+                assertEquals(StartTaskWasCancelled, result.getFailure())
+            }
+        }
+    }
+
 }
