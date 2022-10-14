@@ -19,9 +19,9 @@ import kotlin.test.Test
  * Tests that cancellation works.
  */
 @OptIn(LowLevelApi::class)
-public class `Test Basic Cancellation` {
+class `Test Basic Cancellation` {
     @Test
-    public fun `Test cancelling ourselves`() = runUntilCompleteNoResult {
+    fun `Test cancelling ourselves`() = runUntilCompleteNoResult {
         val x = CancelScope.open {
             assert(!checkIfCancelled().isCancelled)
             it.cancel()
@@ -30,7 +30,7 @@ public class `Test Basic Cancellation` {
     }
 
     @Test
-    public fun `Test cancelling after a checkpoint`() = runUntilCompleteNoResult {
+    fun `Test cancelling after a checkpoint`() = runUntilCompleteNoResult {
         val x = CancelScope.open {
             checkpoint()
             it.cancel()
@@ -40,7 +40,7 @@ public class `Test Basic Cancellation` {
     }
 
     @Test
-    public fun `Test nested scopes`() = runUntilCompleteNoResult {
+    fun `Test nested scopes`() = runUntilCompleteNoResult {
         CancelScope.open { outer ->
             assert(!checkIfCancelled().isCancelled)
 
@@ -57,7 +57,7 @@ public class `Test Basic Cancellation` {
     }
 
     @Test
-    public fun `Test cancelling outer scope`() = runUntilCompleteNoResult {
+    fun `Test cancelling outer scope`() = runUntilCompleteNoResult {
         CancelScope.open { outer ->
             outer.cancel()
 
@@ -69,7 +69,7 @@ public class `Test Basic Cancellation` {
     }
 
     @Test
-    public fun `Test cancelling outer scope from inner scope`() = runUntilCompleteNoResult {
+    fun `Test cancelling outer scope from inner scope`() = runUntilCompleteNoResult {
         CancelScope.open { outer ->
             CancelScope.open { inner ->
                 outer.cancel()
@@ -80,7 +80,7 @@ public class `Test Basic Cancellation` {
     }
 
     @Test
-    public fun `Test shielding`() = runUntilCompleteNoResult {
+    fun `Test shielding`() = runUntilCompleteNoResult {
         CancelScope.open { outer ->
             outer.cancel()
 
@@ -93,7 +93,7 @@ public class `Test Basic Cancellation` {
 
     // ensures that a shielded cancel scope that becomes unshielded is then cancelled.
     @Test
-    public fun `Test unshielding`() = runUntilCompleteNoResult {
+    fun `Test unshielding`() = runUntilCompleteNoResult {
         CancelScope.open { outer ->
             outer.cancel()
 
@@ -106,7 +106,7 @@ public class `Test Basic Cancellation` {
     }
 
     @Test
-    public fun `Ensure unshielding is permanent`() = runUntilCompleteNoResult {
+    fun `Ensure unshielding is permanent`() = runUntilCompleteNoResult {
         CancelScope.open { first ->
             first.cancel()
 

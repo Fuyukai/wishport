@@ -24,6 +24,7 @@ import kotlin.test.assertTrue
 /**
  * Tests the [Lock] class.
  */
+@Suppress("ClassName")
 class `Test Lock` {
     @Test
     fun `Test that locking works`() = runUntilCompleteNoResult {

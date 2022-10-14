@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+@file:Suppress("ClassName")
+
 package tf.veriny.wishport.core
 
 import tf.veriny.wishport.*
@@ -19,7 +21,7 @@ import kotlin.test.assertTrue
 @OptIn(LowLevelApi::class)
 class `Test worker threads` {
     @Test
-    public fun `Test that the worker thread actually does something`() = runUntilCompleteNoResult {
+    fun `Test that the worker thread actually does something`() = runUntilCompleteNoResult {
         val result = runSynchronouslyOffThread({ "test" }) {
             // just make sure the I/O gets woken up
             nanosleep(1L * NS_PER_SEC)
@@ -30,7 +32,7 @@ class `Test worker threads` {
     }
 
     @Test
-    public fun `Test running in a separate worker thread`() = runUntilCompleteNoResult {
+    fun `Test running in a separate worker thread`() = runUntilCompleteNoResult {
         val p = Promise<Long>()
         val clock = EventLoop.get().clock
 

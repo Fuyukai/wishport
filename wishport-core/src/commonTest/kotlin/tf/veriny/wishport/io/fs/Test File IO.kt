@@ -20,6 +20,7 @@ internal inline fun runWithClosingScope(crossinline block: suspend (AsyncClosing
     }
 }
 
+@Suppress("ClassName")
 @OptIn(ProvisionalApi::class)
 class `Test File IO` {
     @Test

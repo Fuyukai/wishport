@@ -12,6 +12,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertTrue
 
+@Suppress("ClassName")
 @OptIn(LowLevelApi::class)
 class `Test Basic Running` {
     @Test

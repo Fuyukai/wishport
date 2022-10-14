@@ -5,6 +5,7 @@
  */
 
 @file:OptIn(LowLevelApi::class)
+@file:Suppress("ClassName")
 
 package tf.veriny.wishport.core
 
@@ -17,7 +18,7 @@ import kotlin.test.*
 
 class `Test ParkingLot` {
     @Test
-    public fun `Test parking and unparking single task`() = runUntilCompleteNoResult {
+    fun `Test parking and unparking single task`() = runUntilCompleteNoResult {
         val lot = ParkingLot()
         var variable = false
 

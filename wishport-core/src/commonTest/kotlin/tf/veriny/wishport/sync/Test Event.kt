@@ -13,6 +13,7 @@ import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+@Suppress("ClassName")
 @OptIn(LowLevelApi::class)
 class `Test Event` {
     // uses a cancel scope + auto jump clock to prevent deadlocking all the tests

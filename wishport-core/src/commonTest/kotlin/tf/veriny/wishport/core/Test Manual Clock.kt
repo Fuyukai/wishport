@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+@file:Suppress("ClassName")
+
 package tf.veriny.wishport.core
 
 import tf.veriny.wishport.annotations.LowLevelApi

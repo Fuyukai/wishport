@@ -9,9 +9,10 @@ package tf.veriny.wishport.helpers
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
+@Suppress("ClassName")
 class `Test LinkedDequeSet` {
     @Test
-    public fun `Test head and tail`() {
+    fun `Test head and tail`() {
         val set = TaskList<Int>()
         set.append(1)
         set.append(2)
@@ -24,7 +25,7 @@ class `Test LinkedDequeSet` {
     }
 
     @Test
-    public fun `Test removing arbitrary items`() {
+    fun `Test removing arbitrary items`() {
         val set = TaskList<Int>()
         set.append(1)
         set.append(2)

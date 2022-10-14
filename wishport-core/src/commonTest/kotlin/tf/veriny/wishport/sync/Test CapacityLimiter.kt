@@ -7,6 +7,7 @@
 package tf.veriny.wishport.sync
 
 import tf.veriny.wishport.*
+import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.core.Nursery
 import tf.veriny.wishport.core.open
 import kotlin.test.Test
@@ -14,6 +15,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+@Suppress("ClassName")
+@OptIn(LowLevelApi::class)
 class `Test CapacityLimiter` {
     @Test
     fun `Test that capacity limiter actually limits`() = runUntilCompleteNoResult {

@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+@file:Suppress("ClassName")
+
 package tf.veriny.wishport.core
 
 import tf.veriny.wishport.annotations.LowLevelApi
@@ -22,7 +24,7 @@ import kotlin.test.assertTrue
 @OptIn(LowLevelApi::class)
 class `Test Deadlines` {
     @Test
-    public fun `Test two second deadline with realtime clock`() = runUntilCompleteNoResult {
+    fun `Test two second deadline with realtime clock`() = runUntilCompleteNoResult {
         CancelScope.open {
             val previous = getCurrentTime()
             it.localDeadline = previous + (2L * NS_PER_SEC)
@@ -36,7 +38,7 @@ class `Test Deadlines` {
     }
 
     @Test
-    public fun `Test effective deadline of child scope`() = runUntilCompleteNoResult {
+    fun `Test effective deadline of child scope`() = runUntilCompleteNoResult {
         CancelScope.open {
             val dl = getCurrentTime() + (30L * NS_PER_SEC)
             it.localDeadline = dl
@@ -56,7 +58,7 @@ class `Test Deadlines` {
     }
 
     @Test
-    public fun `Test effective deadline of child scope when cancelling parent`() =
+    fun `Test effective deadline of child scope when cancelling parent`() =
         runUntilCompleteNoResult {
             CancelScope.open {
                 it.cancel()
@@ -68,7 +70,7 @@ class `Test Deadlines` {
         }
 
     @Test
-    public fun `Test inner scope is cancelled when parent scope expires`() =
+    fun `Test inner scope is cancelled when parent scope expires`() =
         runUntilCompleteNoResult {
             CancelScope.open {
                 it.localDeadline = getCurrentTime() + (2L * NS_PER_SEC)
