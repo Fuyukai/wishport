@@ -1,8 +1,13 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.wishport.io.net
 
 import tf.veriny.wishport.collections.hexlify
 import tf.veriny.wishport.collections.toByteString
-
 
 // as this is the less common operation, i use *much* slower code stuff here, but it makes the code
 // a lot more concise.
