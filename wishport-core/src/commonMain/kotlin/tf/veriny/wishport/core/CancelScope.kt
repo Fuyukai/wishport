@@ -10,6 +10,9 @@ import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.internals.EventLoop
 import tf.veriny.wishport.internals.Task
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 // unlike trio we unify the cancelscope and cancelstatus logic as i don't really see any reason
 // for them to be separated.
@@ -54,6 +57,7 @@ private constructor(
         /**
          * Creates a new [CancelScope], passing it to the specified function.
          */
+        @OptIn(ExperimentalContracts::class)
         public suspend inline operator fun <S, F : Fail> invoke(
             shield: Boolean = false,
             crossinline block: suspend (CancelScope) -> CancellableResult<S, F>
@@ -73,10 +77,15 @@ private constructor(
          * Creates a new [CancelScope], passing it to the specified function that doesn't return
          * a result.
          */
+        @OptIn(ExperimentalContracts::class)
         public suspend inline fun open(
             shield: Boolean = false,
             crossinline block: suspend (CancelScope) -> Unit
         ): CancellableEmpty {
+            contract {
+                callsInPlace(block, InvocationKind.EXACTLY_ONCE)
+            }
+
             return CancelScope(shield = shield) {
                 block(it)
                 checkIfCancelled()
