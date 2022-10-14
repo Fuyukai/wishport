@@ -6,6 +6,7 @@
 
 package tf.veriny.wishport.helpers
 
+import tf.veriny.wishport.SecureRandom
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.core.AutojumpClock
 import tf.veriny.wishport.core.NS_PER_SEC
@@ -20,7 +21,9 @@ import tf.veriny.wishport.core.NS_PER_SEC
  */
 @LowLevelApi
 public class ManualClock(public var autojump: Boolean = false) : AutojumpClock {
-    private var time: Long = 0
+    private var time: Long = SecureRandom.nextLong(
+        0x0000_0000_FFFF_FFFF, 0x0000_00FF_FFFF_FFFF
+    )
 
     public fun advance(seconds: Int = 0, nanoseconds: Int = 0) {
         time += (seconds * NS_PER_SEC) + nanoseconds
