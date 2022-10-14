@@ -277,7 +277,7 @@ public suspend inline fun <S, F : Fail> moveOnAt(
  */
 @OptIn(LowLevelApi::class)
 public suspend fun sleepForever(): CancellableEmpty {
-    return waitUntilRescheduled()
+    return checkIfCancelled().andThen { waitUntilRescheduled() }
 }
 
 /**

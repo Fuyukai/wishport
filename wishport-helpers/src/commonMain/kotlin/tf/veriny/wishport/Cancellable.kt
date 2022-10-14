@@ -62,7 +62,11 @@ internal data class NotCancelled<out S, out F : Fail, out T : Either<S, F>>(
  * Returned when a function *is* cancelled.
  */
 @PublishedApi
-internal object Cancelled : Cancellable<Nothing, Nothing, Nothing>
+internal object Cancelled : Cancellable<Nothing, Nothing, Nothing> {
+    override fun toString(): String {
+        return "Cancelled"
+    }
+}
 
 public inline val CancellableResult<*, *>.isSuccess: Boolean get() =
     this is NotCancelled && wrapped is Ok

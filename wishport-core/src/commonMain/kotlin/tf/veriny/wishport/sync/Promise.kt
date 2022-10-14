@@ -13,9 +13,9 @@ import tf.veriny.wishport.andThen
 /**
  * Like an [Event], but carrying arbitrary data that is returned when awaited on.
  */
-public class Promise<T : Any> {
+public class Promise<T : Any?> {
     private val event = Event()
-    private lateinit var item: T
+    private var item: T? = null
 
     public val flag: Boolean by event::flag
 
@@ -26,7 +26,7 @@ public class Promise<T : Any> {
      * Sets the data for this promise. Like [Event], this can only happen once; subsequent sets are
      * ignored and the data dropped.
      */
-    public fun set(data: T) {
+    public fun set(data: T?) {
         if (event.flag) return
 
         item = data
@@ -37,7 +37,7 @@ public class Promise<T : Any> {
      * Waits for this event to be set by another task. If the flag is already set, this will issue
      * a checkpoint and immediately return.
      */
-    public suspend fun wait(): CancellableSuccess<T> {
+    public suspend fun wait(): CancellableSuccess<T?> {
         return event.wait().andThen { Cancellable.ok(item) }
     }
 }
