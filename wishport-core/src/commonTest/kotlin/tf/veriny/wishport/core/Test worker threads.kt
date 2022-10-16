@@ -22,13 +22,14 @@ import kotlin.test.assertTrue
 class `Test worker threads` {
     @Test
     fun `Test that the worker thread actually does something`() = runUntilCompleteNoResult {
-        val result = runSynchronouslyOffThread({ "test" }) {
-            // just make sure the I/O gets woken up
-            nanosleep(1L * NS_PER_SEC)
-            Either.ok(it)
+        val result = assertSuccess {
+            runSynchronouslyOffThread({ "test" }) {
+                // just make sure the I/O gets woken up
+                nanosleep(1L * NS_PER_SEC)
+                Either.ok(it)
+            }
         }
-        assertTrue(result.isSuccess)
-        assertEquals("test", result.get())
+        assertEquals("test", result)
     }
 
     @Test

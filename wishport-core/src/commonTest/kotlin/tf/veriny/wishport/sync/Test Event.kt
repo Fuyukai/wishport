@@ -40,11 +40,11 @@ class `Test Event` {
         val ev = Event()
         ev.set()
 
-        val res = CancelScope {
-            it.localDeadline = getCurrentTime() + 1 * NS_PER_SEC
-            ev.wait()
+        assertSuccess {
+            CancelScope {
+                it.localDeadline = getCurrentTime() + 1 * NS_PER_SEC
+                ev.wait()
+            }
         }
-
-        assertTrue(res.isSuccess, "event wasn't waited on properly")
     }
 }

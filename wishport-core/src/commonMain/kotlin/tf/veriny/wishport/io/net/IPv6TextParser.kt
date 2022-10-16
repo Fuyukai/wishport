@@ -255,18 +255,18 @@ public class IPv6TextParser(public val incoming: String) {
 
         // if we had a [, we need a ]
         if (openBrackets) {
-            parseError("Missing closing bracket")
+            return parseError("Missing closing bracket")
         }
 
         // if we finished with a trailing colon, and it's not the double colon, it's an error
         // (e.g. 0: )
         if (state == State.STATE_FIRST_COLON || state == State.STATE_REGULAR_COLON) {
-            parseError("Address has trailing colon")
+            return parseError("Address has trailing colon")
         }
 
         // all addresses without the :: have seven colons, so we need to check for that
         if (colons < 7 && !seenDoubleColon) {
-            parseError("Not enough components in address")
+            return parseError("Not enough components in address")
         }
 
         // make sure we push any trailing digits

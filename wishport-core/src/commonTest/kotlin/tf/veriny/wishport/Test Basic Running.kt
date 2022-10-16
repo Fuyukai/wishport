@@ -10,17 +10,14 @@ import tf.veriny.wishport.annotations.LowLevelApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
-import kotlin.test.assertTrue
 
 @Suppress("ClassName")
 @OptIn(LowLevelApi::class)
 class `Test Basic Running` {
     @Test
     fun `Test that a simple non-suspending function works`() {
-        val result = runUntilComplete { Either.ok(1).notCancelled() }
-
-        assertTrue { result.isSuccess }
-        assertEquals(1, result.get())
+        val result = assertSuccess { runUntilComplete { Either.ok(1).notCancelled() } }
+        assertEquals(1, result)
     }
 
     @Test

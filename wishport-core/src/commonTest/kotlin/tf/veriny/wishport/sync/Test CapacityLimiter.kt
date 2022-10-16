@@ -57,13 +57,12 @@ class `Test CapacityLimiter` {
     fun `Test capacity limiter is not reentrant`() = runUntilCompleteNoResult {
         val limiter = CapacityLimiter(1, Unit)
 
-        val res = limiter.unwrapAndRun {
-            limiter.unwrapAndRun { Cancellable.empty() }
+        assertFailure {
+            limiter.unwrapAndRun {
+                limiter.unwrapAndRun { Cancellable.empty() }
+            }
         }
 
-        assertEquals(AlreadyAcquired, res.getFailure())
-
-        val res2 = limiter.unwrapAndRun { Cancellable.empty() }
-        assertTrue(res2.isSuccess)
+        assertSuccess { limiter.unwrapAndRun { Cancellable.empty() } }
     }
 }

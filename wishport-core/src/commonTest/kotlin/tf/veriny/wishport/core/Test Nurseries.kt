@@ -13,7 +13,6 @@ import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 @OptIn(LowLevelApi::class)
 class `Test Nurseries` {
@@ -62,29 +61,29 @@ class `Test Nurseries` {
 
     @Test
     fun `Test that trying to spawn in a closed nursery fails`() = runUntilCompleteNoResult {
-        val n = Nursery { Either.ok(it).notCancelled() }
-        assertTrue(n.isSuccess)
-        val nursery = n.get()!!
+        val n = assertSuccess {
+            Nursery { Either.ok(it).notCancelled() }
+        }
 
-        val res = nursery.startSoonNoResult { }
-        assertTrue(res.isFailure)
+        assertFailure { n.startSoonNoResult {} }
 
         Nursery.open {
             it.cancelScope.cancel()
-            assertTrue(it.startSoonNoResult {}.isFailure)
+            assertFailure { it.startSoonNoResult {} }
         }
     }
 
     @Test
     fun `Test Nursery start`() = runUntilCompleteNoResult {
         Nursery.open {
-            val result = it.start { ts: TaskStatus<Int> ->
-                ts.started(1)
-                sleepForever()
+            val result = assertSuccess {
+                it.start { ts: TaskStatus<Int> ->
+                    ts.started(1)
+                    sleepForever()
+                }
             }
 
-            assertTrue(result.isSuccess)
-            assertEquals(1, result.get())
+            assertEquals(1, result)
             // make sure the internal task is still running
             assertEquals(1, it.openTasks)
             // now kill it
@@ -97,12 +96,13 @@ class `Test Nurseries` {
         Nursery.open { n ->
             // open shielded child scope to prevent the cancellation propagating out to us
             CancelScope.open(shield = true) { _ ->
-                val result = n.start { ts: TaskStatus<Unit> ->
-                    n.cancelScope.cancel()
-                    sleepForever()
+                val result = assertFailure {
+                    n.start { ts: TaskStatus<Unit> ->
+                        n.cancelScope.cancel()
+                        sleepForever()
+
+                    }
                 }
-                assertTrue(result.isFailure)
-                assertEquals(StartTaskWasCancelled, result.getFailure())
             }
         }
     }

@@ -96,6 +96,7 @@ public inline fun <Success, Failure : Fail> Either<Success, Failure>.andAlso(
         is Ok<Success> -> {
             val res = block(value)
             // safe cast, <Success> isn't part of us.
+            @Suppress("UNCHECKED_CAST")
             if (res.isSuccess) this
             else res as Either<Success, Failure>
         }
@@ -111,6 +112,7 @@ public inline fun <Success, Failure : Fail> Either<Success, Failure>.andAlso(
         is Ok<Success> -> {
             val res = block(value)
             // safe cast, <Success> isn't part of us.
+            @Suppress("UNCHECKED_CAST")
             if (res.isSuccess) this.notCancelled()
             else res as CancellableResult<Success, Failure>
         }
