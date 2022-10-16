@@ -18,6 +18,8 @@ import tf.veriny.wishport.core.Clock
 import tf.veriny.wishport.core.Nursery
 import tf.veriny.wishport.internals.EventLoop.Companion.get
 import tf.veriny.wishport.internals.io.IOManager
+import tf.veriny.wishport.io.net.DefaultPlatformResolver
+import tf.veriny.wishport.io.net.NameResolver
 import kotlin.coroutines.coroutineContext
 
 /**
@@ -86,12 +88,22 @@ public class EventLoop private constructor(public val clock: Clock) : Closeable 
     private val workerLazy = lazy {
         WorkerPool(this, Platform.getAvailableProcessors())
     }
+
+    // public APIs
+    /**
+     * The pool of worker threads for running synchronous code off-thread concurrently.
+     */
     public val workerPool: WorkerPool by workerLazy
 
     /**
      * The I/O manager for the current event loop.
      */
     public val ioManager: IOManager = IOManager.default()
+
+    /**
+     * The default DNS resolver to be used by the networking code.
+     */
+    public var nameResolver: NameResolver = DefaultPlatformResolver
 
     /**
      * Creates the root task that all tasks inherit from. This will use the root cancellation scope

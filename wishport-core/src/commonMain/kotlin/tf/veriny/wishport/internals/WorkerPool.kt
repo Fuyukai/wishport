@@ -67,6 +67,7 @@ public class WorkerPool(public val loop: EventLoop, public val size: Int) {
                     workers.addLast(fut.worker)
                 } else {
                     val newWorker = Worker.start(name = "Wishport-WorkerThread-${++nameSeq}")
+                    workers.addLast(newWorker)
                 }
                 waiters.unpark(1)
             }

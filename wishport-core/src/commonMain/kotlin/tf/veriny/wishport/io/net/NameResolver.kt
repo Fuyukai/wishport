@@ -1,4 +1,12 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.wishport.io.net
+
+import tf.veriny.wishport.CancellableResult
 
 /**
  * Defines a way to resolve user-readable hostnames (e.g. ``one.one.one.one``) into IP addresses
@@ -19,5 +27,5 @@ public interface NameResolver {
         socketType: SocketType,
         socketFamily: SocketFamily? = null,
         socketProtocol: SocketProtocol? = null,
-    ): T
+    ): CancellableResult<T, NameResolutionError>
 }

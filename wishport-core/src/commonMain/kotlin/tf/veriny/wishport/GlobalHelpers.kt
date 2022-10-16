@@ -11,6 +11,10 @@ import tf.veriny.wishport.core.CancelScope
 import tf.veriny.wishport.core.Clock
 import tf.veriny.wishport.internals.*
 import tf.veriny.wishport.internals.io.IOManager
+import tf.veriny.wishport.io.net.EndpointInfo
+import tf.veriny.wishport.io.net.SocketFamily
+import tf.veriny.wishport.io.net.SocketProtocol
+import tf.veriny.wishport.io.net.SocketType
 import kotlin.coroutines.coroutineContext
 
 @OptIn(LowLevelApi::class)
@@ -311,4 +315,21 @@ public suspend fun <P, S, F : Fail> runSynchronouslyOffThread(
 ): CancellableResult<S, F> {
     val loop = EventLoop.get()
     return loop.workerPool.runSyncInThread(cancellable, producer, block)
+}
+
+/**
+ * Looks up an IP address from its hostname and port.
+ */
+@OptIn(LowLevelApi::class)
+public suspend fun <T : EndpointInfo> getAddressFromName(
+    hostname: String,
+    port: Int,
+    socketType: SocketType,
+    socketFamily: SocketFamily? = null,
+    socketProtocol: SocketProtocol? = null,
+): CancellableResult<T, Fail> {
+    val loop = EventLoop.get()
+    return loop.nameResolver.getAddressFromName(
+        hostname, port, socketType, socketFamily, socketProtocol
+    )
 }

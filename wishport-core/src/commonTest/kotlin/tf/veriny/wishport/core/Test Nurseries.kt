@@ -100,7 +100,6 @@ class `Test Nurseries` {
                     n.start { ts: TaskStatus<Unit> ->
                         n.cancelScope.cancel()
                         sleepForever()
-
                     }
                 }
             }

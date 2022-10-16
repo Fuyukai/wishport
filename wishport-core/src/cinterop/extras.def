@@ -2,6 +2,9 @@
 #define _GNU_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #include <fcntl.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 // these aren't properly re-exported
 static const int _O_PATH = O_PATH;
@@ -13,3 +16,7 @@ static const int _AT_REMOVEDIR = AT_REMOVEDIR;
 
 // this has a completely mangled export in the default platform lib?
 extern int eventfd(unsigned int initval, int flags);
+
+// GAI constants that arent exported...?
+static const int _EAI_ADDRFAMILY = EAI_ADDRFAMILY;
+static const int _EAI_NODATA = EAI_NODATA;
