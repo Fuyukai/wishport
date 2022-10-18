@@ -500,7 +500,7 @@ public actual class IOManager(
             FileOpenType.WRITE_ONLY -> O_WRONLY
         }
         openFlags = openFlags.or(openMode)
-        
+
         val mode = filePermissions
             .map { it.posixNumber }
             .reduce { acc, i -> acc.or(i) }
@@ -681,7 +681,6 @@ public actual class IOManager(
                 )
             } as CancellableResourceResult<FileMetadata>
     }
-
 
     private fun pollFlags(fl: Set<Poll>): UInt {
         var flags = 0

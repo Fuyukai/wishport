@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.wishport.io.fs
 
 // TODO: linux-only sticky bits?
@@ -6,15 +12,15 @@ package tf.veriny.wishport.io.fs
  * Enumeration of the possible permission values when creating a fresh file.
  */
 public enum class FilePermissions(public val posixNumber: Int) {
-    OWNER_READ(256),  // 0o400
+    OWNER_READ(256), // 0o400
     OWNER_WRITE(128), // 0o200
-    OWNER_EXEC(64),   // 0o100
-    GROUP_READ(32),   // 0o040
-    GROUP_WRITE(16),  // 0o020
-    GROUP_EXEC(8),    // 0o010
-    ANY_READ(4),      // 0o004
-    ANY_WRITE(2),     // 0o002
-    ANY_EXEC(1),      // 0o001
+    OWNER_EXEC(64), // 0o100
+    GROUP_READ(32), // 0o040
+    GROUP_WRITE(16), // 0o020
+    GROUP_EXEC(8), // 0o010
+    ANY_READ(4), // 0o004
+    ANY_WRITE(2), // 0o002
+    ANY_EXEC(1), // 0o001
 
     ;
 
