@@ -13,9 +13,9 @@ import tf.veriny.wishport.core.CancelScope
 import tf.veriny.wishport.core.Nursery
 import tf.veriny.wishport.core.open
 import tf.veriny.wishport.core.startSoonNoResult
-import tf.veriny.wishport.internals.io.Fd
 import tf.veriny.wishport.internals.io.Poll
-import tf.veriny.wishport.internals.io.PollResult
+import tf.veriny.wishport.io.Fd
+import tf.veriny.wishport.io.PollResult
 import tf.veriny.wishport.io.fs.FilesystemHandle
 import tf.veriny.wishport.io.fs.PosixPurePath
 import tf.veriny.wishport.io.fs.openFile

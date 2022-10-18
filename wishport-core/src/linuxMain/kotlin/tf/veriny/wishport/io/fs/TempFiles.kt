@@ -63,7 +63,7 @@ private suspend fun getTempDir(): CancellableSuccess<SystemFilesystemHandle> {
     for (candidate in candidates) {
         val result =
             SystemFilesystem.getFileHandle(
-                candidate, FileOpenMode.READ_ONLY,
+                candidate, FileOpenType.READ_ONLY,
                 setOf(FileOpenFlags.PATH, FileOpenFlags.DIRECTORY)
             )
 
@@ -71,7 +71,7 @@ private suspend fun getTempDir(): CancellableSuccess<SystemFilesystemHandle> {
 
         // hack: openat with CURRENT_DIR
         val opened = path.openRelative(
-            PosixPurePath.CURRENT_DIR, FileOpenMode.READ_WRITE,
+            PosixPurePath.CURRENT_DIR, FileOpenType.READ_WRITE,
             setOf(
                 FileOpenFlags.TEMPORARY_FILE, FileOpenFlags.MUST_CREATE
             )
@@ -98,7 +98,7 @@ private suspend fun getTempDir(): CancellableSuccess<SystemFilesystemHandle> {
 @ProvisionalApi
 public actual suspend fun openTemporaryFile(
     scope: AsyncClosingScope,
-    mode: FileOpenMode,
+    mode: FileOpenType,
     flags: Set<FileOpenFlags>
 ): CancellableResult<FilesystemHandle<SystemPurePath>, Fail> {
     val realFlags = flags + setOf(
@@ -106,7 +106,7 @@ public actual suspend fun openTemporaryFile(
     )
 
     return getTempDir().andThen {
-        it.openRelative(scope, PosixPurePath.CURRENT_DIR, FileOpenMode.READ_WRITE, realFlags)
+        it.openRelative(scope, PosixPurePath.CURRENT_DIR, FileOpenType.READ_WRITE, realFlags)
     }
 }
 
@@ -128,7 +128,7 @@ public actual suspend fun <S, F : Fail> createTemporaryDirectory(
                     SystemFilesystem.mkdirRelative(tmp, it)
                 }
                 .andThen {
-                    SystemFilesystem.getRelativeFileHandle(tmp, it, FileOpenMode.READ_WRITE, flags)
+                    SystemFilesystem.getRelativeFileHandle(tmp, it, FileOpenType.READ_WRITE, flags)
                 }
 
             return@andThen if (result.isFailure) {

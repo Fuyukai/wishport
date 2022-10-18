@@ -1,24 +1,18 @@
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at https://mozilla.org/MPL/2.0/.
- */
-
-package tf.veriny.wishport.internals.io
+package tf.veriny.wishport.io
 
 import platform.linux.EPOLLERR
 import platform.linux.EPOLLIN
 import platform.linux.EPOLLOUT
+import tf.veriny.wishport.internals.io.Poll
 
-// see the expect definitions
 
-public actual sealed interface IOResult
-
+// marker interfaces
 public actual interface IOHandle {
     public val actualFd: Int
 }
+public actual sealed interface IOResult
 
-public class Fd(public override val actualFd: Int) : IOResult, IOHandle
+public class Fd(override val actualFd: Int) : IOHandle, IOResult
 
 public actual typealias DirectoryHandle = Fd
 public actual typealias RawFileHandle = Fd

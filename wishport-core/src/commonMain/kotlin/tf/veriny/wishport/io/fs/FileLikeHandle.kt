@@ -8,8 +8,8 @@ package tf.veriny.wishport.io.fs
 
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
-import tf.veriny.wishport.internals.io.ByteCountResult
-import tf.veriny.wishport.internals.io.IOHandle
+import tf.veriny.wishport.io.ByteCountResult
+import tf.veriny.wishport.io.IOHandle
 
 /**
  * Defines any object that is file-like, i.e. allows reading and writing as if it was a file.

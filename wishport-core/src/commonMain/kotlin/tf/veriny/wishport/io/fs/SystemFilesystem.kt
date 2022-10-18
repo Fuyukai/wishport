@@ -9,8 +9,9 @@ package tf.veriny.wishport.io.fs
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
-import tf.veriny.wishport.internals.io.DirectoryHandle
-import tf.veriny.wishport.internals.io.Empty
+import tf.veriny.wishport.collections.b
+import tf.veriny.wishport.io.DirectoryHandle
+import tf.veriny.wishport.io.Empty
 
 private typealias SysFsHandle = FilesystemHandle<SystemPurePath>
 
@@ -19,15 +20,18 @@ private typealias SysFsHandle = FilesystemHandle<SystemPurePath>
  */
 @OptIn(LowLevelApi::class)
 public object SystemFilesystem : Filesystem<SystemPurePath> {
+    override val currentDirectoryPath: SystemPurePath = systemPathFor(b(".")).get()!!
+
     @Unsafe
     override suspend fun getFileHandle(
         path: SystemPurePath,
-        openMode: FileOpenMode,
-        flags: Set<FileOpenFlags>
+        openMode: FileOpenType,
+        flags: Set<FileOpenFlags>,
+        permissions: Set<FilePermissions>
     ): CancellableResourceResult<SystemFilesystemHandle> {
         val manager = getIOManager()
         return manager.openFilesystemFile(
-            null, path.toByteString(), openMode, flags
+            null, path.toByteString(), openMode, flags, permissions
         )
             .andThen {
                 Cancellable.ok(SystemFilesystemHandle(this, it, path))
@@ -38,8 +42,9 @@ public object SystemFilesystem : Filesystem<SystemPurePath> {
     override suspend fun getRelativeFileHandle(
         otherHandle: SysFsHandle,
         path: SystemPurePath,
-        openMode: FileOpenMode,
-        flags: Set<FileOpenFlags>
+        openMode: FileOpenType,
+        flags: Set<FileOpenFlags>,
+        permissions: Set<FilePermissions>
     ): CancellableResult<SystemFilesystemHandle, Fail> {
         // NB: on linux this will still go to io_uring due to DirectoryHandle and FileHandle being
         // identical (and then return the error), but on Windows it'll fail.
@@ -48,11 +53,26 @@ public object SystemFilesystem : Filesystem<SystemPurePath> {
 
         val manager = getIOManager()
         return manager.openFilesystemFile(
-            otherHandle.raw as DirectoryHandle, path.toByteString(), openMode, flags
+            otherHandle.raw as DirectoryHandle, path.toByteString(), openMode, flags, permissions
         )
             .andThen {
                 Cancellable.ok(SystemFilesystemHandle(this, it, path))
             }
+    }
+
+    override suspend fun getFileMetadata(
+        handle: FilesystemHandle<SystemPurePath>
+    ): CancellableResult<FileMetadata, Fail> {
+        val io = getIOManager()
+        return io.fileMetadataAt(handle.raw, null)
+    }
+
+    override suspend fun getFileMetadataRelative(
+        handle: FilesystemHandle<SystemPurePath>?,
+        path: SystemPurePath
+    ): CancellableResult<FileMetadata, Fail> {
+        val io = getIOManager()
+        return io.fileMetadataAt(handle?.raw, path.toByteString())
     }
 
     override suspend fun flushFile(
@@ -65,20 +85,25 @@ public object SystemFilesystem : Filesystem<SystemPurePath> {
         return manager.fsync(handle.raw, withMetadata = withMetadata)
     }
 
-    override suspend fun mkdir(path: SystemPurePath): CancellableResourceResult<Empty> {
-        return getIOManager().makeDirectoryAt(null, path.toByteString())
+    override suspend fun mkdir(
+        path: SystemPurePath,
+        permissions: Set<FilePermissions>
+    ): CancellableResourceResult<Empty> {
+        return getIOManager().makeDirectoryAt(null, path.toByteString(), permissions)
     }
 
     override suspend fun mkdirRelative(
         otherHandle: FilesystemHandle<SystemPurePath>,
-        path: SystemPurePath
+        path: SystemPurePath,
+        permissions: Set<FilePermissions>
     ): CancellableResult<Empty, Fail> {
         if (otherHandle.raw !is DirectoryHandle) return Cancellable.failed(NotADirectory)
         if (otherHandle.filesystem != this) return Cancellable.failed(WrongFilesystemError)
 
         return getIOManager().makeDirectoryAt(
             otherHandle.raw as DirectoryHandle,
-            path.toByteString()
+            path.toByteString(),
+            permissions
         )
     }
 

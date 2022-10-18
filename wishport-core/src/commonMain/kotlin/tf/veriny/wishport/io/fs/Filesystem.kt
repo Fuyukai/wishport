@@ -10,7 +10,7 @@ import tf.veriny.wishport.CancellableResourceResult
 import tf.veriny.wishport.CancellableResult
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.Unsafe
-import tf.veriny.wishport.internals.io.Empty
+import tf.veriny.wishport.io.Empty
 
 // see: java.nio.file.Filesystem
 
@@ -26,13 +26,21 @@ public interface Filesystem<Flavour : PurePath<Flavour>> {
     public companion object;
 
     /**
-     * Opens a new file handle for this filesystem.
+     * The [PurePath] that corresponds to the current directory of the running proceesses in the
+     * flavour that this filesystem expects.
+     */
+    public val currentDirectoryPath: Flavour
+
+    /**
+     * Opens a new file handle for this filesystem, at [path].
      */
     @Unsafe
     public suspend fun getFileHandle(
         path: Flavour,
-        openMode: FileOpenMode,
+        openMode: FileOpenType,
         flags: Set<FileOpenFlags> = setOf(),
+        // only relevant on files, so this is fine even for directories.
+        permissions: Set<FilePermissions> = FilePermissions.DEFAULT_FILE,
     ): CancellableResourceResult<FilesystemHandle<Flavour>>
 
     /**
@@ -42,9 +50,33 @@ public interface Filesystem<Flavour : PurePath<Flavour>> {
     public suspend fun getRelativeFileHandle(
         otherHandle: FilesystemHandle<Flavour>,
         path: Flavour,
-        openMode: FileOpenMode,
+        openMode: FileOpenType,
         flags: Set<FileOpenFlags> = setOf(),
+        permissions: Set<FilePermissions> = FilePermissions.DEFAULT_FILE
     ): CancellableResult<FilesystemHandle<Flavour>, Fail>
+
+    /**
+     * Gets metadata about the file at [handle].
+     */
+    public suspend fun getFileMetadata(
+        handle: FilesystemHandle<Flavour>,
+    ): CancellableResult<FileMetadata, Fail>
+
+    /**
+     * Gets metadata about the file at [path].
+     *
+     * If [handle] is not null then [handle] should refer to an open directory,
+     * and [path] should refer to a relative file in that directory; the metadata will be for the
+     * file at the path provided.
+     *
+     * If [handle] is null, or [path] is an absolute path regardless of the
+     * status of [handle], then the metadata will be for the file at the absolute path provided, or
+     * the file at the path relative to the current directory if [path] is a relative path.
+     */
+    public suspend fun getFileMetadataRelative(
+        handle: FilesystemHandle<Flavour>?,
+        path: Flavour
+    ): CancellableResult<FileMetadata, Fail>
 
     /**
      * Flushes the data written into the specified file to disk. If [withMetadata] is true, then all file
@@ -59,14 +91,18 @@ public interface Filesystem<Flavour : PurePath<Flavour>> {
     /**
      * Creates a new, empty directory at [path].
      */
-    public suspend fun mkdir(path: Flavour): CancellableResourceResult<Empty>
+    public suspend fun mkdir(
+        path: Flavour,
+        permissions: Set<FilePermissions> = FilePermissions.DEFAULT_DIRECTORY
+    ): CancellableResourceResult<Empty>
 
     /**
      * Creates a new, empty directory at the [path] relative to the directory at [otherHandle].
      */
     public suspend fun mkdirRelative(
         otherHandle: FilesystemHandle<Flavour>,
-        path: Flavour
+        path: Flavour,
+        permissions: Set<FilePermissions> = FilePermissions.DEFAULT_DIRECTORY
     ): CancellableResult<Empty, Fail>
 
     /**

@@ -8,7 +8,7 @@ package tf.veriny.wishport.io.fs
 
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.ProvisionalApi
-import tf.veriny.wishport.internals.io.ByteCountResult
+import tf.veriny.wishport.io.ByteCountResult
 import tf.veriny.wishport.io.EofNotSupported
 import tf.veriny.wishport.io.PartialStream
 import tf.veriny.wishport.io.StreamDamaged

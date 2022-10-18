@@ -8,7 +8,7 @@ package tf.veriny.wishport.io.fs
 
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.Unsafe
-import tf.veriny.wishport.internals.io.Empty
+import tf.veriny.wishport.io.Empty
 
 // can't wait for multiple receivers
 
@@ -19,10 +19,10 @@ import tf.veriny.wishport.internals.io.Empty
 public suspend fun FilesystemHandle.Companion.openFile(
     scope: AsyncClosingScope,
     path: SystemPurePath,
-    fileOpenMode: FileOpenMode = FileOpenMode.READ_ONLY,
+    fileOpenType: FileOpenType = FileOpenType.READ_ONLY,
     flags: Set<FileOpenFlags> = setOf()
 ): CancellableResourceResult<SystemFilesystemHandle> {
-    return SystemFilesystem.getFileHandle(path, fileOpenMode, flags)
+    return SystemFilesystem.getFileHandle(path, fileOpenType, flags)
         .andAddTo(scope)
 }
 
@@ -33,10 +33,10 @@ public suspend fun FilesystemHandle.Companion.openFile(
 public suspend fun <Flavour : PurePath<Flavour>> Filesystem<Flavour>.openFile(
     scope: AsyncClosingScope,
     path: Flavour,
-    fileOpenMode: FileOpenMode = FileOpenMode.READ_ONLY,
+    fileOpenType: FileOpenType = FileOpenType.READ_ONLY,
     flags: Set<FileOpenFlags> = setOf()
 ): CancellableResourceResult<FilesystemHandle<Flavour>> {
-    return getFileHandle(path, fileOpenMode, flags).andAddTo(scope)
+    return getFileHandle(path, fileOpenType, flags).andAddTo(scope)
 }
 
 /**
@@ -46,7 +46,7 @@ public suspend fun <Flavour : PurePath<Flavour>> Filesystem<Flavour>.openFile(
 @Unsafe
 public suspend fun <F : PurePath<F>> FilesystemHandle<F>.openRelative(
     path: F,
-    mode: FileOpenMode,
+    mode: FileOpenType,
     flags: Set<FileOpenFlags> = setOf()
 ): CancellableResult<FilesystemHandle<F>, Fail> {
     return filesystem.getRelativeFileHandle(this, path, mode, flags)
@@ -60,7 +60,7 @@ public suspend fun <F : PurePath<F>> FilesystemHandle<F>.openRelative(
 public suspend fun <F : PurePath<F>> FilesystemHandle<F>.openRelative(
     scope: AsyncClosingScope,
     path: F,
-    mode: FileOpenMode,
+    mode: FileOpenType,
     flags: Set<FileOpenFlags> = setOf()
 ): CancellableResult<FilesystemHandle<F>, Fail> {
     return filesystem.getRelativeFileHandle(this, path, mode, flags).andAddTo(scope)
@@ -84,4 +84,17 @@ public suspend fun <F : PurePath<F>> FilesystemHandle<F>.createDirectoryRelative
     path: F
 ): CancellableResult<Empty, Fail> {
     return filesystem.mkdirRelative(this, path)
+}
+
+/**
+ * Gets the metadata either for this file,
+ */
+public suspend fun <F : PurePath<F>> FilesystemHandle<F>.getMetadata(
+    path: F? = null
+): CancellableResult<FileMetadata, Fail> {
+    return if (path == null) {
+        filesystem.getFileMetadata(this)
+    } else {
+        filesystem.getFileMetadataRelative(this, path)
+    }
 }

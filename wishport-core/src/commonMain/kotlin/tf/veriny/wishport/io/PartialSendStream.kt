@@ -9,7 +9,6 @@ package tf.veriny.wishport.io
 import tf.veriny.wishport.CancellableResult
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.ProvisionalApi
-import tf.veriny.wishport.internals.io.ByteCountResult
 
 /**
  * Like [SendStream], but allows partial sending.

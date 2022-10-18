@@ -9,8 +9,8 @@ package tf.veriny.wishport.io.fs
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.core.CancelScope
-import tf.veriny.wishport.internals.io.ByteCountResult
-import tf.veriny.wishport.internals.io.IOHandle
+import tf.veriny.wishport.io.ByteCountResult
+import tf.veriny.wishport.io.IOHandle
 
 /**
  * A file handle to a file on the system filehandle.

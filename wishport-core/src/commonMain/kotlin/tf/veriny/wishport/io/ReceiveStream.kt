@@ -10,7 +10,6 @@ import tf.veriny.wishport.AsyncCloseable
 import tf.veriny.wishport.CancellableResult
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.ProvisionalApi
-import tf.veriny.wishport.internals.io.ByteCountResult
 
 /**
  * An interface for objects that can asynchronously read byte data.

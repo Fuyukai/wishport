@@ -2,5 +2,6 @@ package = external.liburing
 headers = liburing.h
 headerFilter = liburing.h liburing/*
 noStringConversion = io_uring_prep_openat2 io_uring_prep_mkdirat io_uring_prep_renameat \
-                     io_uring_prep_symlinkat io_uring_prep_statx io_uring_prep_unlinkat
+                     io_uring_prep_symlinkat io_uring_prep_statx io_uring_prep_unlinkat \
+                     io_uring_prep_openat
 staticLibraries = liburing.a

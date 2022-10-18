@@ -9,7 +9,7 @@ package tf.veriny.wishport.io.fs
 /**
  * Enumeration of possible ways to open a file.
  */
-public enum class FileOpenMode {
+public enum class FileOpenType {
     /**
      * The file will be opened in read-only mode.
      */

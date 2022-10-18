@@ -8,8 +8,10 @@ package tf.veriny.wishport.io.fs
 
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.ProvisionalApi
+import tf.veriny.wishport.annotations.Unsafe
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
 
 internal inline fun runWithClosingScope(crossinline block: suspend (AsyncClosingScope) -> Unit) {
     runUntilCompleteNoResult {
@@ -33,5 +35,30 @@ class `Test File IO` {
         }
 
         assertContentEquals("one".encodeToByteArray(), buf)
+    }
+
+    // checks for metadata relative
+    @OptIn(Unsafe::class)
+    @Test
+    fun `Test getting file metadata`() = runWithClosingScope { scope ->
+        val path = systemPathFor("test.txt").get()!!
+
+        assertSuccess {
+            createTemporaryDirectory { handle ->
+                val result = assertSuccess {
+                    handle.openRelative(scope, path, FileOpenType.READ_WRITE, setOf(FileOpenFlags.CREATE_IF_NOT_EXISTS))
+                        .andAlso { it.writeFrom("test".encodeToByteArray()) }
+                        .andAlso { it.flush() }
+                        .andThen { it.close() }
+                        .andThen {
+                            handle.getMetadata(path)
+                        }
+                }
+
+                assertEquals(4UL, result.fileSize)
+
+                Cancellable.empty()
+            }
+        }
     }
 }

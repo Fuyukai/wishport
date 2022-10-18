@@ -9,6 +9,7 @@ package tf.veriny.wishport.internals.io
 import tf.veriny.wishport.CancellableResourceResult
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.internals.Task
+import tf.veriny.wishport.io.IOResult
 
 /**
  * Wraps the state of a task currently waiting for an io_uring event.
@@ -37,6 +38,7 @@ internal enum class SleepingWhy {
     POLL_UPDATE,
     MKDIR,
     UNLINK,
+    STATX,
 
     ;
 }

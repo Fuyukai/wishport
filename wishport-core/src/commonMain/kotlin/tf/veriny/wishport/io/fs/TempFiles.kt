@@ -18,7 +18,7 @@ import tf.veriny.wishport.annotations.ProvisionalApi
 @ProvisionalApi
 public expect suspend fun openTemporaryFile(
     scope: AsyncClosingScope,
-    mode: FileOpenMode = FileOpenMode.READ_WRITE,
+    mode: FileOpenType = FileOpenType.READ_WRITE,
     flags: Set<FileOpenFlags> = setOf()
 ): CancellableResult<FilesystemHandle<SystemPurePath>, Fail>
 

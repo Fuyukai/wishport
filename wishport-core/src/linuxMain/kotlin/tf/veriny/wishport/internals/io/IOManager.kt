@@ -21,8 +21,8 @@ import tf.veriny.wishport.core.InternalWishportError
 import tf.veriny.wishport.core.NS_PER_SEC
 import tf.veriny.wishport.internals.Task
 import tf.veriny.wishport.internals.checkIfCancelled
-import tf.veriny.wishport.io.fs.FileOpenFlags
-import tf.veriny.wishport.io.fs.FileOpenMode
+import tf.veriny.wishport.io.*
+import tf.veriny.wishport.io.fs.*
 import tf.veriny.wishport.sync.CapacityLimiter
 import tf.veriny.wishport.util.kstrerror
 
@@ -34,6 +34,15 @@ private val MISSING_NODROP = """
     io_uring reports that it is missing the IORING_FEAT_NODROP feature. This feature is essential to
     Wishport. You should upgrade your kernel!
 """.trimIndent()
+
+private val EMPTY_PATH = byteArrayOf(0)
+
+// TODO: Don't hardcode this.
+private const val STATX_BASIC_STATS = 2047U
+
+private fun statx_timestamp.toNs(): ULong {
+    return (tv_sec.toULong() * NS_PER_SEC.toULong()) + tv_nsec.toULong()
+}
 
 /**
  * Provides asynchronous access to the io_uring kernel interface, via liburing.
@@ -183,7 +192,8 @@ public actual class IOManager(
 
             SleepingWhy.FSYNC, SleepingWhy.CLOSE,
             SleepingWhy.POLL_UPDATE, SleepingWhy.MKDIR,
-            SleepingWhy.UNLINK, SleepingWhy.SHUTDOWN -> {
+            SleepingWhy.UNLINK, SleepingWhy.SHUTDOWN,
+            SleepingWhy.STATX, -> {
                 Cancellable.ok(Empty)
             }
         }
@@ -385,6 +395,7 @@ public actual class IOManager(
         } as CancellableResourceResult<Empty>
     }
 
+    @Suppress("UNCHECKED_CAST")
     public actual suspend fun shutdown(
         handle: IOHandle,
         how: ShutdownHow
@@ -415,14 +426,14 @@ public actual class IOManager(
      * Opens a new handle to a directory.
      */
     @Unsafe
-    @Suppress("UNCHECKED_CAST")
     public actual suspend fun openFilesystemDirectory(
         dirHandle: DirectoryHandle?,
         path: ByteString
     ): CancellableResourceResult<DirectoryHandle> {
         return openFilesystemFile(
-            dirHandle, path, FileOpenMode.READ_WRITE,
-            setOf(FileOpenFlags.PATH, FileOpenFlags.DIRECTORY)
+            dirHandle, path, FileOpenType.READ_WRITE,
+            setOf(FileOpenFlags.PATH, FileOpenFlags.DIRECTORY),
+            setOf()
         )
     }
 
@@ -431,8 +442,9 @@ public actual class IOManager(
     public actual suspend fun openFilesystemFile(
         dirHandle: DirectoryHandle?,
         path: ByteString,
-        mode: FileOpenMode,
-        flags: Set<FileOpenFlags>
+        type: FileOpenType,
+        flags: Set<FileOpenFlags>,
+        filePermissions: Set<FilePermissions>,
     ): CancellableResourceResult<RawFileHandle> = memScoped {
         var openFlags = O_CLOEXEC
 
@@ -482,12 +494,17 @@ public actual class IOManager(
             }
         }
 
-        val openMode = when (mode) {
-            FileOpenMode.READ_ONLY -> O_RDONLY
-            FileOpenMode.READ_WRITE -> O_RDWR
-            FileOpenMode.WRITE_ONLY -> O_WRONLY
+        val openMode = when (type) {
+            FileOpenType.READ_ONLY -> O_RDONLY
+            FileOpenType.READ_WRITE -> O_RDWR
+            FileOpenType.WRITE_ONLY -> O_WRONLY
         }
         openFlags = openFlags.or(openMode)
+        
+        val mode = filePermissions
+            .map { it.posixNumber }
+            .reduce { acc, i -> acc.or(i) }
+            .toUInt()
 
         val task = getCurrentTask()
 
@@ -495,17 +512,20 @@ public actual class IOManager(
             .andThen {
                 limiter.unwrapAndRun {
                     val sqe = getsqe()
-                    val how = alloc<open_how>()
-                    // see openat(2), this is mandatory
-                    memset(how.ptr, 0, sizeOf<open_how>().convert())
-                    how.flags = openFlags.convert()
+                    // XXX: For some reason openat2() fails where openat() doesn't.
+
+                    // val how = alloc<open_how>()
+                    //  see openat(2), this is mandatory
+                    // memset(how.ptr, 0, sizeOf<open_how>().convert())
+                    // how.flags = openFlags.convert()
 
                     val dirfd = dirHandle?.actualFd ?: _AT_FDCWD
                     val pin = path.pinnedTerminated()
                     defer { pin.unpin() }
                     val cPath = pin.addressOf(0)
 
-                    io_uring_prep_openat2(sqe, dirfd, cPath, how.ptr)
+                    // io_uring_prep_openat2(sqe, dirfd, cPath, how.ptr)
+                    io_uring_prep_openat(sqe, dirfd, cPath, openFlags, mode)
                     val seq = counter++
                     io_uring_sqe_set_data64(sqe, seq)
 
@@ -577,12 +597,12 @@ public actual class IOManager(
             .andThen {
                 limiter.unwrapAndRun {
                     val sqe = getsqe()
-                    val buf = buf.pin()
+                    val inpData = buf.pin()
 
                     io_uring_prep_write(
                         sqe,
                         handle.actualFd,
-                        buf.addressOf(bufferOffset),
+                        inpData.addressOf(bufferOffset),
                         size,
                         fileOffset
                     )
@@ -613,6 +633,55 @@ public actual class IOManager(
                 }
             } as CancellableResourceResult<Empty>
     }
+
+    @Suppress("UNCHECKED_CAST")
+    @OptIn(Unsafe::class)
+    public actual suspend fun fileMetadataAt(
+        handle: IOHandle?,
+        path: ByteString?,
+    ): CancellableResourceResult<FileMetadata> = memScoped {
+        val task = getCurrentTask()
+        val out = alloc<statx>()
+
+        return task.checkIfCancelled()
+            .andThen {
+                limiter.unwrapAndRun {
+                    val sqe = getsqe()
+
+                    val dirfd = handle?.actualFd ?: _AT_FDCWD
+                    val buf = path?.pinnedTerminated() ?: EMPTY_PATH.pin()
+                    defer { buf.unpin() }
+
+                    var flags = 0
+                    if (path == null) flags = flags.or(_AT_EMPTY_PATH)
+
+                    io_uring_prep_statx(
+                        sqe, dirfd,
+                        buf.addressOf(0),
+                        flags,
+                        STATX_BASIC_STATS,
+                        out.ptr
+                    )
+                    val seq = counter++
+                    io_uring_sqe_set_data64(sqe, seq)
+
+                    submitAndWait<Empty>(task, seq, SleepingWhy.STATX)
+                }
+            }
+            .andThen {
+                Cancellable.ok(
+                    FileMetadata(
+                        fileSize = out.stx_size,
+                        creationTime = out.stx_ctime.toNs(),
+                        modificationTime = out.stx_mtime.toNs(),
+                        linkCount = out.stx_nlink,
+                        ownerUid = out.stx_uid,
+                        ownerGid = out.stx_gid,
+                    )
+                )
+            } as CancellableResourceResult<FileMetadata>
+    }
+
 
     private fun pollFlags(fl: Set<Poll>): UInt {
         var flags = 0
@@ -657,7 +726,8 @@ public actual class IOManager(
     @OptIn(Unsafe::class)
     public actual suspend fun makeDirectoryAt(
         dirHandle: DirectoryHandle?,
-        path: ByteString
+        path: ByteString,
+        permissions: Set<FilePermissions>,
     ): CancellableResourceResult<Empty> = memScoped {
         val task = getCurrentTask()
 
@@ -670,7 +740,10 @@ public actual class IOManager(
                     val buf = path.pinnedTerminated()
                     defer { buf.unpin() }
 
-                    io_uring_prep_mkdirat(sqe, dirFd, buf.addressOf(0), 511 /* 0777 */)
+                    var mode = permissions.toMode()
+                    if (mode == 0U) mode = 511U /* 777 */
+
+                    io_uring_prep_mkdirat(sqe, dirFd, buf.addressOf(0), mode)
                     val seq = counter++
                     io_uring_sqe_set_data64(sqe, seq)
                     submitAndWait<Empty>(task, seq, SleepingWhy.MKDIR)

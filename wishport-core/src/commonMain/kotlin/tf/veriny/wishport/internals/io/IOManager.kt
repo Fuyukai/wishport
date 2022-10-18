@@ -13,8 +13,11 @@ import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.ByteString
+import tf.veriny.wishport.io.*
+import tf.veriny.wishport.io.fs.FileMetadata
 import tf.veriny.wishport.io.fs.FileOpenFlags
-import tf.veriny.wishport.io.fs.FileOpenMode
+import tf.veriny.wishport.io.fs.FileOpenType
+import tf.veriny.wishport.io.fs.FilePermissions
 
 // TODO: Rethink if this should be responsible for I/O dispatching itself, or if that functionality
 //       should be moved to the event loop, which can then poll this.
@@ -78,7 +81,7 @@ public expect class IOManager : Closeable {
     @Unsafe
     public suspend fun openFilesystemDirectory(
         dirHandle: DirectoryHandle?,
-        path: ByteString
+        path: ByteString,
     ): CancellableResourceResult<DirectoryHandle>
 
     /**
@@ -87,13 +90,19 @@ public expect class IOManager : Closeable {
      * If [dirHandle] is provided, the file will be opened relative to it. If null is provided,
      * then the file will be opened relative to the current working directory. If path is an
      * absolute path, then the provided handle is ignored.
+     *
+     * [flags] is a set of [FileOpenFlags] that control the behaviour of the open file handle.
+     * [filePermissions] is a set of [FilePermissions] that define the permissions set on a file
+     * if it is created with [FileOpenFlags.CREATE_IF_NOT_EXISTS]. Otherwise, [filePermissions]
+     * is ignored.
      */
     @Unsafe
     public suspend fun openFilesystemFile(
         dirHandle: DirectoryHandle?,
         path: ByteString,
-        mode: FileOpenMode,
-        flags: Set<FileOpenFlags>
+        type: FileOpenType,
+        flags: Set<FileOpenFlags>,
+        filePermissions: Set<FilePermissions>
     ): CancellableResourceResult<RawFileHandle>
 
     /**
@@ -131,6 +140,22 @@ public expect class IOManager : Closeable {
         withMetadata: Boolean
     ): CancellableResourceResult<Empty>
 
+    /**
+     * Gets the metadata for a file on the filesystem.
+     *
+     * If [handle] is provided, and [path] is not null, then the metadata will be for a file
+     * relative to [handle]. In this case, [handle] must be a [DirectoryHandle].
+     * If [handle] is provided, and [path] is null, then the metadata for be for the file identified
+     * by [handle].
+     *
+     * If [handle] is not provided, then [path] must not be null, and the metadata will be for the
+     * file at [path].
+     */
+    public suspend fun fileMetadataAt(
+        handle: IOHandle?,
+        path: ByteString?,
+    ): CancellableResourceResult<FileMetadata>
+
     // io_uring has io_uring_prep_poll_add/poll_remove
     // but windows has these absolute bastard methods in winsock that suck fuck to use
     // WSAPoll 1) only supports 512 sockets (not true) 2) is O(n) (lol)
@@ -154,10 +179,14 @@ public expect class IOManager : Closeable {
      * If [dirHandle] is provided, the new directory will be relative to it. If null is provided,
      * then the new directory will be relative to the current working directory. If path is an
      * absolute path, then the provided handle is ignored.
+     *
+     * [permissions] is a set of permissions to create the new directory with. If this is unset,
+     * then the default permissions (0755) will be used.
      */
     public suspend fun makeDirectoryAt(
         dirHandle: DirectoryHandle?,
         path: ByteString,
+        permissions: Set<FilePermissions>
     ): CancellableResourceResult<Empty>
 
     /**
