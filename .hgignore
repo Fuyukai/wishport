@@ -4,3 +4,6 @@ syntax: glob
 .idea/
 
 */build/*
+
+docs/.venv/
+docs/_build/

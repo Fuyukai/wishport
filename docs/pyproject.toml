@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "docs"
+version = "0.1.0"
+description = ""
+authors = ["Lura Skye <l@veriny.tf>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+Sphinx = "^5.3.0"
+sphinx-rtd-theme = "^1.0.0"
+sphinx-inline-tabs = "^2022.1.2-beta.11"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
