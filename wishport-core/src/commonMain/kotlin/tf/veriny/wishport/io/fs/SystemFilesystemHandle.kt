@@ -18,10 +18,10 @@ import tf.veriny.wishport.io.IOHandle
 public class SystemFilesystemHandle
 @OptIn(LowLevelApi::class)
 internal constructor(
-    public override val filesystem: Filesystem<SystemPurePath>,
+    public override val filesystem: SystemFilesystem,
     public override val raw: IOHandle,
     public override val path: SystemPurePath,
-) : FilesystemHandle<SystemPurePath> {
+) : FilesystemHandle<SystemPurePath, PlatformFileMetadata> {
     public override var closed: Boolean = false
         private set
 

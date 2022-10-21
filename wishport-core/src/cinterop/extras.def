@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <sys/syscall.h>
 
 // these aren't properly re-exported
 static const int _O_PATH = O_PATH;
@@ -19,6 +20,11 @@ static const int _AT_EMPTY_PATH = AT_EMPTY_PATH;
 
 // this has a completely mangled export in the default platform lib?
 extern int eventfd(unsigned int initval, int flags);
+
+// our glibc doesn't export this sys call
+int memfd_create(const char *name, unsigned int flags) {
+    return syscall(__NR_memfd_create, name, flags);
+}
 
 // GAI constants that arent exported...?
 static const int _EAI_ADDRFAMILY = EAI_ADDRFAMILY;

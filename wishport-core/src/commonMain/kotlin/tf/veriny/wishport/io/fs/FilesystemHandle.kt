@@ -9,11 +9,11 @@ package tf.veriny.wishport.io.fs
 /**
  * A handle to an opened file on a filesystem.
  */
-public interface FilesystemHandle<F : PurePath<F>> : FileLikeHandle {
+public interface FilesystemHandle<F : PurePath<F>, M : FileMetadata> : FileLikeHandle {
     public companion object;
 
     /** The filesystem this handle is open on. */
-    public val filesystem: Filesystem<F>
+    public val filesystem: Filesystem<F, M>
 
     /** The path to this file. */
     public val path: F

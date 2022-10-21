@@ -4,12 +4,12 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-package tf.veriny.wishport.io
+package tf.veriny.wishport.io.streams
 
 import tf.veriny.wishport.annotations.ProvisionalApi
 
 /**
- * Combines [PartialSendStream] and [Stream] into one object.
+ * Combines [PartialWriteStream] and [Stream] into one object.
  */
 @ProvisionalApi
-public interface PartialStream : PartialSendStream, Stream
+public interface PartialStream : PartialWriteStream, Stream

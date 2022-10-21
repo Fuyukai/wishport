@@ -536,27 +536,6 @@ public actual class IOManager(
             } as CancellableResourceResult<RawFileHandle>
     }
 
-    private fun checkBuffers(
-        buf: ByteArray,
-        size: UInt,
-        offset: Int
-    ): CancellableResult<Unit, Fail> {
-        if (size < 0U || size > buf.size.toUInt()) {
-            return Cancellable.failed(TooSmall(size))
-        }
-
-        if (offset < 0 || offset >= buf.size) {
-            return Cancellable.failed(IndexOutOfRange(offset.toUInt()))
-        }
-
-        val requiredEndPoint = size + offset.toUInt()
-        if (buf.size.toUInt() < requiredEndPoint) {
-            return Cancellable.failed(TooSmall(requiredEndPoint))
-        }
-
-        return Cancellable.empty()
-    }
-
     public actual suspend fun read(
         handle: IOHandle,
         out: ByteArray,
@@ -567,7 +546,7 @@ public actual class IOManager(
         val task = getCurrentTask()
 
         return task.checkIfCancelled()
-            .andThen { checkBuffers(out, size, bufferOffset) }
+            .andThen { out.checkBuffers(size, bufferOffset).notCancelled() }
             .andThen {
                 limiter.unwrapAndRun {
                     val sqe = getsqe()
@@ -593,7 +572,7 @@ public actual class IOManager(
         val task = getCurrentTask()
 
         return task.checkIfCancelled()
-            .andThen { checkBuffers(buf, size, bufferOffset) }
+            .andThen { buf.checkBuffers(size, bufferOffset).notCancelled() }
             .andThen {
                 limiter.unwrapAndRun {
                     val sqe = getsqe()
@@ -639,7 +618,7 @@ public actual class IOManager(
     public actual suspend fun fileMetadataAt(
         handle: IOHandle?,
         path: ByteString?,
-    ): CancellableResourceResult<FileMetadata> = memScoped {
+    ): CancellableResourceResult<PlatformFileMetadata> = memScoped {
         val task = getCurrentTask()
         val out = alloc<statx>()
 
@@ -670,16 +649,17 @@ public actual class IOManager(
             }
             .andThen {
                 Cancellable.ok(
-                    FileMetadata(
-                        fileSize = out.stx_size,
+                    PlatformFileMetadata(
+                        size = out.stx_size,
                         creationTime = out.stx_ctime.toNs(),
                         modificationTime = out.stx_mtime.toNs(),
                         linkCount = out.stx_nlink,
                         ownerUid = out.stx_uid,
                         ownerGid = out.stx_gid,
+                        blockSize = out.stx_blksize
                     )
                 )
-            } as CancellableResourceResult<FileMetadata>
+            } as CancellableResourceResult<PlatformFileMetadata>
     }
 
     private fun pollFlags(fl: Set<Poll>): UInt {

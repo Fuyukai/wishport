@@ -4,18 +4,19 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-package tf.veriny.wishport.io
+package tf.veriny.wishport.io.streams
 
 import tf.veriny.wishport.AsyncCloseable
 import tf.veriny.wishport.CancellableResult
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.ProvisionalApi
+import tf.veriny.wishport.io.ByteCountResult
 
 /**
  * An interface for objects that can asynchronously read byte data.
  */
 @ProvisionalApi
-public interface ReceiveStream : AsyncCloseable {
+public interface ReadStream : AsyncCloseable {
     /**
      * Reads up to [byteCount] bytes, but no more. Returns the number of bytes that were
      * actually read.

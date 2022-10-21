@@ -4,17 +4,18 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-package tf.veriny.wishport.io
+package tf.veriny.wishport.io.streams
 
 import tf.veriny.wishport.CancellableResult
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.ProvisionalApi
+import tf.veriny.wishport.io.ByteCountResult
 
 /**
- * Like [SendStream], but allows partial sending.
+ * Like [WriteStream], but allows partial sending.
  */
 @ProvisionalApi
-public interface PartialSendStream : SendStream {
+public interface PartialWriteStream : WriteStream {
     /**
      * Attempts to send most (if not all) data over this stream. This follows a slightly different
      * but relatively familiar set of cancellation semantics:
@@ -29,10 +30,10 @@ public interface PartialSendStream : SendStream {
      * websockets) must not implement this.
      *
      * If this method encounters an error, but data has already been sent, it will return a
-     * [SendMostFailed] that wraps the original error as well as the total number of bytes that
+     * [WriteMostFailed] that wraps the original error as well as the total number of bytes that
      * was written before the error occurred. Otherwise, it will just directly return the error.
      */
-    public suspend fun sendMost(
+    public suspend fun writeMost(
         buffer: ByteArray,
         byteCount: UInt = buffer.size.toUInt(),
         bufferOffset: Int = 0
@@ -40,6 +41,6 @@ public interface PartialSendStream : SendStream {
 }
 
 /**
- * Returned when [PartialSendStream.sendMost] fails.
+ * Returned when [PartialWriteStream.writeMost] fails.
  */
-public class SendMostFailed(public val why: Fail, public val byteCount: Int) : Fail
+public class WriteMostFailed(public val why: Fail, public val byteCount: Int) : Fail

@@ -22,7 +22,7 @@ import tf.veriny.wishport.io.Empty
  * one filesystem covers the entire OS file namespace. Filesystems can be created over any archive
  * or remote access system, such as a zip file or FTP.
  */
-public interface Filesystem<Flavour : PurePath<Flavour>> {
+public interface Filesystem<Flavour : PurePath<Flavour>, Metadata : FileMetadata> {
     public companion object;
 
     /**
@@ -41,26 +41,26 @@ public interface Filesystem<Flavour : PurePath<Flavour>> {
         flags: Set<FileOpenFlags> = setOf(),
         // only relevant on files, so this is fine even for directories.
         permissions: Set<FilePermissions> = FilePermissions.DEFAULT_FILE,
-    ): CancellableResourceResult<FilesystemHandle<Flavour>>
+    ): CancellableResourceResult<FilesystemHandle<Flavour, Metadata>>
 
     /**
      * Gets a relative file handle from the specified [otherHandle].
      */
     @Unsafe
     public suspend fun getRelativeFileHandle(
-        otherHandle: FilesystemHandle<Flavour>,
+        otherHandle: FilesystemHandle<Flavour, Metadata>,
         path: Flavour,
         openMode: FileOpenType,
         flags: Set<FileOpenFlags> = setOf(),
         permissions: Set<FilePermissions> = FilePermissions.DEFAULT_FILE
-    ): CancellableResult<FilesystemHandle<Flavour>, Fail>
+    ): CancellableResult<FilesystemHandle<Flavour, Metadata>, Fail>
 
     /**
      * Gets metadata about the file at [handle].
      */
     public suspend fun getFileMetadata(
-        handle: FilesystemHandle<Flavour>,
-    ): CancellableResult<FileMetadata, Fail>
+        handle: FilesystemHandle<Flavour, Metadata>,
+    ): CancellableResult<Metadata, Fail>
 
     /**
      * Gets metadata about the file at [path].
@@ -74,9 +74,9 @@ public interface Filesystem<Flavour : PurePath<Flavour>> {
      * the file at the path relative to the current directory if [path] is a relative path.
      */
     public suspend fun getFileMetadataRelative(
-        handle: FilesystemHandle<Flavour>?,
+        handle: FilesystemHandle<Flavour, Metadata>?,
         path: Flavour
-    ): CancellableResult<FileMetadata, Fail>
+    ): CancellableResult<Metadata, Fail>
 
     /**
      * Flushes the data written into the specified file to disk. If [withMetadata] is true, then all file
@@ -84,7 +84,7 @@ public interface Filesystem<Flavour : PurePath<Flavour>> {
      * will be flushed.
      */
     public suspend fun flushFile(
-        handle: FilesystemHandle<Flavour>,
+        handle: FilesystemHandle<Flavour, Metadata>,
         withMetadata: Boolean = true
     ): CancellableResult<Empty, Fail>
 
@@ -100,7 +100,7 @@ public interface Filesystem<Flavour : PurePath<Flavour>> {
      * Creates a new, empty directory at the [path] relative to the directory at [otherHandle].
      */
     public suspend fun mkdirRelative(
-        otherHandle: FilesystemHandle<Flavour>,
+        otherHandle: FilesystemHandle<Flavour, Metadata>,
         path: Flavour,
         permissions: Set<FilePermissions> = FilePermissions.DEFAULT_DIRECTORY
     ): CancellableResult<Empty, Fail>
@@ -118,7 +118,7 @@ public interface Filesystem<Flavour : PurePath<Flavour>> {
      * Unlinks a file from this filesystem, relative to [otherHandle].
      */
     public suspend fun unlinkRelative(
-        otherHandle: FilesystemHandle<Flavour>,
+        otherHandle: FilesystemHandle<Flavour, Metadata>,
         path: Flavour,
         removeDir: Boolean = false
     ): CancellableResult<Empty, Fail>

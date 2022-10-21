@@ -14,10 +14,10 @@ import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.ByteString
 import tf.veriny.wishport.io.*
-import tf.veriny.wishport.io.fs.FileMetadata
 import tf.veriny.wishport.io.fs.FileOpenFlags
 import tf.veriny.wishport.io.fs.FileOpenType
 import tf.veriny.wishport.io.fs.FilePermissions
+import tf.veriny.wishport.io.fs.PlatformFileMetadata
 
 // TODO: Rethink if this should be responsible for I/O dispatching itself, or if that functionality
 //       should be moved to the event loop, which can then poll this.
@@ -154,7 +154,7 @@ public expect class IOManager : Closeable {
     public suspend fun fileMetadataAt(
         handle: IOHandle?,
         path: ByteString?,
-    ): CancellableResourceResult<FileMetadata>
+    ): CancellableResourceResult<PlatformFileMetadata>
 
     // io_uring has io_uring_prep_poll_add/poll_remove
     // but windows has these absolute bastard methods in winsock that suck fuck to use

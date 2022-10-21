@@ -20,12 +20,12 @@ public expect suspend fun openTemporaryFile(
     scope: AsyncClosingScope,
     mode: FileOpenType = FileOpenType.READ_WRITE,
     flags: Set<FileOpenFlags> = setOf()
-): CancellableResult<FilesystemHandle<SystemPurePath>, Fail>
+): CancellableResult<FilesystemHandle<SystemPurePath, PlatformFileMetadata>, Fail>
 
 /**
  * Creates a new temporary directory and invokes the specified [block] with it.
  */
 @ProvisionalApi
 public expect suspend fun <S, F : Fail> createTemporaryDirectory(
-    block: suspend (FilesystemHandle<SystemPurePath>) -> CancellableResult<S, F>
+    block: suspend (FilesystemHandle<SystemPurePath, PlatformFileMetadata>) -> CancellableResult<S, F>
 ): CancellableResult<S, Fail>

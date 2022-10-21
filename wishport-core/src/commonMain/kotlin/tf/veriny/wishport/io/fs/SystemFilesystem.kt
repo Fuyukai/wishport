@@ -13,13 +13,13 @@ import tf.veriny.wishport.collections.b
 import tf.veriny.wishport.io.DirectoryHandle
 import tf.veriny.wishport.io.Empty
 
-private typealias SysFsHandle = FilesystemHandle<SystemPurePath>
+private typealias SysFsHandle = FilesystemHandle<SystemPurePath, PlatformFileMetadata>
 
 /**
  * The filesystem for the main operating system namespace.
  */
 @OptIn(LowLevelApi::class)
-public object SystemFilesystem : Filesystem<SystemPurePath> {
+public object SystemFilesystem : Filesystem<SystemPurePath, PlatformFileMetadata> {
     override val currentDirectoryPath: SystemPurePath = systemPathFor(b(".")).get()!!
 
     @Unsafe
@@ -61,22 +61,22 @@ public object SystemFilesystem : Filesystem<SystemPurePath> {
     }
 
     override suspend fun getFileMetadata(
-        handle: FilesystemHandle<SystemPurePath>
-    ): CancellableResult<FileMetadata, Fail> {
+        handle: SysFsHandle
+    ): CancellableResult<PlatformFileMetadata, Fail> {
         val io = getIOManager()
         return io.fileMetadataAt(handle.raw, null)
     }
 
     override suspend fun getFileMetadataRelative(
-        handle: FilesystemHandle<SystemPurePath>?,
+        handle: SysFsHandle?,
         path: SystemPurePath
-    ): CancellableResult<FileMetadata, Fail> {
+    ): CancellableResult<PlatformFileMetadata, Fail> {
         val io = getIOManager()
         return io.fileMetadataAt(handle?.raw, path.toByteString())
     }
 
     override suspend fun flushFile(
-        handle: FilesystemHandle<SystemPurePath>,
+        handle: SysFsHandle,
         withMetadata: Boolean
     ): CancellableResult<Empty, Fail> {
         if (handle.filesystem != this) return Cancellable.failed(WrongFilesystemError)
@@ -93,7 +93,7 @@ public object SystemFilesystem : Filesystem<SystemPurePath> {
     }
 
     override suspend fun mkdirRelative(
-        otherHandle: FilesystemHandle<SystemPurePath>,
+        otherHandle: SysFsHandle,
         path: SystemPurePath,
         permissions: Set<FilePermissions>
     ): CancellableResult<Empty, Fail> {

@@ -55,7 +55,7 @@ class `Test File IO` {
                         }
                 }
 
-                assertEquals(4UL, result.fileSize)
+                assertEquals(4UL, result.size)
 
                 Cancellable.empty()
             }

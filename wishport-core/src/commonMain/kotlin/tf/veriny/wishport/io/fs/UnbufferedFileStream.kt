@@ -9,22 +9,22 @@ package tf.veriny.wishport.io.fs
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.ProvisionalApi
 import tf.veriny.wishport.io.ByteCountResult
-import tf.veriny.wishport.io.EofNotSupported
-import tf.veriny.wishport.io.PartialStream
-import tf.veriny.wishport.io.StreamDamaged
+import tf.veriny.wishport.io.streams.EofNotSupported
+import tf.veriny.wishport.io.streams.PartialStream
+import tf.veriny.wishport.io.streams.StreamDamaged
 
 /**
  * A [PartialStream] that wraps a [FilesystemHandle].
  */
 @ProvisionalApi
-public class UnbufferedFileStream<F : PurePath<F>>(
-    public val handle: FilesystemHandle<F>,
+public class UnbufferedFileStream(
+    public val handle: FilesystemHandle<*, *>,
 ) : PartialStream {
     override val closed: Boolean by handle::closed
     override var damaged: Boolean = false
         private set
 
-    override suspend fun sendMost(
+    override suspend fun writeMost(
         buffer: ByteArray,
         byteCount: UInt,
         bufferOffset: Int
@@ -49,7 +49,7 @@ public class UnbufferedFileStream<F : PurePath<F>>(
         return Cancellable.ok(ByteCountResult(runningTotal.toInt()))
     }
 
-    override suspend fun sendAll(buffer: ByteArray, byteCount: UInt, bufferOffset: Int): CancellableResult<Unit, Fail> {
+    override suspend fun writeAll(buffer: ByteArray, byteCount: UInt, bufferOffset: Int): CancellableResult<Unit, Fail> {
         if (closed) return Cancellable.failed(AlreadyClosedError)
         if (damaged) return Cancellable.failed(StreamDamaged)
 

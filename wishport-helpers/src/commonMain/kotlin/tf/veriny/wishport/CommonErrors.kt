@@ -25,3 +25,23 @@ public class TooSmall(public val sizeRequested: UInt) : CommonErrors {
         return "TooSmall[sizeRequested = $sizeRequested]"
     }
 }
+
+public fun ByteArray.checkBuffers(
+    size: UInt,
+    offset: Int
+): Either<ByteArray, Fail> {
+    if (size < 0U || size > this.size.toUInt()) {
+        return Either.err(TooSmall(size))
+    }
+
+    if (offset < 0 || offset >= this.size) {
+        return Either.err(IndexOutOfRange(offset.toUInt()))
+    }
+
+    val requiredEndPoint = size + offset.toUInt()
+    if (this.size.toUInt() < requiredEndPoint) {
+        return Either.err(TooSmall(requiredEndPoint))
+    }
+
+    return Either.ok(this)
+}

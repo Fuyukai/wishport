@@ -120,6 +120,16 @@ public inline fun <Success, Failure : Fail> Either<Success, Failure>.andAlso(
     }
 
 /**
+ * If this is a success, then return the unwrapped value. Otherwise, panicks with the specified
+ * message.
+ */
+public inline fun <Success, F : Fail> Either<Success, F>.expect(message: String): Success =
+    when (this) {
+        is Ok<Success> -> value
+        is Err<F> -> throw IllegalStateException(message)
+    }
+
+/**
  * If this is a success, then return the unwrapped value. Otherwise, return the constant provided
  * to this function.
  */

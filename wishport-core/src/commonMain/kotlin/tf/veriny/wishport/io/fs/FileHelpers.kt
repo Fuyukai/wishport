@@ -30,12 +30,12 @@ public suspend fun FilesystemHandle.Companion.openFile(
  * Opens a file on the specified [Filesystem], and adds it to the specified [ClosingScope].
  */
 @OptIn(Unsafe::class)
-public suspend fun <Flavour : PurePath<Flavour>> Filesystem<Flavour>.openFile(
+public suspend fun <Flavour : PurePath<Flavour>, M : FileMetadata> Filesystem<Flavour, M>.openFile(
     scope: AsyncClosingScope,
     path: Flavour,
     fileOpenType: FileOpenType = FileOpenType.READ_ONLY,
     flags: Set<FileOpenFlags> = setOf()
-): CancellableResourceResult<FilesystemHandle<Flavour>> {
+): CancellableResourceResult<FilesystemHandle<Flavour, M>> {
     return getFileHandle(path, fileOpenType, flags).andAddTo(scope)
 }
 
@@ -44,11 +44,11 @@ public suspend fun <Flavour : PurePath<Flavour>> Filesystem<Flavour>.openFile(
  * fail with ENOTDIR otherwise.
  */
 @Unsafe
-public suspend fun <F : PurePath<F>> FilesystemHandle<F>.openRelative(
+public suspend fun <F : PurePath<F>, M : FileMetadata> FilesystemHandle<F, M>.openRelative(
     path: F,
     mode: FileOpenType,
     flags: Set<FileOpenFlags> = setOf()
-): CancellableResult<FilesystemHandle<F>, Fail> {
+): CancellableResult<FilesystemHandle<F, M>, Fail> {
     return filesystem.getRelativeFileHandle(this, path, mode, flags)
 }
 
@@ -57,12 +57,12 @@ public suspend fun <F : PurePath<F>> FilesystemHandle<F>.openRelative(
  * adds it to the specified [scope].
  */
 @OptIn(Unsafe::class)
-public suspend fun <F : PurePath<F>> FilesystemHandle<F>.openRelative(
+public suspend fun <F : PurePath<F>, M : FileMetadata> FilesystemHandle<F, M>.openRelative(
     scope: AsyncClosingScope,
     path: F,
     mode: FileOpenType,
     flags: Set<FileOpenFlags> = setOf()
-): CancellableResult<FilesystemHandle<F>, Fail> {
+): CancellableResult<FilesystemHandle<F, M>, Fail> {
     return filesystem.getRelativeFileHandle(this, path, mode, flags).andAddTo(scope)
 }
 
@@ -71,7 +71,7 @@ public suspend fun <F : PurePath<F>> FilesystemHandle<F>.openRelative(
  * metadata will be flushed; otherwise, only essential metadata relating to write consistency
  * will be flushed.
  */
-public suspend fun <F : PurePath<F>> FilesystemHandle<F>.flush(
+public suspend fun <F : PurePath<F>, M : FileMetadata> FilesystemHandle<F, M>.flush(
     withMetadata: Boolean = true
 ): CancellableResult<Empty, Fail> {
     return filesystem.flushFile(this, withMetadata)
@@ -80,7 +80,7 @@ public suspend fun <F : PurePath<F>> FilesystemHandle<F>.flush(
 /**
  * Creates a new directory relative to this filesystem handle.
  */
-public suspend fun <F : PurePath<F>> FilesystemHandle<F>.createDirectoryRelative(
+public suspend fun <F : PurePath<F>, M : FileMetadata> FilesystemHandle<F, M>.createDirectoryRelative(
     path: F
 ): CancellableResult<Empty, Fail> {
     return filesystem.mkdirRelative(this, path)
@@ -89,9 +89,9 @@ public suspend fun <F : PurePath<F>> FilesystemHandle<F>.createDirectoryRelative
 /**
  * Gets the metadata either for this file,
  */
-public suspend fun <F : PurePath<F>> FilesystemHandle<F>.getMetadata(
+public suspend fun <F : PurePath<F>, M : FileMetadata> FilesystemHandle<F, M>.getMetadata(
     path: F? = null
-): CancellableResult<FileMetadata, Fail> {
+): CancellableResult<M, Fail> {
     return if (path == null) {
         filesystem.getFileMetadata(this)
     } else {

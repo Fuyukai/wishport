@@ -100,7 +100,7 @@ public actual suspend fun openTemporaryFile(
     scope: AsyncClosingScope,
     mode: FileOpenType,
     flags: Set<FileOpenFlags>
-): CancellableResult<FilesystemHandle<SystemPurePath>, Fail> {
+):  CancellableResult<FilesystemHandle<SystemPurePath, PlatformFileMetadata>, Fail> {
     val realFlags = flags + setOf(
         FileOpenFlags.MUST_CREATE, FileOpenFlags.TEMPORARY_FILE
     )
@@ -116,7 +116,7 @@ public actual suspend fun openTemporaryFile(
 @OptIn(Unsafe::class)
 @ProvisionalApi
 public actual suspend fun <S, F : Fail> createTemporaryDirectory(
-    block: suspend (FilesystemHandle<SystemPurePath>) -> CancellableResult<S, F>
+    block: suspend (FilesystemHandle<SystemPurePath, PlatformFileMetadata>) -> CancellableResult<S, F>
 ): CancellableResult<S, Fail> {
     val fileName = TempFileNamer.next()
     return getTempDir().andThen { tmp ->
