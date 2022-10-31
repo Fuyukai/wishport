@@ -7,6 +7,7 @@
 package tf.veriny.wishport
 
 import tf.veriny.wishport.annotations.LowLevelApi
+import tf.veriny.wishport.annotations.StableApi
 import tf.veriny.wishport.core.CancelScope
 import tf.veriny.wishport.core.Clock
 import tf.veriny.wishport.internals.*
@@ -32,7 +33,8 @@ private fun EventLoop.runWithErrorPrint() {
 /**
  * Runs the specified suspend function until complete.
  */
-@OptIn(LowLevelApi::class)
+@LowLevelApi
+@StableApi
 public fun <S, F : Fail> runUntilComplete(
     clock: Clock? = null,
     fn: suspend () -> CancellableResult<S, F>,
@@ -62,6 +64,7 @@ public fun <S, F : Fail> runUntilComplete(
  * Runs the specified suspend function until complete. This variant doesn't return a result.
  */
 @LowLevelApi
+@StableApi
 public fun runUntilCompleteNoResult(clock: Clock?, fn: suspend () -> Unit) {
     val loop = EventLoop.new(clock)
     val task = loop.makeRootTask {
@@ -86,6 +89,7 @@ public fun runUntilCompleteNoResult(fn: suspend () -> Unit) {
  * cancellation or returning an Either.
  */
 @LowLevelApi
+@StableApi
 public suspend inline fun getCurrentTask(): Task {
     try {
         return (coroutineContext as Task.TaskContext).task
@@ -112,6 +116,7 @@ public suspend inline fun getCurrentTask(): Task {
  * Gets the current I/O manager.
  */
 @LowLevelApi
+@StableApi
 public suspend inline fun getIOManager(): IOManager {
     return EventLoop.get().ioManager
 }
@@ -120,6 +125,7 @@ public suspend inline fun getIOManager(): IOManager {
  * Reschedules the specified task.
  */
 @LowLevelApi
+@StableApi
 public fun reschedule(task: Task) {
     task.reschedule()
 }
@@ -154,6 +160,7 @@ public suspend fun getCurrentTime(): Long {
  * You probably want [checkpoint] instead.
  */
 @LowLevelApi
+@StableApi
 public suspend fun waitUntilRescheduled(): CancellableEmpty {
     return getCurrentTask().suspendTask()
 }
@@ -164,6 +171,7 @@ public suspend fun waitUntilRescheduled(): CancellableEmpty {
  * is *not* a suspension point.
  */
 @LowLevelApi
+@StableApi
 public suspend fun checkIfCancelled(): CancellableEmpty {
     val task = getCurrentTask()
     return task.checkIfCancelled()

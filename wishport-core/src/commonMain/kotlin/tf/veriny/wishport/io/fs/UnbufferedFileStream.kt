@@ -35,18 +35,18 @@ public class UnbufferedFileStream(
 
         while (runningTotal < byteCount) {
             val result = handle.writeFrom(
-                buffer, byteCount - runningTotal, bufferOffset, 0UL
+                buffer, byteCount - runningTotal, bufferOffset, ULong.MAX_VALUE
             )
             if (result.isCancelled) {
-                return if (runningTotal > 0U) Cancellable.ok(ByteCountResult(runningTotal.toInt()))
+                return if (runningTotal > 0U) Cancellable.ok(ByteCountResult(runningTotal))
                 else result
             } else if (result.isFailure) return result
             else {
-                runningTotal += result.get()!!.count.toUInt()
+                runningTotal += result.get()!!.count
             }
         }
 
-        return Cancellable.ok(ByteCountResult(runningTotal.toInt()))
+        return Cancellable.ok(ByteCountResult(runningTotal))
     }
 
     override suspend fun writeAll(buffer: ByteArray, byteCount: UInt, bufferOffset: Int): CancellableResult<Unit, Fail> {
@@ -57,11 +57,11 @@ public class UnbufferedFileStream(
 
         while (runningTotal < byteCount) {
             val result = handle.writeFrom(
-                buffer, byteCount - runningTotal, bufferOffset, 0UL
+                buffer, byteCount - runningTotal, bufferOffset, ULong.MAX_VALUE
             )
 
             if (result.isCancelled) {
-                runningTotal += result.get()!!.count.toUInt()
+                runningTotal += result.get()!!.count
             } else {
                 damaged = true
                 // safe cast, <Cancellable> isn't part of us
@@ -86,6 +86,6 @@ public class UnbufferedFileStream(
         byteCount: UInt,
         bufferOffset: Int
     ): CancellableResult<ByteCountResult, Fail> {
-        return handle.readInto(buf, byteCount, bufferOffset, 0U)
+        return handle.readInto(buf, byteCount, bufferOffset, ULong.MAX_VALUE)
     }
 }

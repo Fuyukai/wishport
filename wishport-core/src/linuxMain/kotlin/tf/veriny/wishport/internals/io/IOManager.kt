@@ -183,7 +183,7 @@ public actual class IOManager(
             }
 
             SleepingWhy.READ_WRITE -> {
-                Cancellable.ok(ByteCountResult(result))
+                Cancellable.ok(ByteCountResult(result.toUInt()))
             }
 
             SleepingWhy.POLL_ADD -> {
@@ -552,6 +552,8 @@ public actual class IOManager(
                     val sqe = getsqe()
                     val buf = out.pin()
 
+                    defer { buf.unpin() }
+
                     io_uring_prep_read(
                         sqe, handle.actualFd, buf.addressOf(bufferOffset), size, fileOffset
                     )
@@ -577,6 +579,8 @@ public actual class IOManager(
                 limiter.unwrapAndRun {
                     val sqe = getsqe()
                     val inpData = buf.pin()
+
+                    defer { inpData.unpin() }
 
                     io_uring_prep_write(
                         sqe,
@@ -611,6 +615,23 @@ public actual class IOManager(
                     submitAndWait<Empty>(task, seq, SleepingWhy.FSYNC)
                 }
             } as CancellableResourceResult<Empty>
+    }
+
+    // not actually async but lseek() shouldn't (!) block
+    public actual suspend fun lseek(
+        handle: IOHandle, position: Long, whence: SeekWhence
+    ): CancellableResourceResult<SeekPosition>{
+        val task = getCurrentTask()
+
+        return task.checkIfCancelled()
+            .andThen {
+                val res = lseek64(handle.actualFd, position, whence.value)
+                if (res < 0) {
+                    Cancellable.failed(posix_errno().toSysError())
+                } else {
+                    uncancellableCheckpoint(SeekPosition(res))
+                }
+            }
     }
 
     @Suppress("UNCHECKED_CAST")

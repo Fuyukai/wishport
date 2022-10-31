@@ -100,7 +100,7 @@ public actual suspend fun openTemporaryFile(
     scope: AsyncClosingScope,
     mode: FileOpenType,
     flags: Set<FileOpenFlags>
-):  CancellableResult<FilesystemHandle<SystemPurePath, PlatformFileMetadata>, Fail> {
+): CancellableResult<FilesystemHandle<SystemPurePath, PlatformFileMetadata>, Fail> {
     val realFlags = flags + setOf(
         FileOpenFlags.MUST_CREATE, FileOpenFlags.TEMPORARY_FILE
     )

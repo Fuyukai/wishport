@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.wishport.io.streams
 
 import tf.veriny.wishport.annotations.ProvisionalApi
@@ -16,6 +22,8 @@ public interface BufferedReadStream : ReadStream {
      * [readIntoUpto] for actually reading from the underlying source.
      */
     public fun readFromBuffer(
-        into: ByteArray, byteCount: Int = into.size, bufferOffset: Int = 0
-    ): Int
+        into: ByteArray,
+        byteCount: UInt = into.size.toUInt(),
+        bufferOffset: Int = 0
+    ): UInt
 }

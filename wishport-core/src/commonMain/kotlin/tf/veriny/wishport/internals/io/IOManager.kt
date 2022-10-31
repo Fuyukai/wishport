@@ -14,10 +14,7 @@ import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.ByteString
 import tf.veriny.wishport.io.*
-import tf.veriny.wishport.io.fs.FileOpenFlags
-import tf.veriny.wishport.io.fs.FileOpenType
-import tf.veriny.wishport.io.fs.FilePermissions
-import tf.veriny.wishport.io.fs.PlatformFileMetadata
+import tf.veriny.wishport.io.fs.*
 
 // TODO: Rethink if this should be responsible for I/O dispatching itself, or if that functionality
 //       should be moved to the event loop, which can then poll this.
@@ -139,6 +136,16 @@ public expect class IOManager : Closeable {
         handle: IOHandle,
         withMetadata: Boolean
     ): CancellableResourceResult<Empty>
+
+    /**
+     * Seeks a seekable file [handle] to the specified [position], dependant on the behaviour
+     * controlled by passing [whence], reeturning the new file offset.
+     */
+    public suspend fun lseek(
+        handle: IOHandle,
+        position: Long,
+        whence: SeekWhence,
+    ): CancellableResourceResult<SeekPosition>
 
     /**
      * Gets the metadata for a file on the filesystem.

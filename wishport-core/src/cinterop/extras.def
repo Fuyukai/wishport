@@ -26,6 +26,10 @@ int memfd_create(const char *name, unsigned int flags) {
     return syscall(__NR_memfd_create, name, flags);
 }
 
+// equally not exported due to shenanigans
+typedef int64_t off64_t;
+extern off64_t lseek64(int fd, off64_t offset, int whence);
+
 // GAI constants that arent exported...?
 static const int _EAI_ADDRFAMILY = EAI_ADDRFAMILY;
 static const int _EAI_NODATA = EAI_NODATA;

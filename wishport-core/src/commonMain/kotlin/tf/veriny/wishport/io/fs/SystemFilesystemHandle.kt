@@ -11,6 +11,7 @@ import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.core.CancelScope
 import tf.veriny.wishport.io.ByteCountResult
 import tf.veriny.wishport.io.IOHandle
+import tf.veriny.wishport.io.SeekPosition
 
 /**
  * A file handle to a file on the system filehandle.
@@ -49,6 +50,16 @@ internal constructor(
 
         val io = getIOManager()
         return io.write(raw, buf, size, fileOffset, bufferOffset)
+    }
+
+    @OptIn(LowLevelApi::class)
+    override suspend fun seek(
+        position: Long, whence: SeekWhence
+    ): CancellableResult<SeekPosition, Fail> {
+        if (closed) return Cancellable.failed(ResourceClosed)
+
+        val io = getIOManager()
+        return io.lseek(raw, position, whence)
     }
 
     @OptIn(LowLevelApi::class)

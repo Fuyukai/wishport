@@ -39,9 +39,14 @@ public expect class RawFileHandle : IOResult, IOHandle
 /**
  * The result of a read/write operation.
  */
-public value class ByteCountResult(public val count: Int) : IOResult
+public value class ByteCountResult(public val count: UInt) : IOResult
 
 /**
  * The result of a poll operation.
  */
 public value class PollResult(public val polled: Set<Poll>) : IOResult
+
+/**
+ * The result of a seek operation.
+ */
+public value class SeekPosition(public val position: Long): IOResult

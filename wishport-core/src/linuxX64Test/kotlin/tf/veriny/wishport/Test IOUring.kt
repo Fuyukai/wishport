@@ -44,7 +44,7 @@ class `Test IOUring` {
                 buf, 4U, 4, 0U
             )
             assertTrue(readResult.isSuccess)
-            assertEquals(4, readResult.get()!!.count)
+            assertEquals(4U, readResult.get()!!.count)
             assertContentEquals(byteArrayOf(1, 1, 1, 1, 0, 0, 0, 0), buf)
         }
     }

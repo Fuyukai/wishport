@@ -30,11 +30,30 @@ class `Test File IO` {
         assertSuccess {
             openTemporaryFile(scope)
                 .andAlso { println("write").run { it.writeFrom("one".encodeToByteArray()) } }
+                .andAlso { println("seek").run { it.seek(0, SeekWhence.SEEK_SET) } }
                 .andAlso { println("read").run { it.readInto(buf) } }
                 .andThen { println("close").run { it.close() } }
         }
 
         assertContentEquals("one".encodeToByteArray(), buf)
+    }
+
+    // accidentally had a long-running bug where the file would always be read from offset zero...
+    @Test
+    fun `Test reading from a file uses the right file offset`() = runWithClosingScope { scope ->
+        val first = ByteArray(2)
+        val second = ByteArray(2)
+        assertSuccess {
+            openTemporaryFile(scope)
+                .andAlso { it.writeFrom("data".encodeToByteArray()) }
+                .andAlso { it.seek(0, SeekWhence.SEEK_SET) }
+                .andAlso { it.readInto(first) }
+                .andAlso { it.readInto(second) }
+                .andThen { it.close() }
+        }
+
+        assertContentEquals("da".encodeToByteArray(), first)
+        assertContentEquals("ta".encodeToByteArray(), second)
     }
 
     // checks for metadata relative
@@ -50,9 +69,7 @@ class `Test File IO` {
                         .andAlso { it.writeFrom("test".encodeToByteArray()) }
                         .andAlso { it.flush() }
                         .andThen { it.close() }
-                        .andThen {
-                            handle.getMetadata(path)
-                        }
+                        .andThen { handle.getMetadata(path) }
                 }
 
                 assertEquals(4UL, result.size)
