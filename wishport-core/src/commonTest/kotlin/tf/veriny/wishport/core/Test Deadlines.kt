@@ -12,7 +12,6 @@ import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.getCurrentTime
 import tf.veriny.wishport.isCancelled
 import tf.veriny.wishport.runUntilCompleteNoResult
-import tf.veriny.wishport.waitUntilRescheduled
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

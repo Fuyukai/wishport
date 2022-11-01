@@ -9,6 +9,7 @@ package tf.veriny.wishport.internals
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.core.ParkingLot
+import tf.veriny.wishport.core.getCurrentTask
 import kotlin.native.concurrent.Future
 import kotlin.native.concurrent.FutureState
 import kotlin.native.concurrent.TransferMode

@@ -7,6 +7,9 @@
 package tf.veriny.wishport
 
 import tf.veriny.wishport.annotations.LowLevelApi
+import tf.veriny.wishport.core.getCurrentTask
+import tf.veriny.wishport.core.reschedule
+import tf.veriny.wishport.core.waitUntilRescheduled
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails

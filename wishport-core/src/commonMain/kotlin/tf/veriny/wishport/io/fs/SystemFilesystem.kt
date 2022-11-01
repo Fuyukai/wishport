@@ -10,6 +10,7 @@ import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.b
+import tf.veriny.wishport.core.getIOManager
 import tf.veriny.wishport.io.DirectoryHandle
 import tf.veriny.wishport.io.Empty
 

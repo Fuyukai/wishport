@@ -55,6 +55,7 @@ public interface FileLikeHandle : AsyncCloseable {
      * Seeks this file to the specified [position], using the behaviour specified by [whence].
      */
     public suspend fun seek(
-        position: Long, whence: SeekWhence
+        position: Long,
+        whence: SeekWhence
     ): CancellableResult<SeekPosition, Fail>
 }

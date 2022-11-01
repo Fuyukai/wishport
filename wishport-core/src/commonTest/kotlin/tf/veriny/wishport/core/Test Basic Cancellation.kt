@@ -9,7 +9,6 @@
 package tf.veriny.wishport.core
 
 import tf.veriny.wishport.annotations.LowLevelApi
-import tf.veriny.wishport.checkIfCancelled
 import tf.veriny.wishport.checkpoint
 import tf.veriny.wishport.isCancelled
 import tf.veriny.wishport.runUntilCompleteNoResult

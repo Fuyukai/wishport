@@ -19,6 +19,8 @@ import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.ByteString
 import tf.veriny.wishport.core.InternalWishportError
 import tf.veriny.wishport.core.NS_PER_SEC
+import tf.veriny.wishport.core.getCurrentTask
+import tf.veriny.wishport.core.waitUntilRescheduled
 import tf.veriny.wishport.internals.Task
 import tf.veriny.wishport.internals.checkIfCancelled
 import tf.veriny.wishport.io.*
@@ -619,8 +621,10 @@ public actual class IOManager(
 
     // not actually async but lseek() shouldn't (!) block
     public actual suspend fun lseek(
-        handle: IOHandle, position: Long, whence: SeekWhence
-    ): CancellableResourceResult<SeekPosition>{
+        handle: IOHandle,
+        position: Long,
+        whence: SeekWhence
+    ): CancellableResourceResult<SeekPosition> {
         val task = getCurrentTask()
 
         return task.checkIfCancelled()

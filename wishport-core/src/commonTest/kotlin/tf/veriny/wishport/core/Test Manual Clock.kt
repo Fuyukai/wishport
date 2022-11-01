@@ -12,7 +12,6 @@ import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.getCurrentTime
 import tf.veriny.wishport.helpers.ManualClock
 import tf.veriny.wishport.internals.getMonotonicTime
-import tf.veriny.wishport.runUntilCompleteNoResult
 import tf.veriny.wishport.sleep
 import kotlin.test.Test
 import kotlin.test.assertTrue

@@ -49,4 +49,4 @@ public value class PollResult(public val polled: Set<Poll>) : IOResult
 /**
  * The result of a seek operation.
  */
-public value class SeekPosition(public val position: Long): IOResult
+public value class SeekPosition(public val position: Long) : IOResult

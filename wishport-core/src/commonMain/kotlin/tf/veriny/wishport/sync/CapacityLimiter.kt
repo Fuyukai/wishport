@@ -9,6 +9,7 @@ package tf.veriny.wishport.sync
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.core.ParkingLot
+import tf.veriny.wishport.core.getCurrentTask
 import tf.veriny.wishport.internals.Task
 import tf.veriny.wishport.internals.checkIfCancelled
 import tf.veriny.wishport.internals.uncancellableCheckpoint

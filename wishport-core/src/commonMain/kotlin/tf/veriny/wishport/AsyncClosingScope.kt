@@ -10,6 +10,7 @@ import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.IdentitySet
 import tf.veriny.wishport.core.CancelScope
+import tf.veriny.wishport.core.checkIfCancelled
 
 /**
  * Like [ClosingScope], but it supports both [Closeable] and [AsyncCloseable]. This should be

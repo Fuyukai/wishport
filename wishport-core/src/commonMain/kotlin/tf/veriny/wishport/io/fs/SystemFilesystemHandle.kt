@@ -9,6 +9,7 @@ package tf.veriny.wishport.io.fs
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.core.CancelScope
+import tf.veriny.wishport.core.getIOManager
 import tf.veriny.wishport.io.ByteCountResult
 import tf.veriny.wishport.io.IOHandle
 import tf.veriny.wishport.io.SeekPosition
@@ -54,7 +55,8 @@ internal constructor(
 
     @OptIn(LowLevelApi::class)
     override suspend fun seek(
-        position: Long, whence: SeekWhence
+        position: Long,
+        whence: SeekWhence
     ): CancellableResult<SeekPosition, Fail> {
         if (closed) return Cancellable.failed(ResourceClosed)
 
