@@ -7,7 +7,13 @@
 package tf.veriny.wishport.io.fs
 
 /**
- * A handle to an opened file on a filesystem.
+ * A handle to an opened file on a filesystem. This can be a real readable or writeable file, or
+ * an opened directory.
+ *
+ * A FilesystemHandle doubles as both a basic file read/write class, and a Path class. All
+ * filesystem functions that perform actions on the filesystem structure - such as opening or
+ * creating other files or directories - can be passed a FilesystemHandle to open files relative
+ * to the real location of this file.
  */
 public interface FilesystemHandle<F : PurePath<F>, M : FileMetadata> : FileLikeHandle {
     public companion object;

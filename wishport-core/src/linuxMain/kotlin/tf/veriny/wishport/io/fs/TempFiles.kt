@@ -100,14 +100,15 @@ public actual suspend fun openTemporaryFile(
     scope: AsyncClosingScope,
     mode: FileOpenType,
     flags: Set<FileOpenFlags>
-): CancellableResult<FilesystemHandle<SystemPurePath, PlatformFileMetadata>, Fail> {
+): CancellableResult<BufferedFile, Fail> {
     val realFlags = flags + setOf(
         FileOpenFlags.MUST_CREATE, FileOpenFlags.TEMPORARY_FILE
     )
 
-    return getTempDir().andThen {
-        it.openRelative(scope, PosixPurePath.CURRENT_DIR, FileOpenType.READ_WRITE, realFlags)
-    }
+    return getTempDir()
+        .andThen {
+            scope.openBufferedSystemFile(it, PosixPurePath.CURRENT_DIR, mode, flags)
+        }
 }
 
 /**

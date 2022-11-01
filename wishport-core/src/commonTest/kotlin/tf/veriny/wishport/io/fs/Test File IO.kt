@@ -28,9 +28,9 @@ class `Test File IO` {
         val buf = ByteArray(3)
         assertSuccess {
             openTemporaryFile(scope)
-                .andAlso { println("write").run { it.writeFrom("one".encodeToByteArray()) } }
+                .andAlso { println("write").run { it.writeAll("one".encodeToByteArray()) } }
                 .andAlso { println("seek").run { it.seek(0, SeekWhence.SEEK_SET) } }
-                .andAlso { println("read").run { it.readInto(buf) } }
+                .andAlso { println("read").run { it.readIntoUpto(buf) } }
                 .andThen { println("close").run { it.close() } }
         }
 
@@ -44,10 +44,10 @@ class `Test File IO` {
         val second = ByteArray(2)
         assertSuccess {
             openTemporaryFile(scope)
-                .andAlso { it.writeFrom("data".encodeToByteArray()) }
+                .andAlso { it.writeAll("data".encodeToByteArray()) }
                 .andAlso { it.seek(0, SeekWhence.SEEK_SET) }
-                .andAlso { it.readInto(first) }
-                .andAlso { it.readInto(second) }
+                .andAlso { it.readIntoUpto(first) }
+                .andAlso { it.readIntoUpto(second) }
                 .andThen { it.close() }
         }
 
