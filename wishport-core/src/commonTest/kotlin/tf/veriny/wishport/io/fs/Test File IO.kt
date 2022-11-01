@@ -8,7 +8,6 @@ package tf.veriny.wishport.io.fs
 
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.ProvisionalApi
-import tf.veriny.wishport.annotations.Unsafe
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -57,7 +56,6 @@ class `Test File IO` {
     }
 
     // checks for metadata relative
-    @OptIn(Unsafe::class)
     @Test
     fun `Test getting file metadata`() = runWithClosingScope { scope ->
         val path = systemPathFor("test.txt").get()!!
@@ -75,6 +73,53 @@ class `Test File IO` {
                 assertEquals(4UL, result.size)
 
                 Cancellable.empty()
+            }
+        }
+    }
+
+    @Test
+    fun `Test buffered file IO`() = runWithClosingScope { scope ->
+        val path = systemPathFor("test.bin").get()!!
+
+        assertSuccess {
+            createTemporaryDirectory { handle ->
+                val file = assertSuccess {
+                    scope.openBufferedSystemFile(
+                        handle, path,
+                        FileOpenType.READ_WRITE,
+                        flags = setOf(FileOpenFlags.CREATE_IF_NOT_EXISTS)
+                    )
+                }
+
+                val buffer = ByteArray(file.bufferSize.toInt() * 2)
+                SecureRandom.nextBytes(buffer)
+
+                val out = ByteArray(16)
+
+                // this is all wrapped in .andThens to make sure it automatically fails wwith
+                // a good message if seek/readintoupto fails
+                file.writeAll(buffer)
+                    .andThen {
+                        println("seek")
+                        file.seek(0, SeekWhence.SEEK_SET)
+                    }
+                    .andThen {
+                        println("read")
+                        file.readIntoUpto(out)
+                    }
+                    .andThen {
+                        println("equals")
+                        assertContentEquals(buffer.sliceArray(0 until 16), out)
+                        Cancellable.empty()
+                    }
+                    .andThen {
+                        // make sure that we actually do a buffer read.
+                        println("readFromBuffer")
+                        val count = file.readFromBuffer(out)
+                        assertEquals(16U, count)
+                        assertContentEquals(buffer.sliceArray(16 until 32), out)
+                        Cancellable.empty()
+                    }
             }
         }
     }

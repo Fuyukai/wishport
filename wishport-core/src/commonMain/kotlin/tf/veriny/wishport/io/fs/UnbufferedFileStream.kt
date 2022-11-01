@@ -9,6 +9,7 @@ package tf.veriny.wishport.io.fs
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.ProvisionalApi
 import tf.veriny.wishport.io.ByteCountResult
+import tf.veriny.wishport.io.SeekPosition
 import tf.veriny.wishport.io.streams.EofNotSupported
 import tf.veriny.wishport.io.streams.PartialStream
 import tf.veriny.wishport.io.streams.StreamDamaged
@@ -23,6 +24,13 @@ public class UnbufferedFileStream(
     override val closed: Boolean by handle::closed
     override var damaged: Boolean = false
         private set
+
+    public suspend fun seek(
+        position: Long,
+        whence: SeekWhence
+    ): CancellableResult<SeekPosition, Fail> {
+        return handle.seek(position, whence)
+    }
 
     override suspend fun writeMost(
         buffer: ByteArray,
