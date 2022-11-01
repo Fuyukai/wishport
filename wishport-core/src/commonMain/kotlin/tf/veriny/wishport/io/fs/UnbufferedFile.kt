@@ -18,7 +18,7 @@ import tf.veriny.wishport.io.streams.StreamDamaged
  * A [PartialStream] that wraps a [FilesystemHandle].
  */
 @ProvisionalApi
-public class UnbufferedFileStream(
+public class UnbufferedFile(
     public val handle: FilesystemHandle<*, *>,
 ) : PartialStream {
     override val closed: Boolean by handle::closed

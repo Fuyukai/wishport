@@ -43,7 +43,7 @@ private constructor(
     private var front = 0U
     private var end = 0U
 
-    private val backing = UnbufferedFileStream(handle)
+    private val backing = UnbufferedFile(handle)
     override val closed: Boolean by backing::closed
     override val damaged: Boolean by backing::damaged
 
@@ -154,7 +154,7 @@ private constructor(
                         Cancellable.ok(ByteCountResult(total))
                     } else res
                 } else {
-                    Cancellable.ok(ByteCountResult(total))
+                    uncancellableCheckpoint(ByteCountResult(total))
                 }
             }
     }

@@ -216,6 +216,67 @@ public suspend fun <T : EndpointInfo> getAddressFromName(
 
 // == I/O helpers == //
 /**
+ * Opens a new [UnbufferedFile] for the specified [path], relative to the [otherHandle],
+ * with the specified [mode] and file open [flags]. This function needs to be ran inside an
+ * [AsyncClosingScope].
+ */
+@OptIn(Unsafe::class)
+@ProvisionalApi
+public suspend fun AsyncClosingScope.openUnbufferedSystemFile(
+    otherHandle: FilesystemHandle<SystemPurePath, PlatformFileMetadata>,
+    path: SystemPurePath,
+    mode: FileOpenType = FileOpenType.READ_ONLY,
+    flags: Set<FileOpenFlags> = setOf()
+): CancellableResult<UnbufferedFile, Fail> =
+    SystemFilesystem.getRelativeFileHandle(otherHandle, path, mode, flags)
+        .andThen { Cancellable.ok(UnbufferedFile(it)) }
+        .andAddTo(this)
+
+/**
+ * Like [openUnbufferedSystemFile], but takes a string argument.
+ */
+@ProvisionalApi
+public suspend fun AsyncClosingScope.openUnbufferedSystemFile(
+    otherHandle: FilesystemHandle<SystemPurePath, PlatformFileMetadata>,
+    path: String,
+    mode: FileOpenType = FileOpenType.READ_ONLY,
+    flags: Set<FileOpenFlags> = setOf()
+): CancellableResult<UnbufferedFile, Fail> =
+    systemPathFor(path)
+        .andThen {
+            openUnbufferedSystemFile(otherHandle, it, mode, flags)
+        }
+
+/**
+ * Opens a new [UnbufferedFile] for the specified [path], with the specified [mode] and file open
+ * [flags]. This function needs to be ran inside an [AsyncClosingScope].
+ */
+@OptIn(Unsafe::class)
+@ProvisionalApi
+public suspend fun AsyncClosingScope.openUnbufferedSystemFile(
+    path: SystemPurePath,
+    mode: FileOpenType = FileOpenType.READ_ONLY,
+    flags: Set<FileOpenFlags> = setOf()
+): CancellableResult<UnbufferedFile, Fail> =
+    SystemFilesystem.getFileHandle(path, mode, flags)
+        .andThen { Cancellable.ok(UnbufferedFile(it)) }
+        .andAddTo(this)
+
+/**
+ * Like [openBufferedSystemFile], but takes a string argument.
+ */
+@ProvisionalApi
+public suspend fun AsyncClosingScope.openUnbufferedSystemFile(
+    path: String,
+    mode: FileOpenType = FileOpenType.READ_ONLY,
+    flags: Set<FileOpenFlags> = setOf()
+): CancellableResult<UnbufferedFile, Fail> =
+    systemPathFor(path)
+        .andThen {
+            openUnbufferedSystemFile(it, mode, flags)
+        }
+
+/**
  * Opens a new [BufferedFile] for the specified [path], relative to the [otherHandle],
  * with the specified [mode] and file open [flags]. This function needs to be ran inside an
  * [AsyncClosingScope].
@@ -233,6 +294,21 @@ public suspend fun AsyncClosingScope.openBufferedSystemFile(
         .andAddTo(this)
 
 /**
+ * Like [openBufferedSystemFile], but takes a string argument.
+ */
+@ProvisionalApi
+public suspend fun AsyncClosingScope.openBufferedSystemFile(
+    otherHandle: FilesystemHandle<SystemPurePath, PlatformFileMetadata>,
+    path: String,
+    mode: FileOpenType = FileOpenType.READ_ONLY,
+    flags: Set<FileOpenFlags> = setOf()
+): CancellableResult<BufferedFile, Fail> =
+    systemPathFor(path)
+        .andThen {
+            openBufferedSystemFile(otherHandle, it, mode, flags)
+        }
+
+/**
  * Opens a new [BufferedFile] for the specified [path], with the specified [mode] and file open
  * [flags]. This function needs to be ran inside an [AsyncClosingScope].
  */
@@ -246,3 +322,17 @@ public suspend fun AsyncClosingScope.openBufferedSystemFile(
     SystemFilesystem.getFileHandle(path, mode, flags)
         .andThen { BufferedFile(it) }
         .andAddTo(this)
+
+/**
+ * Like [openBufferedSystemFile], but takes a string argument.
+ */
+@ProvisionalApi
+public suspend fun AsyncClosingScope.openBufferedSystemFile(
+    path: String,
+    mode: FileOpenType = FileOpenType.READ_ONLY,
+    flags: Set<FileOpenFlags> = setOf()
+): CancellableResult<BufferedFile, Fail> =
+    systemPathFor(path)
+        .andThen {
+            openBufferedSystemFile(it, mode, flags)
+        }
