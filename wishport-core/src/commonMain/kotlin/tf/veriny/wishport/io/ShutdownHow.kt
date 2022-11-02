@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-package tf.veriny.wishport.internals.io
+package tf.veriny.wishport.io
 
 /**
  * Enumeration over the possible ways to shutdown a handle.

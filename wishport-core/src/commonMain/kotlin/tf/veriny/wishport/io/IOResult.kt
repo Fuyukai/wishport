@@ -6,8 +6,6 @@
 
 package tf.veriny.wishport.io
 
-import tf.veriny.wishport.internals.io.Poll
-
 /**
  * A readable handle for usage in I/O methods.
  */

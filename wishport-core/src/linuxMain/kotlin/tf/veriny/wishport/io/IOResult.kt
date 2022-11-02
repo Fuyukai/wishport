@@ -9,7 +9,6 @@ package tf.veriny.wishport.io
 import platform.linux.EPOLLERR
 import platform.linux.EPOLLIN
 import platform.linux.EPOLLOUT
-import tf.veriny.wishport.internals.io.Poll
 
 // marker interfaces
 public actual interface IOHandle {

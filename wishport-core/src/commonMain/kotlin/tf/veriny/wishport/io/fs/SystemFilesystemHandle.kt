@@ -70,7 +70,7 @@ internal constructor(
 
         return CancelScope(shield = true) {
             val io = getIOManager()
-            io.closeHandle(raw)
-        }.andThen { closed = true; Cancellable.empty() }
+            io.closeHandle(raw).also { closed = true }
+        }.andThen { Cancellable.empty() }
     }
 }

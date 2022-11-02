@@ -10,8 +10,8 @@ import kotlinx.cinterop.*
 import platform.posix.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.core.*
-import tf.veriny.wishport.internals.io.Poll
 import tf.veriny.wishport.io.Fd
+import tf.veriny.wishport.io.Poll
 import tf.veriny.wishport.io.PollResult
 import tf.veriny.wishport.io.fs.FilesystemHandle
 import tf.veriny.wishport.io.fs.PosixPurePath
