@@ -83,7 +83,7 @@ private constructor(
     }
 
     override suspend fun sendEof(): CancellableResult<Unit, Fail> {
-        return CancellableResult.failed(EofNotSupported)
+        return Cancellable.failed(EofNotSupported)
     }
 
     override suspend fun writeMost(
