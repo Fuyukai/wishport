@@ -140,17 +140,11 @@ public class EventLoop private constructor(public val clock: Clock) : Closeable 
 
     // I/O methods, with different semantics
     // this one: loop io_uring_peek_cqe
-    /**
-     * Consumes all available I/O events from the completion queue.
-     */
     private fun peekIO() {
         ioManager.pollIO()
     }
 
     // this one: io_uring_wait_cqes with max queue length and a timeout.
-    /**
-     * Waits for I/O.
-     */
     private fun waitForIO(nextDeadline: Long) {
         if (checkWaiter()) return
 
@@ -159,7 +153,6 @@ public class EventLoop private constructor(public val clock: Clock) : Closeable 
             clock.autojump(nextDeadline)
             peekIO()
         } else {
-            // TODO: actually wait on I/O
             val sleepTime = clock.getSleepTime(nextDeadline)
             ioManager.waitForIOUntil(sleepTime)
         }

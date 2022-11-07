@@ -8,6 +8,8 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <sys/syscall.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 // these aren't properly re-exported
 static const int _O_PATH = O_PATH;
@@ -33,6 +35,21 @@ extern off64_t lseek64(int fd, off64_t offset, int whence);
 // GAI constants that arent exported...?
 static const int _EAI_ADDRFAMILY = EAI_ADDRFAMILY;
 static const int _EAI_NODATA = EAI_NODATA;
+
+// default kotlin platform lib sockaddr_in6 is mangled
+// so export our own, identical struct
+struct wp_in6_addr {
+    unsigned char addr[16];
+};
+
+typedef struct wp_sockaddr_in6 {
+   sa_family_t     sin6_family;   /* AF_INET6 */
+   in_port_t       sin6_port;     /* port number */
+   uint32_t        sin6_flowinfo; /* IPv6 flow information */
+   struct wp_in6_addr sin6_addr;     /* IPv6 address */
+   uint32_t        sin6_scope_id; /* Scope ID (new in 2.4) */
+};
+
 
 // statx isn't exported by the really ancient glibc
 struct statx_timestamp {
@@ -73,3 +90,4 @@ struct statx {
    uint32_t stx_dev_minor;   /* Minor ID */
    uint64_t stx_mnt_id;      /* Mount ID */
 };
+

@@ -39,6 +39,8 @@ internal enum class SleepingWhy {
     MKDIR,
     UNLINK,
     STATX,
+    CONNECT,
+    ACCEPT,
 
     ;
 }

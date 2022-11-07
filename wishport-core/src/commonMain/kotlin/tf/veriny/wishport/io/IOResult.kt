@@ -23,6 +23,11 @@ public expect sealed interface IOResult
 public object Empty : IOResult
 
 /**
+ * A handle to an open socket.
+ */
+public expect class SocketHandle : IOResult, IOHandle
+
+/**
  * A handle to an open directory on a filesystem. This may be a real directory on the default
  * filesystem or a directory in a customised filesystem.
  */

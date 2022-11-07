@@ -216,12 +216,21 @@ public fun ByteString.hexlify(): String {
     return buf.toString()
 }
 
+/**
+ * Creates a new hex-escaped string from this ByteString, ala Python's stringifiers.
+ */
 public fun ByteString.escapedString(): String {
     return joinToString("") {
         if (it in 32..126) it.toInt().toChar().toString()
         else "\\x" + it.toUByte().toString(16).padStart(2, '0')
     }
 }
+
+/**
+ * Decodes this [ByteString] to a [String], with UTF-8 surrogate escapes in the
+ */
+@OptIn(Unsafe::class)
+public fun ByteString.decodeToString(): String = unwrap().decodeToString()
 
 public fun ByteArray.toByteString(): ByteString = ByteString(this)
 

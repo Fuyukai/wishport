@@ -172,3 +172,17 @@ public inline fun <Out, S : Out, F : Fail> CancellableResult<S, F>.unwrapOr(
             }
         }
     }
+
+/**
+ * If this is a non-cancelled success, then return the unwrapped value. Otherwise, panic with the
+ * specified error message.
+ */
+public inline fun <S, F : Fail> CancellableResult<S, F>.expect(
+    message: String = "expected a success"
+): S =
+    when (this) {
+        is Cancelled -> throw IllegalStateException(message)
+        is NotCancelled<S, F, Either<S, F>> -> {
+            wrapped.expect(message)
+        }
+    }

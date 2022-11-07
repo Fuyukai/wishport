@@ -25,6 +25,9 @@ import tf.veriny.wishport.internals.Task
 import tf.veriny.wishport.internals.checkIfCancelled
 import tf.veriny.wishport.io.*
 import tf.veriny.wishport.io.fs.*
+import tf.veriny.wishport.io.net.Inet4SocketAddress
+import tf.veriny.wishport.io.net.Inet6SocketAddress
+import tf.veriny.wishport.io.net.SocketAddress
 import tf.veriny.wishport.sync.CapacityLimiter
 import tf.veriny.wishport.util.kstrerror
 
@@ -179,7 +182,7 @@ public actual class IOManager(
             }
 
             // impl note, these are the same (openat2) on linux
-            SleepingWhy.OPEN_DIRECTORY, SleepingWhy.OPEN_FILE -> {
+            SleepingWhy.OPEN_DIRECTORY, SleepingWhy.OPEN_FILE, SleepingWhy.ACCEPT -> {
                 val fd = unwrapped.res
                 Cancellable.ok(Fd(fd))
             }
@@ -195,7 +198,7 @@ public actual class IOManager(
             SleepingWhy.FSYNC, SleepingWhy.CLOSE,
             SleepingWhy.POLL_UPDATE, SleepingWhy.MKDIR,
             SleepingWhy.UNLINK, SleepingWhy.SHUTDOWN,
-            SleepingWhy.STATX, -> {
+            SleepingWhy.STATX, SleepingWhy.CONNECT, -> {
                 Cancellable.ok(Empty)
             }
         }
@@ -538,6 +541,125 @@ public actual class IOManager(
             } as CancellableResourceResult<RawFileHandle>
     }
 
+    // Adding a new socket type:
+    // 1) Make a new SocketAddress subclass that encapsulates the data for the socket connection.
+    // 2) Add a new branch to the when call in ``doSocketAddress`` that handles the new socket type.
+    // This is perhaps not very OO-style code, but I simply do not care. It avoids having to do stupid
+    // expect/actual shenanigans on every socket address subclass.
+
+    @Unsafe
+    private fun doSocketAddress(
+        alloc: NativePlacement,
+        handle: IOHandle,
+        address: SocketAddress,
+        sqe: CPointer<io_uring_sqe>?
+    ): Int = with(alloc) {
+        when (address) {
+            is Inet4SocketAddress -> {
+                val addr = alloc<sockaddr_in>()
+                memset(addr.ptr, 0, sizeOf<sockaddr_in>().toULong())
+                addr.sin_family = AF_INET.toUShort()
+                addr.sin_addr.s_addr = address.address.toUInt()
+                addr.sin_port = htons(address.port)
+
+                if (sqe != null) {
+                    io_uring_prep_connect(
+                        sqe,
+                        handle.actualFd,
+                        addr.ptr.reinterpret(),
+                        sizeOf<sockaddr_in>().convert()
+                    )
+                } else {
+                    return bind(handle.actualFd, addr.ptr.reinterpret(), sizeOf<sockaddr_in>().convert())
+                }
+            }
+            is Inet6SocketAddress -> {
+                val addr = alloc<wp_sockaddr_in6>()
+                memset(addr.ptr, 0, sizeOf<wp_sockaddr_in6>().toULong())
+
+                addr.sin6_family = AF_INET6.toUShort()
+                address.address.representation.unwrap().usePinned {
+                    memcpy(addr.sin6_addr.addr, it.addressOf(0), 16)
+                }
+
+                addr.sin6_port = htons(address.port)
+
+                if (sqe != null) {
+                    io_uring_prep_connect(
+                        sqe,
+                        handle.actualFd,
+                        addr.ptr.reinterpret<sockaddr>(),
+                        sizeOf<sockaddr_in6>().toUInt()
+                    )
+                } else {
+                    return bind(handle.actualFd, addr.ptr.reinterpret(), sizeOf<sockaddr_in6>().toUInt())
+                }
+            }
+        }
+
+        return 0
+    }
+
+    // not really asynchronous (yet), but we have itt here for future direct sockets
+    // and also so that the stupid sockaddr type punning can be unified here
+    @OptIn(Unsafe::class)
+    public actual suspend fun bind(
+        sock: IOHandle,
+        address: SocketAddress
+    ): CancellableResourceResult<Empty> = memScoped {
+        val task = getCurrentTask()
+
+        return task.checkIfCancelled()
+            .andThen {
+                val res = doSocketAddress(this, sock, address, null)
+                if (res < 0) res.toSysResult().notCancelled()
+                else uncancellableCheckpoint(Empty)
+            }
+    }
+
+    /**
+     * Accepts a single incoming connection on a socket.
+     */
+    public suspend fun accept(sock: IOHandle): CancellableResourceResult<SocketHandle> {
+        val task = getCurrentTask()
+
+        return task.checkIfCancelled()
+            .andThen {
+                limiter.unwrapAndRun {
+                    val sqe = getsqe()
+                    io_uring_prep_accept(sqe, sock.actualFd, null, null, SOCK_CLOEXEC)
+
+                    val seq = counter++
+                    io_uring_sqe_set_data64(sqe, seq)
+
+                    submitAndWait<SocketHandle>(task, seq, SleepingWhy.ACCEPT)
+                }
+            } as CancellableResourceResult<SocketHandle>
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    @OptIn(Unsafe::class)
+    public actual suspend fun connect(
+        sock: IOHandle,
+        address: SocketAddress
+    ): CancellableResourceResult<Empty> = memScoped {
+        val task = getCurrentTask()
+
+        return task.checkIfCancelled()
+            .andThen {
+                limiter.unwrapAndRun {
+                    val sqe = getsqe()
+                    // ignore return value, it's always 0
+                    doSocketAddress(this, sock, address, sqe)
+
+                    val seq = counter++
+                    io_uring_sqe_set_data64(sqe, seq)
+
+                    submitAndWait<Empty>(task, seq, SleepingWhy.CONNECT)
+                }
+            } as CancellableResourceResult<Empty>
+    }
+
     public actual suspend fun read(
         handle: IOHandle,
         out: ByteArray,
@@ -568,7 +690,7 @@ public actual class IOManager(
 
     public actual suspend fun write(
         handle: IOHandle,
-        buf: ByteArray,
+        input: ByteArray,
         size: UInt,
         fileOffset: ULong,
         bufferOffset: Int
@@ -576,11 +698,11 @@ public actual class IOManager(
         val task = getCurrentTask()
 
         return task.checkIfCancelled()
-            .andThen { buf.checkBuffers(size, bufferOffset).notCancelled() }
+            .andThen { input.checkBuffers(size, bufferOffset).notCancelled() }
             .andThen {
                 limiter.unwrapAndRun {
                     val sqe = getsqe()
-                    val inpData = buf.pin()
+                    val inpData = input.pin()
 
                     defer { inpData.unpin() }
 
@@ -593,6 +715,64 @@ public actual class IOManager(
                     )
                     val seq = counter++
                     io_uring_sqe_set_data64(sqe, seq)
+                    submitAndWait(task, seq, SleepingWhy.READ_WRITE)
+                }
+            }
+    }
+
+    public actual suspend fun recv(
+        handle: IOHandle,
+        out: ByteArray,
+        size: UInt,
+        bufferOffset: Int,
+        flags: Int
+    ): CancellableResult<ByteCountResult, Fail> = memScoped {
+        val task = getCurrentTask()
+
+        val flags = flags.or(MSG_NOSIGNAL)
+
+        return task.checkIfCancelled()
+            .andThen { out.checkBuffers(size, bufferOffset).notCancelled() }
+            .andThen {
+                limiter.unwrapAndRun {
+                    val sqe = getsqe()
+                    val pinned = out.pin()
+
+                    defer { pinned.unpin() }
+
+                    io_uring_prep_recv(sqe, handle.actualFd, pinned.addressOf(bufferOffset), size.toULong(), flags)
+                    val seq = counter++
+                    io_uring_sqe_set_data64(sqe, seq)
+
+                    submitAndWait(task, seq, SleepingWhy.READ_WRITE)
+                }
+            }
+    }
+
+    public actual suspend fun send(
+        handle: IOHandle,
+        input: ByteArray,
+        size: UInt,
+        bufferOffset: Int,
+        flags: Int
+    ): CancellableResult<ByteCountResult, Fail> = memScoped {
+        val task = getCurrentTask()
+
+        val flags = flags.or(MSG_NOSIGNAL)
+
+        return task.checkIfCancelled()
+            .andThen { input.checkBuffers(size, bufferOffset).notCancelled() }
+            .andThen {
+                limiter.unwrapAndRun {
+                    val sqe = getsqe()
+                    val pinned = input.pin()
+
+                    defer { pinned.unpin() }
+
+                    io_uring_prep_send(sqe, handle.actualFd, pinned.addressOf(bufferOffset), size.toULong(), flags)
+                    val seq = counter++
+                    io_uring_sqe_set_data64(sqe, seq)
+
                     submitAndWait(task, seq, SleepingWhy.READ_WRITE)
                 }
             }

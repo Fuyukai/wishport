@@ -40,7 +40,7 @@ public sealed class IPAddress {
  * An IP address using version 4.
  */
 @OptIn(ExperimentalUnsignedTypes::class)
-public class IPv4Address(bytes: ByteArray) : IPAddress() {
+public class IPv4Address(private val bytes: ByteArray) : IPAddress() {
     public companion object {
         /**
          * Parses an IPv4 address from a String.
@@ -77,7 +77,8 @@ public class IPv4Address(bytes: ByteArray) : IPAddress() {
         }
     }
 
-    override val representation: ByteString = ByteString(bytes)
+    @OptIn(Unsafe::class)
+    override val representation: ByteString = ByteString.uncopied(bytes)
 
     override val version: Int = IP_VERSION_4
     override val family: SocketFamily get() = SocketFamily.IPV4
@@ -94,6 +95,15 @@ public class IPv4Address(bytes: ByteArray) : IPAddress() {
 
     override fun toString(): String {
         return representation.joinToString(".") { it.toUByte().toString() }
+    }
+
+    public fun toUInt(): UInt {
+        var cnt = 0U
+        cnt = cnt.or(bytes[0].toUInt().shr(24))
+        cnt = cnt.or(bytes[1].toUInt().shr(16))
+        cnt = cnt.or(bytes[2].toUInt().shr(8))
+        cnt = cnt.or(bytes[3].toUInt())
+        return cnt
     }
 }
 

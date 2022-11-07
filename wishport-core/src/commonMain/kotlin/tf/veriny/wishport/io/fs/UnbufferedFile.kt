@@ -6,13 +6,13 @@
 
 package tf.veriny.wishport.io.fs
 
-import tf.veriny.wishport.*
+import tf.veriny.wishport.Cancellable
+import tf.veriny.wishport.CancellableResult
+import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.ProvisionalApi
 import tf.veriny.wishport.io.ByteCountResult
 import tf.veriny.wishport.io.SeekPosition
-import tf.veriny.wishport.io.streams.EofNotSupported
-import tf.veriny.wishport.io.streams.PartialStream
-import tf.veriny.wishport.io.streams.StreamDamaged
+import tf.veriny.wishport.io.streams.*
 
 /**
  * A [PartialStream] that wraps a [FilesystemHandle].
@@ -37,48 +37,12 @@ public class UnbufferedFile(
         byteCount: UInt,
         bufferOffset: Int
     ): CancellableResult<ByteCountResult, Fail> {
-        if (closed) return Cancellable.failed(AlreadyClosedError)
-
-        var runningTotal = 0U
-
-        while (runningTotal < byteCount) {
-            val result = handle.writeFrom(
-                buffer, byteCount - runningTotal, bufferOffset, ULong.MAX_VALUE
-            )
-            if (result.isCancelled) {
-                return if (runningTotal > 0U) Cancellable.ok(ByteCountResult(runningTotal))
-                else result
-            } else if (result.isFailure) return result
-            else {
-                runningTotal += result.get()!!.count
-            }
-        }
-
-        return Cancellable.ok(ByteCountResult(runningTotal))
+        return handle.writeMost(buffer, byteCount, bufferOffset)
     }
 
     override suspend fun writeAll(buffer: ByteArray, byteCount: UInt, bufferOffset: Int): CancellableResult<Unit, Fail> {
-        if (closed) return Cancellable.failed(AlreadyClosedError)
         if (damaged) return Cancellable.failed(StreamDamaged)
-
-        var runningTotal = 0U
-
-        while (runningTotal < byteCount) {
-            val result = handle.writeFrom(
-                buffer, byteCount - runningTotal, bufferOffset, ULong.MAX_VALUE
-            )
-
-            if (result.isCancelled) {
-                runningTotal += result.get()!!.count
-            } else {
-                damaged = true
-                // safe cast, <Cancellable> isn't part of us
-                @Suppress("UNCHECKED_CAST")
-                return result as CancellableResult<Unit, Fail>
-            }
-        }
-
-        return Cancellable.empty()
+        return handle.writeAll(buffer, byteCount, bufferOffset) { damaged = true }
     }
 
     override suspend fun close(): CancellableResult<Unit, Fail> {

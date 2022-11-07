@@ -15,6 +15,7 @@ import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.ByteString
 import tf.veriny.wishport.io.*
 import tf.veriny.wishport.io.fs.*
+import tf.veriny.wishport.io.net.SocketAddress
 
 // TODO: Rethink if this should be responsible for I/O dispatching itself, or if that functionality
 //       should be moved to the event loop, which can then poll this.
@@ -103,7 +104,20 @@ public expect class IOManager : Closeable {
     ): CancellableResourceResult<RawFileHandle>
 
     /**
-     * Reads [size] bytes from a [IOHandle] into [out], starting at [fileOffset] from the
+     * Binds the socket [sock] to the specified [address].
+     */
+    public suspend fun bind(sock: IOHandle, address: SocketAddress): CancellableResourceResult<Empty>
+
+    /**
+     * Connects the socket [sock] to the specified [address].
+     */
+    public suspend fun connect(
+        sock: IOHandle,
+        address: SocketAddress
+    ): CancellableResourceResult<Empty>
+
+    /**
+     * Reads up to [size] bytes from a [IOHandle] into [out], starting at [fileOffset] from the
      * file's current position, and at [bufferOffset] into the provided buffer.
      */
     public suspend fun read(
@@ -115,15 +129,41 @@ public expect class IOManager : Closeable {
     ): CancellableResult<ByteCountResult, Fail>
 
     /**
-     * Writes [size] bytes from [buf] into an [IOHandle], starting from [bufferOffset] in the
+     * Writes up to [size] bytes from [input] into an [IOHandle], starting from [bufferOffset] in the
      * provided buffer, and into [fileOffset] from the file's current position.
      */
     public suspend fun write(
         handle: IOHandle,
-        buf: ByteArray,
+        input: ByteArray,
         size: UInt,
         fileOffset: ULong,
         bufferOffset: Int
+    ): CancellableResult<ByteCountResult, Fail>
+
+    // TODO: make flags higher-level?
+
+    /**
+     * Reads up to [size] bytes from a connected socket-based [handle] into [out], starting at
+     * offset [bufferOffset], using the socket-specific [flags].
+     */
+    public suspend fun recv(
+        handle: IOHandle,
+        out: ByteArray,
+        size: UInt,
+        bufferOffset: Int,
+        flags: Int
+    ): CancellableResult<ByteCountResult, Fail>
+
+    /**
+     * Writes up to [size] bytes from the specified buffer [input] into a connected socket-based
+     * [handle], starting at offset [bufferOffset], using the socket-specific [flags].
+     */
+    public suspend fun send(
+        handle: IOHandle,
+        input: ByteArray,
+        size: UInt,
+        bufferOffset: Int,
+        flags: Int
     ): CancellableResult<ByteCountResult, Fail>
 
     // FlushFileEx is not async

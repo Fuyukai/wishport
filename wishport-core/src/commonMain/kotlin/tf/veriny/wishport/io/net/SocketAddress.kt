@@ -9,7 +9,7 @@ package tf.veriny.wishport.io.net
 /**
  * A single address for creating and connecting a socket.
  */
-public interface SocketAddress {
+public sealed interface SocketAddress {
     /** The family used to create the socket. */
     public val family: SocketFamily
 
@@ -20,7 +20,7 @@ public interface SocketAddress {
     public val protocol: SocketProtocol
 }
 
-public abstract class BaseSocketAddress(
+public sealed class BaseSocketAddress(
     override val family: SocketFamily,
     override val protocol: SocketProtocol,
     override val type: SocketType,
@@ -52,7 +52,7 @@ public class Inet4SocketAddress(
     protocol: SocketProtocol,
     type: SocketType,
     public val address: IPv4Address,
-    public val port: Int
+    public val port: UShort
 ) : BaseSocketAddress(SocketFamily.IPV4, protocol, type) {
     override fun equals(other: Any?): Boolean {
         if (other === this) return true
@@ -74,7 +74,7 @@ public class Inet6SocketAddress(
     protocol: SocketProtocol,
     type: SocketType,
     public val address: IPv6Address,
-    public val port: Int
+    public val port: UShort
 ) : BaseSocketAddress(SocketFamily.IPV6, protocol, type) {
     override fun equals(other: Any?): Boolean {
         if (other === this) return true

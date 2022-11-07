@@ -18,6 +18,7 @@ public actual sealed interface IOResult
 
 public class Fd(override val actualFd: Int) : IOHandle, IOResult
 
+public actual typealias SocketHandle = Fd
 public actual typealias DirectoryHandle = Fd
 public actual typealias RawFileHandle = Fd
 

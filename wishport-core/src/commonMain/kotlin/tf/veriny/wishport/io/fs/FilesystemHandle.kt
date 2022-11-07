@@ -6,6 +6,9 @@
 
 package tf.veriny.wishport.io.fs
 
+import tf.veriny.wishport.io.FileLikeHandle
+import tf.veriny.wishport.io.Seekable
+
 /**
  * A handle to an opened file on a filesystem. This can be a real readable or writeable file, or
  * an opened directory.
@@ -15,7 +18,7 @@ package tf.veriny.wishport.io.fs
  * creating other files or directories - can be passed a FilesystemHandle to open files relative
  * to the real location of this file.
  */
-public interface FilesystemHandle<F : PurePath<F>, M : FileMetadata> : FileLikeHandle {
+public interface FilesystemHandle<F : PurePath<F>, M : FileMetadata> : FileLikeHandle, Seekable {
     public companion object;
 
     /** The filesystem this handle is open on. */

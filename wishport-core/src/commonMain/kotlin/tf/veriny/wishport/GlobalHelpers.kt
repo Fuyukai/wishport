@@ -12,10 +12,7 @@ import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.core.*
 import tf.veriny.wishport.internals.*
 import tf.veriny.wishport.io.fs.*
-import tf.veriny.wishport.io.net.EndpointInfo
-import tf.veriny.wishport.io.net.SocketFamily
-import tf.veriny.wishport.io.net.SocketProtocol
-import tf.veriny.wishport.io.net.SocketType
+import tf.veriny.wishport.io.net.*
 
 // workaround for weird optin stuff
 /**
@@ -336,3 +333,19 @@ public suspend fun AsyncClosingScope.openBufferedSystemFile(
         .andThen {
             openBufferedSystemFile(it, mode, flags)
         }
+
+/**
+ * Opens a new TCP stream to the specified [SocketAddress].
+ */
+@OptIn(Unsafe::class, LowLevelApi::class)
+@ProvisionalApi
+public suspend fun <T : SocketAddress> AsyncClosingScope.openTcpStream(
+    address: T
+): CancellableResult<TcpSocketStream, Fail> {
+    if (address.protocol != SocketProtocol.TCP) TODO("errors")
+
+    return Socket(address)
+        .andAddTo(this)
+        .andAlso { it.connect(address) }
+        .andThen { Cancellable.ok(TcpSocketStream(it)) }
+}

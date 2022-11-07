@@ -4,13 +4,10 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-package tf.veriny.wishport.io.fs
+package tf.veriny.wishport.io
 
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
-import tf.veriny.wishport.io.ByteCountResult
-import tf.veriny.wishport.io.IOHandle
-import tf.veriny.wishport.io.SeekPosition
 
 /**
  * Defines any object that is file-like, i.e. allows reading and writing as if it was a file.
@@ -25,7 +22,8 @@ public interface FileLikeHandle : AsyncCloseable {
      * Reads data from the file handle into the specified [buf]. The data will be read from the file
      * at offset [fileOffset], for [size] bytes, and copied into the buffer at [bufferOffset].
      *
-     * If [fileOffset] is not specified, then it will use the current file position.
+     * If [fileOffset] is not specified, then it will use the current file position. If the file
+     * handle does not support file offsets, then the parameter will be silently discarded.
      *
      * If any of these are out of bounds, then this will return [IndexOutOfRange] or [TooSmall].
      */
@@ -40,7 +38,8 @@ public interface FileLikeHandle : AsyncCloseable {
      * Writes data from [buf] into the specified file handle. The data will be read from the buffer
      * at offset [bufferOffset], into the file at [fileOffset], for [size] bytes.
      *
-     * If [fileOffset] is not specified, then it will use the current file position.
+     * If [fileOffset] is not specified, then it will use the current file position. If the file
+     * handle does not support file offsets, then the parameter will be silently discarded.
      *
      * If any of these are out of bounds, then this will return [IndexOutOfRange] or [TooSmall].
      */
@@ -50,12 +49,4 @@ public interface FileLikeHandle : AsyncCloseable {
         bufferOffset: Int = 0,
         fileOffset: ULong = ULong.MAX_VALUE
     ): CancellableResult<ByteCountResult, Fail>
-
-    /**
-     * Seeks this file to the specified [position], using the behaviour specified by [whence].
-     */
-    public suspend fun seek(
-        position: Long,
-        whence: SeekWhence
-    ): CancellableResult<SeekPosition, Fail>
 }

@@ -20,6 +20,14 @@ internal inline fun runWithClosingScope(crossinline block: suspend (AsyncClosing
     }
 }
 
+internal inline fun runWithClosingScopeThis(crossinline block: suspend AsyncClosingScope.() -> Unit) {
+    runUntilCompleteNoResult {
+        AsyncClosingScope {
+            it.block()
+        }
+    }
+}
+
 @Suppress("ClassName")
 @OptIn(ProvisionalApi::class)
 class `Test File IO` {

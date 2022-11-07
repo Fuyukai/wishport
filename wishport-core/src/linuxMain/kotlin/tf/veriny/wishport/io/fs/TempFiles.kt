@@ -107,7 +107,7 @@ public actual suspend fun openTemporaryFile(
 
     return getTempDir()
         .andThen {
-            scope.openBufferedSystemFile(it, PosixPurePath.CURRENT_DIR, mode, flags)
+            scope.openBufferedSystemFile(it, PosixPurePath.CURRENT_DIR, mode, realFlags)
         }
 }
 

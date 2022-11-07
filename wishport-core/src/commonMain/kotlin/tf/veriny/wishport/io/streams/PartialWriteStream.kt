@@ -43,4 +43,4 @@ public interface PartialWriteStream : WriteStream {
 /**
  * Returned when [PartialWriteStream.writeMost] fails.
  */
-public class WriteMostFailed(public val why: Fail, public val byteCount: Int) : Fail
+public class WriteMostFailed(public val why: Fail, public val byteCount: UInt) : Fail
