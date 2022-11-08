@@ -65,6 +65,10 @@ public actual class IOManager(
         public actual fun default(): IOManager {
             return IOManager(2048, false)
         }
+
+        public actual fun withSize(size: Int): IOManager {
+            return IOManager(size, false)
+        }
     }
 
     private var closed = false

@@ -30,6 +30,18 @@ private fun EventLoop.runWithErrorPrint() {
     }
 }
 
+@StableApi
+@LowLevelApi
+public fun <S, F : Fail> EventLoop.runUntilComplete(
+    fn: suspend () -> CancellableResult<S, F>
+): CancellableResult<S, F> {
+    val task = makeRootTask(fn)
+    directlyReschedule(task)
+
+    runWithErrorPrint()
+    return task.result()
+}
+
 /**
  * Runs the specified suspend function until complete.
  */
@@ -40,11 +52,7 @@ public fun <S, F : Fail> runUntilComplete(
     fn: suspend () -> CancellableResult<S, F>,
 ): CancellableResult<S, F> {
     val loop = EventLoop.new(clock)
-    val task = loop.makeRootTask(fn)
-    loop.directlyReschedule(task)
-
-    loop.runWithErrorPrint()
-    return task.result()
+    return loop.runUntilComplete(fn)
 }
 
 /**

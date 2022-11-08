@@ -33,7 +33,10 @@ import kotlin.coroutines.coroutineContext
 @OptIn(Unsafe::class)
 @LowLevelApi
 @StableApi
-public class EventLoop private constructor(public val clock: Clock) : Closeable {
+public class EventLoop private constructor(
+    public val clock: Clock,
+    ioManagerSize: Int = -1
+) : Closeable {
     public companion object {
         internal fun new(clock: Clock? = PlatformClock): EventLoop {
             val c = clock ?: PlatformClock
@@ -98,7 +101,10 @@ public class EventLoop private constructor(public val clock: Clock) : Closeable 
     /**
      * The I/O manager for the current event loop.
      */
-    public val ioManager: IOManager = IOManager.default()
+    public val ioManager: IOManager = run {
+        if (ioManagerSize == -1) IOManager.default()
+        else IOManager.withSize(ioManagerSize)
+    }
 
     /**
      * The default DNS resolver to be used by the networking code.

@@ -28,6 +28,8 @@ import tf.veriny.wishport.io.net.SocketAddress
 public expect class IOManager : Closeable {
     public companion object {
         public fun default(): IOManager
+
+        public fun withSize(size: Int): IOManager
     }
 
     /**
