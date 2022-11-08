@@ -109,15 +109,20 @@ public expect class IOManager : Closeable {
     /**
      * Binds the socket [sock] to the specified [address].
      */
-    public suspend fun bind(sock: IOHandle, address: SocketAddress): CancellableResourceResult<Empty>
+    public suspend fun bind(sock: SocketHandle, address: SocketAddress): CancellableResourceResult<Empty>
 
     /**
      * Connects the socket [sock] to the specified [address].
      */
     public suspend fun connect(
-        sock: IOHandle,
+        sock: SocketHandle,
         address: SocketAddress
     ): CancellableResourceResult<Empty>
+
+    /**
+     * Accepts a new connection for the specified [sock].
+     */
+    public suspend fun accept(sock: SocketHandle): CancellableResourceResult<SocketHandle>
 
     /**
      * Reads up to [size] bytes from a [IOHandle] into [out], starting at [fileOffset] from the

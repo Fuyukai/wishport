@@ -619,7 +619,7 @@ public actual class IOManager(
     // and also so that the stupid sockaddr type punning can be unified here
     @OptIn(Unsafe::class)
     public actual suspend fun bind(
-        sock: IOHandle,
+        sock: SocketHandle,
         address: SocketAddress
     ): CancellableResourceResult<Empty> = memScoped {
         val task = getCurrentTask()
@@ -635,7 +635,7 @@ public actual class IOManager(
     /**
      * Accepts a single incoming connection on a socket.
      */
-    public suspend fun accept(sock: IOHandle): CancellableResourceResult<SocketHandle> {
+    public actual suspend fun accept(sock: SocketHandle): CancellableResourceResult<SocketHandle> {
         val task = getCurrentTask()
 
         return task.checkIfCancelled()
@@ -652,7 +652,7 @@ public actual class IOManager(
 
     @OptIn(Unsafe::class)
     public actual suspend fun connect(
-        sock: IOHandle,
+        sock: SocketHandle,
         address: SocketAddress
     ): CancellableResourceResult<Empty> = memScoped {
         val task = getCurrentTask()
