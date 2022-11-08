@@ -6,13 +6,10 @@
 
 package tf.veriny.wishport.util
 
-import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.toKString
-import kotlinx.cinterop.usePinned
-import platform.posix.EINVAL
-import platform.posix.ERANGE
-import platform.posix.strerror_r
+import kotlinx.cinterop.*
+import platform.posix.*
+import tf.veriny.wishport.annotations.Unsafe
+import tf.veriny.wishport.toKStringUtf8Fast
 
 /**
  * Converts an integer [errno] into a human-readable string.
@@ -40,4 +37,46 @@ public fun kstrerror(errno: Int): String = memScoped<String> {
 
     // type inference bug?
     throw Throwable("unreachable")
+}
+
+/**
+ * Wraps the result of a uname(2) call.
+ */
+public data class KernelInfo(
+    /** The node name for this machine, aka the hostname. */
+    public val nodeName: String,
+    /** The kernel release string, e.g. "6.0.7-arch1-1". */
+    public val release: String,
+    public val version: String,
+    public val machine: String,
+) {
+    private val ver by lazy {
+        if ('-' in release) {
+            val (before, after) = release.split('-', limit = 2)
+            before.split(".").map { it.toInt() }
+        } else {
+            release.split(".").map { it.toInt() }
+        }
+    }
+
+    public val major: Int get() = ver[0]
+    public val minor: Int get() = ver[1]
+    public val patch: Int get() = ver[2]
+}
+
+/**
+ * Gets the current Linux kernel version.
+ */
+@OptIn(Unsafe::class)
+public fun getKernelInfo(): KernelInfo = memScoped {
+    val buf = alloc<utsname>()
+    val res = uname(buf.ptr)
+    if (res != 0) error("what the fuck?")
+
+    return KernelInfo(
+        buf.nodename.toKStringUtf8Fast(),
+        buf.release.toKStringUtf8Fast(),
+        buf.version.toKStringUtf8Fast(),
+        buf.machine.toKStringUtf8Fast()
+    )
 }

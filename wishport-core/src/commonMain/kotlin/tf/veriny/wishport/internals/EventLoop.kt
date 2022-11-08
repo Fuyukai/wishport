@@ -38,9 +38,9 @@ public class EventLoop private constructor(
     ioManagerSize: Int = -1
 ) : Closeable {
     public companion object {
-        internal fun new(clock: Clock? = PlatformClock): EventLoop {
+        internal fun new(clock: Clock? = PlatformClock, ioManagerSize: Int = -1): EventLoop {
             val c = clock ?: PlatformClock
-            return EventLoop(c)
+            return EventLoop(c, ioManagerSize)
         }
 
         /**

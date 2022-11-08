@@ -33,23 +33,24 @@ public expect class IOManager : Closeable {
     }
 
     /**
-     * Peeks off all pending I/O events, and wakes up tasks that would be waiting.
+     * Peeks off all pending I/O events, and wakes up tasks that would be waiting. Returns the
+     * number of tasks woken up.
      */
-    public fun pollIO()
+    public fun pollIO(): Int
 
     /**
-     * Waits for I/O forever.
+     * Waits for I/O forever. Returns the number of tasks woken up.
      */
-    public fun waitForIO()
+    public fun waitForIO(): Int
 
     /**
-     * Waits for I/O for [timeout] nanoseconds.
+     * Waits for I/O for [timeout] nanoseconds. Returns the number of tasks woken up.
      */
-    public fun waitForIOUntil(timeout: Long)
+    public fun waitForIOUntil(timeout: Long): Int
 
     /**
      * Forces a wake up of the I/O manager, either now (if it is blocked on I/O) or at the next
-     * iteration of the event loop.
+     * iteration of the event loop. This should only be called off-thread.
      */
     public fun forceWakeUp()
 

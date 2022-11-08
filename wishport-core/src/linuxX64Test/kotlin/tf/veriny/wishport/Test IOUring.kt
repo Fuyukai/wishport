@@ -9,10 +9,14 @@ package tf.veriny.wishport
 import kotlinx.cinterop.*
 import platform.posix.*
 import tf.veriny.wishport.annotations.LowLevelApi
+import tf.veriny.wishport.annotations.Unsafe
+import tf.veriny.wishport.collections.b
 import tf.veriny.wishport.core.*
+import tf.veriny.wishport.internals.EventLoop
 import tf.veriny.wishport.io.Fd
 import tf.veriny.wishport.io.Poll
 import tf.veriny.wishport.io.PollResult
+import tf.veriny.wishport.io.fs.FileOpenType
 import tf.veriny.wishport.io.fs.FilesystemHandle
 import tf.veriny.wishport.io.fs.PosixPurePath
 import tf.veriny.wishport.io.fs.openFile
@@ -91,6 +95,30 @@ class `Test IOUring` {
                 assertTrue(i.get()!!.isCancelled)
                 assertEquals(0, io.pendingItems)
             }
+        }
+    }
+
+    // something something test api not impl
+    // kys though
+    @OptIn(LowLevelApi::class, Unsafe::class)
+    @Test
+    fun `Test submitting when the queue is really small`() {
+        val loop = EventLoop.new(ioManagerSize = 4)
+        // the actual manager size is *2 fyi so we have to spawn a lot
+        val task = suspend {
+            val manager = getIOManager()
+            manager.openFilesystemFile(
+                null, b("/dev/zero"),
+                FileOpenType.READ_ONLY, setOf(), setOf()
+            ).andThen { manager.closeHandle(it) }
+        }
+
+        loop.runUntilComplete {
+            Nursery.open { n ->
+                repeat(512) { n.startSoon(task) }
+            }
+
+            Cancellable.empty()
         }
     }
 }

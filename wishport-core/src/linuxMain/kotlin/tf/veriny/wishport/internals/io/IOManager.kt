@@ -28,8 +28,9 @@ import tf.veriny.wishport.io.fs.*
 import tf.veriny.wishport.io.net.Inet4SocketAddress
 import tf.veriny.wishport.io.net.Inet6SocketAddress
 import tf.veriny.wishport.io.net.SocketAddress
-import tf.veriny.wishport.sync.CapacityLimiter
+import tf.veriny.wishport.util.getKernelInfo
 import tf.veriny.wishport.util.kstrerror
+import kotlin.math.min
 
 // TODO: consider enabling poll mode by default
 // TODO: I was wrong about how the SQ works, so maybe remove the capacity limiter?
@@ -76,8 +77,6 @@ public actual class IOManager(
 
     // THE io_uring
     private val ring = alloca.alloc<io_uring>()
-    // blatantly ignoring my own safety rules here
-    private val limiter = CapacityLimiter(size - 1, Unit)
 
     // used for associating tasks and cqes
     private var counter = 0UL
@@ -93,17 +92,24 @@ public actual class IOManager(
             val params = alloc<io_uring_params>()
             memset(params.ptr, 0, sizeOf<io_uring_params>().convert())
 
+            val uname = getKernelInfo()
+            var flags = flags(IORING_SETUP_CQSIZE, IORING_SETUP_CLAMP)
+
+            when {
+                uname.major >= 6 -> {
+                    // we're single threaded wrt the io_uring so this is good and fast
+                    flags = flags.or(IORING_SETUP_SINGLE_ISSUER)
+                }
+                uname.major >= 6 || uname.minor >= 19 -> {
+                    flags = flags.or(IORING_SETUP_COOP_TASKRUN)
+                    flags = flags.or(IORING_SETUP_TASKRUN_FLAG)
+                }
+            }
+
             // SUBMIT_ALL moves errors down the chain to stupid users
             // COOP_TASKRUN is just faster
             // TASKRUN_FLAG is also faster
             // CQSIZE lets us customise the completion queue size
-            var flags = flags(
-                IORING_SETUP_SUBMIT_ALL,
-                IORING_SETUP_COOP_TASKRUN,
-                IORING_SETUP_TASKRUN_FLAG,
-                IORING_SETUP_CQSIZE,
-                IORING_SETUP_CLAMP,
-            )
 
             if (pollMode) flags = flags.or(IORING_SETUP_SQPOLL)
 
@@ -115,11 +121,11 @@ public actual class IOManager(
             params.flags = flags
 
             val res = io_uring_queue_init_params(
-                256, ring.ptr, params.ptr
+                min(size, 256).toUInt(), ring.ptr, params.ptr
             )
 
             if (res < 0) {
-                val result = kstrerror(posix_errno())
+                val result = kstrerror(abs(res))
                 throw InternalWishportError("io_uring_queue_init failed: $result")
             }
 
@@ -177,7 +183,7 @@ public actual class IOManager(
 
         // gross!
         // TODO: replace this with enum methods maybe
-        val data: CancellableResourceResult<IOResult> = when (task.why) {
+        val data = when (task.why) {
             // ignore cancellation requests
             SleepingWhy.CANCEL -> {
                 task.completed = true
@@ -221,15 +227,17 @@ public actual class IOManager(
      * Waits for I/O. This will first use [block] to wait for the first completion, then peek off
      * any remaining entries from the queue after that.
      */
-    private inline fun pollIO(block: (CPointerVar<io_uring_cqe>) -> Int): Unit = memScoped {
+    private inline fun pollIO(block: (CPointerVar<io_uring_cqe>) -> Int): Int = memScoped {
         // may return -EAGAIN, which means no completions, which means we drop it
         // i think io_uring_wait_cqe_nr might do that if there's nothing in the queue but im
         // not really sure.
+        var count = 0
+
         val cqe = allocPointerTo<io_uring_cqe>()
         run {
             val res = block(cqe)
-            if (res == -EAGAIN) return
-            if (res == -ETIME) return
+            if (res == -EAGAIN) return 0
+            if (res == -ETIME) return 0
             else if (res < 0) {
                 val err = kstrerror(abs(res))
                 throw InternalWishportError("io_uring function returned $err")
@@ -237,6 +245,7 @@ public actual class IOManager(
         }
 
         while (cqe.pointed != null) {
+            count++
             handleCqe(cqe)
             io_uring_cqe_seen(ring.ptr, cqe.value)
             cqe.pointed = null
@@ -244,26 +253,24 @@ public actual class IOManager(
             val res = io_uring_peek_cqe(ring.ptr, cqe.ptr)
             if (res == -EAGAIN) break
         }
+
+        return count
     }
 
     /**
      * Peeks off all pending I/O events, and wakes up tasks that would be waiting.
      */
-    public actual fun pollIO() {
-        pollIO { io_uring_peek_cqe(ring.ptr, it.ptr) }
-    }
+    public actual fun pollIO(): Int = pollIO { io_uring_peek_cqe(ring.ptr, it.ptr) }
 
     /**
      * Waits for I/O forever.
      */
-    public actual fun waitForIO() {
-        pollIO { io_uring_wait_cqe(ring.ptr, it.ptr) }
-    }
+    public actual fun waitForIO(): Int = pollIO { io_uring_wait_cqe(ring.ptr, it.ptr) }
 
     /**
      * Waits for I/O for [timeout] nanoseconds.
      */
-    public actual fun waitForIOUntil(timeout: Long): Unit = memScoped {
+    public actual fun waitForIOUntil(timeout: Long): Int = memScoped {
         val ts = alloc<__kernel_timespec>()
         ts.tv_sec = (timeout / NS_PER_SEC)
         ts.tv_nsec = (timeout.rem(1_000_000_000))
@@ -302,20 +309,26 @@ public actual class IOManager(
         //      thanks liburing! genuinely great feature, makes my life 10000x easier
         //      as i dont have to care about if i actually should enter or not, just pawn it off
         //      to the end user.
-        val submitResult = io_uring_submit(ring.ptr)
+        var submitResult = -1
 
-        // generally, i believe this means very bad things!
-        // io_uring_enter(2)'s man page gives a handful of errors but they're generally
-        // related to using io_uring_enter directly. liburing should have set everything up
-        // so that it's all fine.
-        if (submitResult < 0) {
-            if (submitResult == -EBUSY) {
-                // this should NEVER happen. the capacity limiter should stop this.
-                // i'm adding a to-do in case it turns out I *do* need to care about this,
-                // but otherwise it's unhandled.
-                TODO("handle io_uring_submit -EBUSY")
+        // run loop submission in a loop so that we can immediately reap and reschedule all waiting
+        // for I/O tasks if the completion queue is full.
+        while (true) {
+            submitResult = io_uring_submit(ring.ptr)
+
+            if (submitResult >= 0) break
+            else if (submitResult == -EBUSY) {
+                // EBUSY  If the IORING_FEAT_NODROP feature flag is set, then EBUSY will be returned
+                // if there were overflow entries, IORING_ENTER_GETEVENTS flag is
+                // set and not all of the overflow entries were able to be flushed to the CQ ring.
+                // not enough data
+                // we just directly reap here and reschedule.
+                if (pollIO() == 0) {
+                    // this is very bad and probably an error!
+                    throw InternalWishportError("io_uring_submit returrned -EBUSY, but there are no tasks to reap!")
+                }
             } else {
-                val result = kstrerror(posix_errno())
+                val result = kstrerror(abs(submitResult))
                 throw InternalWishportError("io_uring_submit failed: $result")
             }
         }
@@ -389,24 +402,20 @@ public actual class IOManager(
     //       as it could return AlreadyAcquired.
     //       but we know that's not the case, so we just cast it and override it.
 
-    @Suppress("UNCHECKED_CAST")
     public actual suspend fun closeHandle(handle: IOHandle): CancellableResourceResult<Empty> {
         val task = getCurrentTask()
         assert(!task.checkIfCancelled().isCancelled) {
             "closeHandle should never be called from a cancelled context!"
         }
 
-        return limiter.unwrapAndRun {
-            val sqe = getsqe()
-            io_uring_prep_close(sqe, handle.actualFd)
-            val seq = counter++
-            io_uring_sqe_set_data64(sqe, seq)
+        val sqe = getsqe()
+        io_uring_prep_close(sqe, handle.actualFd)
+        val seq = counter++
+        io_uring_sqe_set_data64(sqe, seq)
 
-            submitAndWait<Empty>(task, seq, SleepingWhy.CLOSE)
-        } as CancellableResourceResult<Empty>
+        return submitAndWait(task, seq, SleepingWhy.CLOSE)
     }
 
-    @Suppress("UNCHECKED_CAST")
     public actual suspend fun shutdown(
         handle: IOHandle,
         how: ShutdownHow
@@ -421,16 +430,14 @@ public actual class IOManager(
 
         return task.checkIfCancelled()
             .andThen {
-                limiter.unwrapAndRun {
-                    val sqe = getsqe()
+                val sqe = getsqe()
 
-                    io_uring_prep_shutdown(sqe, handle.actualFd, why)
-                    val seq = counter++
-                    io_uring_sqe_set_data64(sqe, seq)
+                io_uring_prep_shutdown(sqe, handle.actualFd, why)
+                val seq = counter++
+                io_uring_sqe_set_data64(sqe, seq)
 
-                    submitAndWait<Empty>(task, seq, SleepingWhy.SHUTDOWN)
-                }
-            } as CancellableResourceResult<Empty>
+                submitAndWait(task, seq, SleepingWhy.SHUTDOWN)
+            }
     }
 
     /**
@@ -449,7 +456,6 @@ public actual class IOManager(
     }
 
     @Unsafe
-    @Suppress("UNCHECKED_CAST")
     public actual suspend fun openFilesystemFile(
         dirHandle: DirectoryHandle?,
         path: ByteString,
@@ -512,39 +518,42 @@ public actual class IOManager(
         }
         openFlags = openFlags.or(openMode)
 
-        val mode = filePermissions
-            .map { it.posixNumber }
-            .reduce { acc, i -> acc.or(i) }
-            .toUInt()
+        val mode = if (filePermissions.isEmpty()) {
+            0U
+        }
+        else {
+            filePermissions
+                .map { it.posixNumber }
+                .reduce { acc, i -> acc.or(i) }
+                .toUInt()
+        }
 
         val task = getCurrentTask()
 
         return task.checkIfCancelled()
             .andThen {
-                limiter.unwrapAndRun {
-                    val sqe = getsqe()
-                    // XXX: For some reason openat2() fails where openat() doesn't.
+                val sqe = getsqe()
+                // XXX: For some reason openat2() fails where openat() doesn't.
 
-                    // val how = alloc<open_how>()
-                    //  see openat(2), this is mandatory
-                    // memset(how.ptr, 0, sizeOf<open_how>().convert())
-                    // how.flags = openFlags.convert()
+                // val how = alloc<open_how>()
+                //  see openat(2), this is mandatory
+                // memset(how.ptr, 0, sizeOf<open_how>().convert())
+                // how.flags = openFlags.convert()
 
-                    val dirfd = dirHandle?.actualFd ?: _AT_FDCWD
-                    val pin = path.pinnedTerminated()
-                    defer { pin.unpin() }
-                    val cPath = pin.addressOf(0)
+                val dirfd = dirHandle?.actualFd ?: _AT_FDCWD
+                val pin = path.pinnedTerminated()
+                defer { pin.unpin() }
+                val cPath = pin.addressOf(0)
 
-                    // io_uring_prep_openat2(sqe, dirfd, cPath, how.ptr)
-                    io_uring_prep_openat(sqe, dirfd, cPath, openFlags, mode)
-                    val seq = counter++
-                    io_uring_sqe_set_data64(sqe, seq)
+                // io_uring_prep_openat2(sqe, dirfd, cPath, how.ptr)
+                io_uring_prep_openat(sqe, dirfd, cPath, openFlags, mode)
+                val seq = counter++
+                io_uring_sqe_set_data64(sqe, seq)
 
-                    submitAndWait<RawFileHandle>(
-                        task, seq, SleepingWhy.OPEN_FILE
-                    )
-                }
-            } as CancellableResourceResult<RawFileHandle>
+                submitAndWait(
+                    task, seq, SleepingWhy.OPEN_FILE
+                )
+            }
     }
 
     // Adding a new socket type:
@@ -594,7 +603,7 @@ public actual class IOManager(
                     io_uring_prep_connect(
                         sqe,
                         handle.actualFd,
-                        addr.ptr.reinterpret<sockaddr>(),
+                        addr.ptr.reinterpret(),
                         sizeOf<sockaddr_in6>().toUInt()
                     )
                 } else {
@@ -630,20 +639,17 @@ public actual class IOManager(
         val task = getCurrentTask()
 
         return task.checkIfCancelled()
-            .andThen {
-                limiter.unwrapAndRun {
-                    val sqe = getsqe()
-                    io_uring_prep_accept(sqe, sock.actualFd, null, null, SOCK_CLOEXEC)
+        .andThen {
+                val sqe = getsqe()
+                io_uring_prep_accept(sqe, sock.actualFd, null, null, SOCK_CLOEXEC)
 
-                    val seq = counter++
-                    io_uring_sqe_set_data64(sqe, seq)
+                val seq = counter++
+                io_uring_sqe_set_data64(sqe, seq)
 
-                    submitAndWait<SocketHandle>(task, seq, SleepingWhy.ACCEPT)
-                }
-            } as CancellableResourceResult<SocketHandle>
+                submitAndWait(task, seq, SleepingWhy.ACCEPT)
+            }
     }
 
-    @Suppress("UNCHECKED_CAST")
     @OptIn(Unsafe::class)
     public actual suspend fun connect(
         sock: IOHandle,
@@ -653,17 +659,15 @@ public actual class IOManager(
 
         return task.checkIfCancelled()
             .andThen {
-                limiter.unwrapAndRun {
-                    val sqe = getsqe()
-                    // ignore return value, it's always 0
-                    doSocketAddress(this, sock, address, sqe)
+                val sqe = getsqe()
+                // ignore return value, it's always 0
+                doSocketAddress(this, sock, address, sqe)
 
-                    val seq = counter++
-                    io_uring_sqe_set_data64(sqe, seq)
+                val seq = counter++
+                io_uring_sqe_set_data64(sqe, seq)
 
-                    submitAndWait<Empty>(task, seq, SleepingWhy.CONNECT)
-                }
-            } as CancellableResourceResult<Empty>
+                submitAndWait(task, seq, SleepingWhy.CONNECT)
+            }
     }
 
     public actual suspend fun read(
@@ -678,19 +682,17 @@ public actual class IOManager(
         return task.checkIfCancelled()
             .andThen { out.checkBuffers(size, bufferOffset).notCancelled() }
             .andThen {
-                limiter.unwrapAndRun {
-                    val sqe = getsqe()
-                    val buf = out.pin()
+                val sqe = getsqe()
+                val buf = out.pin()
 
-                    defer { buf.unpin() }
+                defer { buf.unpin() }
 
-                    io_uring_prep_read(
-                        sqe, handle.actualFd, buf.addressOf(bufferOffset), size, fileOffset
-                    )
-                    val seq = counter++
-                    io_uring_sqe_set_data64(sqe, seq)
-                    submitAndWait(task, seq, SleepingWhy.OPEN_FILE)
-                }
+                io_uring_prep_read(
+                    sqe, handle.actualFd, buf.addressOf(bufferOffset), size, fileOffset
+                )
+                val seq = counter++
+                io_uring_sqe_set_data64(sqe, seq)
+                submitAndWait(task, seq, SleepingWhy.OPEN_FILE)
             }
     }
 
@@ -706,23 +708,21 @@ public actual class IOManager(
         return task.checkIfCancelled()
             .andThen { input.checkBuffers(size, bufferOffset).notCancelled() }
             .andThen {
-                limiter.unwrapAndRun {
-                    val sqe = getsqe()
-                    val inpData = input.pin()
+                val sqe = getsqe()
+                val inpData = input.pin()
 
-                    defer { inpData.unpin() }
+                defer { inpData.unpin() }
 
-                    io_uring_prep_write(
-                        sqe,
-                        handle.actualFd,
-                        inpData.addressOf(bufferOffset),
-                        size,
-                        fileOffset
-                    )
-                    val seq = counter++
-                    io_uring_sqe_set_data64(sqe, seq)
-                    submitAndWait(task, seq, SleepingWhy.READ_WRITE)
-                }
+                io_uring_prep_write(
+                    sqe,
+                    handle.actualFd,
+                    inpData.addressOf(bufferOffset),
+                    size,
+                    fileOffset
+                )
+                val seq = counter++
+                io_uring_sqe_set_data64(sqe, seq)
+                submitAndWait(task, seq, SleepingWhy.READ_WRITE)
             }
     }
 
@@ -740,19 +740,17 @@ public actual class IOManager(
         return task.checkIfCancelled()
             .andThen { out.checkBuffers(size, bufferOffset).notCancelled() }
             .andThen {
-                limiter.unwrapAndRun {
-                    val sqe = getsqe()
-                    val pinned = out.pin()
+                val sqe = getsqe()
+                val pinned = out.pin()
 
-                    defer { pinned.unpin() }
+                defer { pinned.unpin() }
 
-                    io_uring_prep_recv(sqe, handle.actualFd, pinned.addressOf(bufferOffset), size.toULong(), flags)
-                    val seq = counter++
-                    io_uring_sqe_set_data64(sqe, seq)
+                io_uring_prep_recv(sqe, handle.actualFd, pinned.addressOf(bufferOffset), size.toULong(), flags)
+                val seq = counter++
+                io_uring_sqe_set_data64(sqe, seq)
 
-                    submitAndWait(task, seq, SleepingWhy.READ_WRITE)
-                }
-            }
+                submitAndWait(task, seq, SleepingWhy.READ_WRITE)
+        }
     }
 
     public actual suspend fun send(
@@ -769,22 +767,19 @@ public actual class IOManager(
         return task.checkIfCancelled()
             .andThen { input.checkBuffers(size, bufferOffset).notCancelled() }
             .andThen {
-                limiter.unwrapAndRun {
-                    val sqe = getsqe()
-                    val pinned = input.pin()
+                val sqe = getsqe()
+                val pinned = input.pin()
 
-                    defer { pinned.unpin() }
+                defer { pinned.unpin() }
 
-                    io_uring_prep_send(sqe, handle.actualFd, pinned.addressOf(bufferOffset), size.toULong(), flags)
-                    val seq = counter++
-                    io_uring_sqe_set_data64(sqe, seq)
+                io_uring_prep_send(sqe, handle.actualFd, pinned.addressOf(bufferOffset), size.toULong(), flags)
+                val seq = counter++
+                io_uring_sqe_set_data64(sqe, seq)
 
-                    submitAndWait(task, seq, SleepingWhy.READ_WRITE)
-                }
+                submitAndWait(task, seq, SleepingWhy.READ_WRITE)
             }
     }
 
-    @Suppress("UNCHECKED_CAST")
     public actual suspend fun fsync(
         handle: IOHandle,
         withMetadata: Boolean
@@ -793,16 +788,14 @@ public actual class IOManager(
 
         return task.checkIfCancelled()
             .andThen {
-                limiter.unwrapAndRun {
-                    val sqe = getsqe()
+                val sqe = getsqe()
 
-                    val flags = if (withMetadata) IORING_FSYNC_DATASYNC else 0u
-                    io_uring_prep_fsync(sqe, handle.actualFd, flags)
-                    val seq = counter++
-                    io_uring_sqe_set_data64(sqe, seq)
-                    submitAndWait<Empty>(task, seq, SleepingWhy.FSYNC)
-                }
-            } as CancellableResourceResult<Empty>
+                val flags = if (withMetadata) IORING_FSYNC_DATASYNC else 0u
+                io_uring_prep_fsync(sqe, handle.actualFd, flags)
+                val seq = counter++
+                io_uring_sqe_set_data64(sqe, seq)
+                submitAndWait(task, seq, SleepingWhy.FSYNC)
+            }
     }
 
     // not actually async but lseek() shouldn't (!) block
@@ -824,7 +817,6 @@ public actual class IOManager(
             }
     }
 
-    @Suppress("UNCHECKED_CAST")
     @OptIn(Unsafe::class)
     public actual suspend fun fileMetadataAt(
         handle: IOHandle?,
@@ -835,28 +827,26 @@ public actual class IOManager(
 
         return task.checkIfCancelled()
             .andThen {
-                limiter.unwrapAndRun {
-                    val sqe = getsqe()
+                val sqe = getsqe()
 
-                    val dirfd = handle?.actualFd ?: _AT_FDCWD
-                    val buf = path?.pinnedTerminated() ?: EMPTY_PATH.pin()
-                    defer { buf.unpin() }
+                val dirfd = handle?.actualFd ?: _AT_FDCWD
+                val buf = path?.pinnedTerminated() ?: EMPTY_PATH.pin()
+                defer { buf.unpin() }
 
-                    var flags = 0
-                    if (path == null) flags = flags.or(_AT_EMPTY_PATH)
+                var flags = 0
+                if (path == null) flags = flags.or(_AT_EMPTY_PATH)
 
-                    io_uring_prep_statx(
-                        sqe, dirfd,
-                        buf.addressOf(0),
-                        flags,
-                        STATX_BASIC_STATS,
-                        out.ptr
-                    )
-                    val seq = counter++
-                    io_uring_sqe_set_data64(sqe, seq)
+                io_uring_prep_statx(
+                    sqe, dirfd,
+                    buf.addressOf(0),
+                    flags,
+                    STATX_BASIC_STATS,
+                    out.ptr
+                )
+                val seq = counter++
+                io_uring_sqe_set_data64(sqe, seq)
 
-                    submitAndWait<Empty>(task, seq, SleepingWhy.STATX)
-                }
+                submitAndWait<Empty>(task, seq, SleepingWhy.STATX)
             }
             .andThen {
                 Cancellable.ok(
@@ -870,7 +860,7 @@ public actual class IOManager(
                         blockSize = out.stx_blksize
                     )
                 )
-            } as CancellableResourceResult<PlatformFileMetadata>
+            }
     }
 
     private fun pollFlags(fl: Set<Poll>): UInt {
@@ -890,7 +880,6 @@ public actual class IOManager(
         return flags.convert()
     }
 
-    @Suppress("UNCHECKED_CAST")
     public actual suspend fun pollHandle(
         handle: IOHandle,
         what: Set<Poll>
@@ -899,20 +888,17 @@ public actual class IOManager(
 
         return task.checkIfCancelled()
             .andThen {
-                limiter.unwrapAndRun {
-                    val flags = pollFlags(what)
-                    val sqe = getsqe()
+                val flags = pollFlags(what)
+                val sqe = getsqe()
 
-                    io_uring_prep_poll_add(sqe, handle.actualFd, flags)
-                    val seq = counter++
-                    io_uring_sqe_set_data64(sqe, seq)
+                io_uring_prep_poll_add(sqe, handle.actualFd, flags)
+                val seq = counter++
+                io_uring_sqe_set_data64(sqe, seq)
 
-                    submitAndWait<PollResult>(task, seq, SleepingWhy.POLL_ADD)
-                }
-            } as CancellableResourceResult<PollResult>
+                submitAndWait(task, seq, SleepingWhy.POLL_ADD)
+            }
     }
 
-    @Suppress("UNCHECKED_CAST")
     @OptIn(Unsafe::class)
     public actual suspend fun makeDirectoryAt(
         dirHandle: DirectoryHandle?,
@@ -923,22 +909,20 @@ public actual class IOManager(
 
         return task.checkIfCancelled()
             .andThen {
-                limiter.unwrapAndRun {
-                    val sqe = getsqe()
+                val sqe = getsqe()
 
-                    val dirFd = dirHandle?.actualFd ?: _AT_FDCWD
-                    val buf = path.pinnedTerminated()
-                    defer { buf.unpin() }
+                val dirFd = dirHandle?.actualFd ?: _AT_FDCWD
+                val buf = path.pinnedTerminated()
+                defer { buf.unpin() }
 
-                    var mode = permissions.toMode()
-                    if (mode == 0U) mode = 511U /* 777 */
+                var mode = permissions.toMode()
+                if (mode == 0U) mode = 511U /* 777 */
 
-                    io_uring_prep_mkdirat(sqe, dirFd, buf.addressOf(0), mode)
-                    val seq = counter++
-                    io_uring_sqe_set_data64(sqe, seq)
-                    submitAndWait<Empty>(task, seq, SleepingWhy.MKDIR)
-                }
-            } as CancellableResourceResult<Empty>
+                io_uring_prep_mkdirat(sqe, dirFd, buf.addressOf(0), mode)
+                val seq = counter++
+                io_uring_sqe_set_data64(sqe, seq)
+                submitAndWait(task, seq, SleepingWhy.MKDIR)
+            }
     }
 
     @OptIn(Unsafe::class)
@@ -962,31 +946,29 @@ public actual class IOManager(
 
         return task.checkIfCancelled()
             .andThen {
-                limiter.unwrapAndRun {
-                    val sqe = getsqe()
-                    val fromDir = fromDirHandle?.actualFd ?: _AT_FDCWD
-                    val toDir = toDirHandle?.actualFd ?: _AT_FDCWD
+                val sqe = getsqe()
+                val fromDir = fromDirHandle?.actualFd ?: _AT_FDCWD
+                val toDir = toDirHandle?.actualFd ?: _AT_FDCWD
 
-                    val fromBuf = from.pinnedTerminated()
-                    defer { fromBuf.unpin() }
-                    val toBuf = to.pinnedTerminated()
-                    defer { toBuf.unpin() }
+                val fromBuf = from.pinnedTerminated()
+                defer { fromBuf.unpin() }
+                val toBuf = to.pinnedTerminated()
+                defer { toBuf.unpin() }
 
-                    io_uring_prep_renameat(
-                        sqe,
-                        fromDir,
-                        fromBuf.addressOf(0),
-                        toDir,
-                        toBuf.addressOf(0),
-                        realFlags
-                    )
+                io_uring_prep_renameat(
+                    sqe,
+                    fromDir,
+                    fromBuf.addressOf(0),
+                    toDir,
+                    toBuf.addressOf(0),
+                    realFlags
+                )
 
-                    val seq = counter++
-                    io_uring_sqe_set_data64(sqe, seq)
+                val seq = counter++
+                io_uring_sqe_set_data64(sqe, seq)
 
-                    submitAndWait<Empty>(task, seq, SleepingWhy.RENAME)
-                }
-            } as CancellableResourceResult<Empty>
+                submitAndWait(task, seq, SleepingWhy.RENAME)
+            }
     }
 
     @OptIn(Unsafe::class)
@@ -1000,31 +982,29 @@ public actual class IOManager(
 
         return task.checkIfCancelled()
             .andThen {
-                limiter.unwrapAndRun {
-                    val sqe = getsqe()
-                    val fromDir = fromDirHandle?.actualFd ?: _AT_FDCWD
-                    val toDir = toDirHandle?.actualFd ?: _AT_FDCWD
+                val sqe = getsqe()
+                val fromDir = fromDirHandle?.actualFd ?: _AT_FDCWD
+                val toDir = toDirHandle?.actualFd ?: _AT_FDCWD
 
-                    val fromBuf = from.pinnedTerminated()
-                    defer { fromBuf.unpin() }
-                    val toBuf = to.pinnedTerminated()
-                    defer { toBuf.unpin() }
+                val fromBuf = from.pinnedTerminated()
+                defer { fromBuf.unpin() }
+                val toBuf = to.pinnedTerminated()
+                defer { toBuf.unpin() }
 
-                    io_uring_prep_renameat(
-                        sqe,
-                        fromDir,
-                        fromBuf.addressOf(0),
-                        toDir,
-                        toBuf.addressOf(0),
-                        0
-                    )
+                io_uring_prep_renameat(
+                    sqe,
+                    fromDir,
+                    fromBuf.addressOf(0),
+                    toDir,
+                    toBuf.addressOf(0),
+                    0
+                )
 
-                    val seq = counter++
-                    io_uring_sqe_set_data64(sqe, seq)
+                val seq = counter++
+                io_uring_sqe_set_data64(sqe, seq)
 
-                    submitAndWait<Empty>(task, seq, SleepingWhy.LINK)
-                }
-            } as CancellableResourceResult<Empty>
+                submitAndWait(task, seq, SleepingWhy.LINK)
+            }
     }
 
     @OptIn(Unsafe::class)
@@ -1037,27 +1017,24 @@ public actual class IOManager(
 
         return task.checkIfCancelled()
             .andThen {
-                limiter.unwrapAndRun {
-                    val sqe = getsqe()
-                    val toDir = dirHandle?.actualFd ?: _AT_FDCWD
+                val sqe = getsqe()
+                val toDir = dirHandle?.actualFd ?: _AT_FDCWD
 
-                    val pathBuf = path.pinnedTerminated()
-                    defer { pathBuf.unpin() }
+                val pathBuf = path.pinnedTerminated()
+                defer { pathBuf.unpin() }
 
-                    val targetBuf = path.pinnedTerminated()
-                    defer { targetBuf.unpin() }
+                val targetBuf = path.pinnedTerminated()
+                defer { targetBuf.unpin() }
 
-                    io_uring_prep_symlinkat(sqe, targetBuf.addressOf(0), toDir, pathBuf.addressOf(0))
-                    val seq = counter++
-                    io_uring_sqe_set_data64(sqe, seq)
+                io_uring_prep_symlinkat(sqe, targetBuf.addressOf(0), toDir, pathBuf.addressOf(0))
+                val seq = counter++
+                io_uring_sqe_set_data64(sqe, seq)
 
-                    submitAndWait<Empty>(task, seq, SleepingWhy.SYMLINK)
-                }
-            } as CancellableResourceResult<Empty>
+                submitAndWait(task, seq, SleepingWhy.SYMLINK)
+            }
     }
 
 
-    @Suppress("UNCHECKED_CAST")
     @OptIn(Unsafe::class)
     public actual suspend fun unlinkAt(
         dirHandle: DirectoryHandle?,
@@ -1068,21 +1045,19 @@ public actual class IOManager(
 
         return task.checkIfCancelled()
             .andThen {
-                limiter.unwrapAndRun {
-                    val sqe = getsqe()
+                val sqe = getsqe()
 
-                    val dirFd = dirHandle?.actualFd ?: _AT_FDCWD
-                    val buf = path.pinnedTerminated()
-                    defer { buf.unpin() }
+                val dirFd = dirHandle?.actualFd ?: _AT_FDCWD
+                val buf = path.pinnedTerminated()
+                defer { buf.unpin() }
 
-                    val flags = if (!removeDir) 0 else _AT_REMOVEDIR
+                val flags = if (!removeDir) 0 else _AT_REMOVEDIR
 
-                    io_uring_prep_unlinkat(sqe, dirFd, buf.addressOf(0), flags)
-                    val seq = counter++
-                    io_uring_sqe_set_data64(sqe, seq)
-                    submitAndWait<Empty>(task, seq, SleepingWhy.UNLINK)
-                }
-            } as CancellableResourceResult<Empty>
+                io_uring_prep_unlinkat(sqe, dirFd, buf.addressOf(0), flags)
+                val seq = counter++
+                io_uring_sqe_set_data64(sqe, seq)
+                submitAndWait(task, seq, SleepingWhy.UNLINK)
+            }
     }
 
     override fun close() {
