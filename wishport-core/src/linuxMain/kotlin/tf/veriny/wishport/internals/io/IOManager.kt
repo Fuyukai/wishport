@@ -198,7 +198,9 @@ public actual class IOManager(
             SleepingWhy.FSYNC, SleepingWhy.CLOSE,
             SleepingWhy.POLL_UPDATE, SleepingWhy.MKDIR,
             SleepingWhy.UNLINK, SleepingWhy.SHUTDOWN,
-            SleepingWhy.STATX, SleepingWhy.CONNECT, -> {
+            SleepingWhy.STATX, SleepingWhy.CONNECT,
+            SleepingWhy.RENAME, SleepingWhy.SYMLINK,
+            SleepingWhy.LINK, -> {
                 Cancellable.ok(Empty)
             }
         }
@@ -934,6 +936,122 @@ public actual class IOManager(
                 }
             } as CancellableResourceResult<Empty>
     }
+
+    @OptIn(Unsafe::class)
+    public actual suspend fun renameAt(
+        fromDirHandle: DirectoryHandle?,
+        from: ByteString,
+        toDirHandle: DirectoryHandle?,
+        to: ByteString,
+        flags: Set<RenameFlags>
+    ): CancellableResourceResult<Empty> = memScoped {
+        val task = getCurrentTask()
+
+        var realFlags = 0
+
+        for (flag in flags) {
+            realFlags = when (flag) {
+                RenameFlags.EXCHANGE -> realFlags.or(_RENAME_EXCHANGE)
+                RenameFlags.DONT_REPLACE -> realFlags.or(_RENAME_NOREPLACE)
+            }
+        }
+
+        return task.checkIfCancelled()
+            .andThen {
+                limiter.unwrapAndRun {
+                    val sqe = getsqe()
+                    val fromDir = fromDirHandle?.actualFd ?: _AT_FDCWD
+                    val toDir = toDirHandle?.actualFd ?: _AT_FDCWD
+
+                    val fromBuf = from.pinnedTerminated()
+                    defer { fromBuf.unpin() }
+                    val toBuf = to.pinnedTerminated()
+                    defer { toBuf.unpin() }
+
+                    io_uring_prep_renameat(
+                        sqe,
+                        fromDir,
+                        fromBuf.addressOf(0),
+                        toDir,
+                        toBuf.addressOf(0),
+                        realFlags
+                    )
+
+                    val seq = counter++
+                    io_uring_sqe_set_data64(sqe, seq)
+
+                    submitAndWait<Empty>(task, seq, SleepingWhy.RENAME)
+                }
+            } as CancellableResourceResult<Empty>
+    }
+
+    @OptIn(Unsafe::class)
+    public actual suspend fun linkAt(
+        fromDirHandle: DirectoryHandle?,
+        from: ByteString,
+        toDirHandle: DirectoryHandle?,
+        to: ByteString,
+    ): CancellableResourceResult<Empty> = memScoped {
+        val task = getCurrentTask()
+
+        return task.checkIfCancelled()
+            .andThen {
+                limiter.unwrapAndRun {
+                    val sqe = getsqe()
+                    val fromDir = fromDirHandle?.actualFd ?: _AT_FDCWD
+                    val toDir = toDirHandle?.actualFd ?: _AT_FDCWD
+
+                    val fromBuf = from.pinnedTerminated()
+                    defer { fromBuf.unpin() }
+                    val toBuf = to.pinnedTerminated()
+                    defer { toBuf.unpin() }
+
+                    io_uring_prep_renameat(
+                        sqe,
+                        fromDir,
+                        fromBuf.addressOf(0),
+                        toDir,
+                        toBuf.addressOf(0),
+                        0
+                    )
+
+                    val seq = counter++
+                    io_uring_sqe_set_data64(sqe, seq)
+
+                    submitAndWait<Empty>(task, seq, SleepingWhy.LINK)
+                }
+            } as CancellableResourceResult<Empty>
+    }
+
+    @OptIn(Unsafe::class)
+    public actual suspend fun symlinkAt(
+        dirHandle: DirectoryHandle?,
+        path: ByteString,
+        target: ByteString,
+    ): CancellableResourceResult<Empty> = memScoped {
+        val task = getCurrentTask()
+
+        return task.checkIfCancelled()
+            .andThen {
+                limiter.unwrapAndRun {
+                    val sqe = getsqe()
+                    val toDir = dirHandle?.actualFd ?: _AT_FDCWD
+
+                    val pathBuf = path.pinnedTerminated()
+                    defer { pathBuf.unpin() }
+
+                    val targetBuf = path.pinnedTerminated()
+                    defer { targetBuf.unpin() }
+
+                    io_uring_prep_symlinkat(sqe, targetBuf.addressOf(0), toDir, pathBuf.addressOf(0))
+                    val seq = counter++
+                    io_uring_sqe_set_data64(sqe, seq)
+
+                    submitAndWait<Empty>(task, seq, SleepingWhy.SYMLINK)
+                }
+            } as CancellableResourceResult<Empty>
+    }
+
 
     @Suppress("UNCHECKED_CAST")
     @OptIn(Unsafe::class)

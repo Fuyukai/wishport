@@ -224,7 +224,7 @@ public expect class IOManager : Closeable {
      * Creates a new directory.
      *
      * If [dirHandle] is provided, the new directory will be relative to it. If null is provided,
-     * then the new directory will be relative to the current working directory. If path is an
+     * then the new directory will be relative to the current working directory. If the path is an
      * absolute path, then the provided handle is ignored.
      *
      * [permissions] is a set of permissions to create the new directory with. If this is unset,
@@ -234,6 +234,59 @@ public expect class IOManager : Closeable {
         dirHandle: DirectoryHandle?,
         path: ByteString,
         permissions: Set<FilePermissions>
+    ): CancellableResourceResult<Empty>
+
+    /**
+     * Renames a file or directory.
+     *
+     * If [fromDirHandle] is provided, the existing path [from] will be relative to it. If null is
+     * provided, then the existing path will be relative to the current working directory. If the
+     * path is an absolute path, then the provided handle is ignored.
+     *
+     * If [toDirHandle] is provided, the existing path [to] will be relative to it. If null is
+     * provided, then the existing path will be relative to the current working directory. If the
+     * path is an absolute path, then the provided handle is ignored.
+     *
+     * [flags] is a set of zero or more flags used to customise the behaviour of the rename
+     * operation.
+     */
+    public suspend fun renameAt(
+        fromDirHandle: DirectoryHandle?,
+        from: ByteString,
+        toDirHandle: DirectoryHandle?,
+        to: ByteString,
+        flags: Set<RenameFlags>
+    ): CancellableResourceResult<Empty>
+
+    /**
+     * Creates a hardlink to the file at [from], with the link existing at [to].
+     *
+     * If [fromDirHandle] is provided, the existing path [from] will be relative to it. If null is
+     * provided, then the existing path will be relative to the current working directory. If the
+     * path is an absolute path, then the provided handle is ignored.
+     *
+     * If [toDirHandle] is provided, the existing path [to] will be relative to it. If null is
+     * provided, then the existing path will be relative to the current working directory. If the
+     * path is an absolute path, then the provided handle is ignored.
+     */
+    public suspend fun linkAt(
+        fromDirHandle: DirectoryHandle?,
+        from: ByteString,
+        toDirHandle: DirectoryHandle?,
+        to: ByteString,
+    ): CancellableResourceResult<Empty>
+
+    /**
+     * Creates a symbolic link with the content [target].
+     *
+     * If [dirHandle] is provided, the existing path [to] will be relative to it. If null is
+     * provided, then the existing path will be relative to the current working directory. If the
+     * path is an absolute path, then the provided handle is ignored.
+     */
+    public suspend fun symlinkAt(
+        dirHandle: DirectoryHandle?,
+        path: ByteString,
+        target: ByteString,
     ): CancellableResourceResult<Empty>
 
     /**
