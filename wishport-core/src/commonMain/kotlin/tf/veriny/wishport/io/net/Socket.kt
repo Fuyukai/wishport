@@ -17,14 +17,14 @@ import tf.veriny.wishport.io.*
  * A BSD socket that can either listen to new incoming connections or start outgoing connections.
  */
 @OptIn(LowLevelApi::class)
-public class Socket<T : SocketAddress>
-private constructor(override val raw: IOHandle) : FileLikeHandle {
+public class Socket
+private constructor(override val raw: SocketHandle) : FileLikeHandle {
     public companion object {
         /**
          * Creates a new [Socket], using the parameters specified by the [SocketAddress].
          */
         @Unsafe
-        public operator fun <T : SocketAddress> invoke(address: T): ResourceResult<Socket<T>> {
+        public operator fun invoke(address: SocketAddress): ResourceResult<Socket> {
             return makeSocket(address.family, address.type, address.protocol)
                 .andThen { Either.ok(Socket(it)) }
         }
@@ -36,7 +36,7 @@ private constructor(override val raw: IOHandle) : FileLikeHandle {
     /**
      * Binds this socket to the specified address.
      */
-    public suspend fun bind(address: T): CancellableResourceResult<Empty> {
+    public suspend fun bind(address: SocketAddress): CancellableResourceResult<Empty> {
         if (closed) return Cancellable.failed(AlreadyClosedError)
 
         val io = getIOManager()
@@ -46,11 +46,21 @@ private constructor(override val raw: IOHandle) : FileLikeHandle {
     /**
      * Connects this socket to the specified address.
      */
-    public suspend fun connect(address: T): CancellableResourceResult<Empty> {
+    public suspend fun connect(address: SocketAddress): CancellableResourceResult<Empty> {
         if (closed) return Cancellable.failed(AlreadyClosedError)
 
         val io = getIOManager()
         return io.connect(raw, address)
+    }
+
+    /**
+     * Accepts a new incoming connection, producing a new [Socket].
+     */
+    public suspend fun accept(address: SocketAddress): CancellableResourceResult<Socket> {
+        if (closed) return Cancellable.failed(AlreadyClosedError)
+
+        val io = getIOManager()
+        return io.accept(raw).andThen { Cancellable.ok(Socket(it)) }
     }
 
     /**
