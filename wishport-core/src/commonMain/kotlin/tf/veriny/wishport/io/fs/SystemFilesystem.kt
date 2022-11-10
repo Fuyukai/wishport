@@ -32,7 +32,7 @@ public object SystemFilesystem : Filesystem<SystemPurePath, PlatformFileMetadata
     ): CancellableResourceResult<SystemFilesystemHandle> {
         val manager = getIOManager()
         return manager.openFilesystemFile(
-            null, path.toByteString(), openMode, flags, permissions
+            null, path.toByteString(withNullSep = true), openMode, flags, permissions
         )
             .andThen {
                 Cancellable.ok(SystemFilesystemHandle(this, it, path))
@@ -54,7 +54,8 @@ public object SystemFilesystem : Filesystem<SystemPurePath, PlatformFileMetadata
 
         val manager = getIOManager()
         return manager.openFilesystemFile(
-            otherHandle.raw as DirectoryHandle, path.toByteString(), openMode, flags, permissions
+            otherHandle.raw as DirectoryHandle, path.toByteString(withNullSep = true),
+            openMode, flags, permissions
         )
             .andThen {
                 Cancellable.ok(SystemFilesystemHandle(this, it, path))
@@ -73,7 +74,7 @@ public object SystemFilesystem : Filesystem<SystemPurePath, PlatformFileMetadata
         path: SystemPurePath
     ): CancellableResult<PlatformFileMetadata, Fail> {
         val io = getIOManager()
-        return io.fileMetadataAt(handle?.raw, path.toByteString())
+        return io.fileMetadataAt(handle?.raw, path.toByteString(withNullSep = true))
     }
 
     override suspend fun flushFile(
@@ -90,7 +91,7 @@ public object SystemFilesystem : Filesystem<SystemPurePath, PlatformFileMetadata
         path: SystemPurePath,
         permissions: Set<FilePermissions>
     ): CancellableResourceResult<Empty> {
-        return getIOManager().makeDirectoryAt(null, path.toByteString(), permissions)
+        return getIOManager().makeDirectoryAt(null, path.toByteString(withNullSep = true), permissions)
     }
 
     override suspend fun mkdirRelative(
@@ -103,7 +104,7 @@ public object SystemFilesystem : Filesystem<SystemPurePath, PlatformFileMetadata
 
         return getIOManager().makeDirectoryAt(
             otherHandle.raw as DirectoryHandle,
-            path.toByteString(),
+            path.toByteString(withNullSep = true),
             permissions
         )
     }
@@ -113,7 +114,7 @@ public object SystemFilesystem : Filesystem<SystemPurePath, PlatformFileMetadata
         removeDir: Boolean
     ): CancellableResourceResult<Empty> {
         val manager = getIOManager()
-        return manager.unlinkAt(null, path.toByteString(), removeDir)
+        return manager.unlinkAt(null, path.toByteString(withNullSep = true), removeDir)
     }
 
     override suspend fun unlinkRelative(
@@ -125,6 +126,8 @@ public object SystemFilesystem : Filesystem<SystemPurePath, PlatformFileMetadata
         if (otherHandle.filesystem != this) return Cancellable.failed(WrongFilesystemError)
 
         val manager = getIOManager()
-        return manager.unlinkAt(otherHandle.raw as DirectoryHandle, path.toByteString(), removeDir)
+        return manager.unlinkAt(
+            otherHandle.raw as DirectoryHandle, path.toByteString(withNullSep = true), removeDir
+        )
     }
 }

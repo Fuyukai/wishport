@@ -64,19 +64,27 @@ public data class KernelInfo(
     public val patch: Int get() = ver[2]
 }
 
+private lateinit var info: KernelInfo
+
 /**
  * Gets the current Linux kernel version.
  */
 @OptIn(Unsafe::class)
-public fun getKernelInfo(): KernelInfo = memScoped {
-    val buf = alloc<utsname>()
+public fun getKernelInfo(): KernelInfo {
+    if (::info.isInitialized) return info
+
+    // leak it into the ether as for some reason K/N can't free this properly? or I have
+    // a leak somewhere else that I don't know about and it's conflicting somehow.
+    val buf = nativeHeap.alloc<utsname>()
     val res = uname(buf.ptr)
     if (res != 0) error("what the fuck?")
 
-    return KernelInfo(
+    info = KernelInfo(
         buf.nodename.toKStringUtf8Fast(),
         buf.release.toKStringUtf8Fast(),
         buf.version.toKStringUtf8Fast(),
         buf.machine.toKStringUtf8Fast()
     )
+
+    return info
 }

@@ -6,33 +6,59 @@
 
 package tf.veriny.wishport.io.fs
 
+import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.ByteString
 import tf.veriny.wishport.io.fs.PathComponent.*
 
 /**
- * Concatenates all the underlying components of this path into a [ByteString].
+ * Concatenates all the underlying components of this path into a [ByteString]. The result will be
+ * null terminated if [withNullSep] is true.
  */
-public fun PurePath<*>.toByteString(): ByteString {
+@OptIn(Unsafe::class)
+public fun PurePath<*>.toByteString(withNullSep: Boolean = false): ByteString {
     // we take some liberties with internal apis!
     // TODO: once we get a real byte buffer like, we can avoid using the internal apis altogether
-    val buf = ArrayList<ByteString>()
+    var size = 0
+    val buf = ArrayList<ByteString>(components.size)
 
     for (idx in components.indices) {
         when (val comp = components[idx]) {
             is Prefix -> TODO()
             is RootDir -> {
                 buf.add(PATH_SEP)
-                continue
+                size += PATH_SEP.size
             }
-            is CurrentDir -> buf.add(CurrentDir.DOT)
-            is PreviousDir -> buf.add(PreviousDir.DOTDOT)
-            is Normal -> buf.add(comp.data)
+            is CurrentDir -> {
+                buf.add(CurrentDir.DOT)
+                size += CurrentDir.DOT.size
+            }
+            is PreviousDir -> {
+                buf.add(PreviousDir.DOTDOT)
+                size += PreviousDir.DOTDOT.size
+            }
+            is Normal -> {
+                buf.add(comp.data)
+                size += comp.data.size
+            }
         }
 
-        if (idx != components.size - 1) buf.add(PATH_SEP)
+        if (idx != components.size - 1) {
+            buf.add(PATH_SEP)
+            size += 1
+        }
     }
 
-    return buf.reduce { acc, bs -> acc + bs }
+    // be more efficient than a reduce here
+    if (withNullSep) size++
+    val out = ByteArray(size)
+    var cursor = 0
+
+    for (item in buf) {
+        item.unwrap().copyInto(out, destinationOffset = cursor)
+        cursor += item.size
+    }
+
+    return ByteString.uncopied(out)
 }
 
 /**
