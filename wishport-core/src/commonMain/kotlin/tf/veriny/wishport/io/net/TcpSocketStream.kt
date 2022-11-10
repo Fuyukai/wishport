@@ -19,11 +19,11 @@ import tf.veriny.wishport.io.streams.writeAll
 import tf.veriny.wishport.io.streams.writeMost
 
 /**
- * A [PartialStream] that
+ * A [PartialStream] that wraps a [Socket].
  */
 @ProvisionalApi
 public class TcpSocketStream
-internal constructor(public val sock: Socket) : PartialStream {
+public constructor(public val sock: Socket) : PartialStream {
     override val closed: Boolean by sock::closed
 
     override var damaged: Boolean = false

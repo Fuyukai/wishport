@@ -21,7 +21,7 @@ class `Test TCP sockets` {
     @Test
     fun `Test basic TCP connection`() = runWithClosingScopeThis {
         val ip = IPv6Address.of("2610:20:6f15:15::27").expect("this is a valid address")
-        val address = Inet6SocketAddress(SocketProtocol.TCP, SocketType.STREAM, ip, 13U)
+        val address = Inet6SocketAddress(SocketType.STREAM, SocketProtocol.TCP, ip, 13U)
 
         val data = assertSuccess {
             openTcpStream(address)

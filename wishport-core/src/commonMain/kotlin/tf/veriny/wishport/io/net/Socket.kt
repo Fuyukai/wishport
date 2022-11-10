@@ -20,6 +20,13 @@ import tf.veriny.wishport.io.*
 public class Socket
 private constructor(override val raw: SocketHandle) : FileLikeHandle {
     public companion object {
+        @OptIn(Unsafe::class)
+        public operator fun invoke(
+            scope: AsyncClosingScope, address: SocketAddress
+        ): ResourceResult<Socket> {
+            return Socket(address).andAddTo(scope)
+        }
+
         /**
          * Creates a new [Socket], using the parameters specified by the [SocketAddress].
          */
@@ -56,7 +63,8 @@ private constructor(override val raw: SocketHandle) : FileLikeHandle {
     /**
      * Accepts a new incoming connection, producing a new [Socket].
      */
-    public suspend fun accept(address: SocketAddress): CancellableResourceResult<Socket> {
+    @Unsafe
+    public suspend fun accept(): CancellableResourceResult<Socket> {
         if (closed) return Cancellable.failed(AlreadyClosedError)
 
         val io = getIOManager()
@@ -131,8 +139,7 @@ private constructor(override val raw: SocketHandle) : FileLikeHandle {
             CancelScope(shield = true) {
                 val io = getIOManager()
                 // ignore return value, suppress error
-                io.shutdown(raw, ShutdownHow.BOTH)
-                io.closeHandle(raw).also { closed = true }
+                io.closeSocket(raw).also { closed = true }
             }.andThen { Cancellable.empty() }
         } else {
             Cancellable.empty()

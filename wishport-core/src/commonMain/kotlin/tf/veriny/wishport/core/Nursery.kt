@@ -194,6 +194,6 @@ public inline fun Nursery.startSoonNoResult(
     crossinline fn: suspend () -> Unit
 ): Either<Unit, NurseryClosed> {
     return startSoon {
-        runSafely { fn.invoke() }.notCancelled()
+         Cancellable.ok(fn.invoke())
     }
 }

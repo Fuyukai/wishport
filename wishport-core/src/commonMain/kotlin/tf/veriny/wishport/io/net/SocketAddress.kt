@@ -22,8 +22,8 @@ public sealed interface SocketAddress {
 
 public sealed class BaseSocketAddress(
     override val family: SocketFamily,
-    override val protocol: SocketProtocol,
     override val type: SocketType,
+    override val protocol: SocketProtocol,
 ) : SocketAddress {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -49,11 +49,11 @@ public sealed class BaseSocketAddress(
  * A socket address that uses IPv4.
  */
 public class Inet4SocketAddress(
-    protocol: SocketProtocol,
     type: SocketType,
+    protocol: SocketProtocol,
     public val address: IPv4Address,
     public val port: UShort
-) : BaseSocketAddress(SocketFamily.IPV4, protocol, type) {
+) : BaseSocketAddress(SocketFamily.IPV4, type, protocol) {
     override fun equals(other: Any?): Boolean {
         if (other === this) return true
         if (other == null || other !is Inet4SocketAddress) return false
@@ -71,11 +71,11 @@ public class Inet4SocketAddress(
 }
 
 public class Inet6SocketAddress(
-    protocol: SocketProtocol,
     type: SocketType,
+    protocol: SocketProtocol,
     public val address: IPv6Address,
     public val port: UShort
-) : BaseSocketAddress(SocketFamily.IPV6, protocol, type) {
+) : BaseSocketAddress(SocketFamily.IPV6, type, protocol) {
     override fun equals(other: Any?): Boolean {
         if (other === this) return true
         if (other == null || other !is Inet6SocketAddress) return false

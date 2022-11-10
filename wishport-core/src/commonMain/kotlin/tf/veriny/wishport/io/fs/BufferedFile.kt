@@ -60,7 +60,6 @@ private constructor(
     private fun readFromBuffer0(into: ByteArray, byteCount: UInt, bufferOffset: Int): UInt {
         return if (end > front) {
             val amount = minOf(end - front, byteCount)
-            println("copying $into, $amount, $bufferOffset, end=$end, front=$front")
             buffer.copyInto(into, bufferOffset, front.toInt(), (front + amount).toInt())
             front += amount
             amount

@@ -6,26 +6,18 @@
 
 package tf.veriny.wishport
 
-import kotlinx.cinterop.*
-import platform.posix.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.b
 import tf.veriny.wishport.core.*
 import tf.veriny.wishport.internals.EventLoop
-import tf.veriny.wishport.io.Fd
 import tf.veriny.wishport.io.Poll
 import tf.veriny.wishport.io.PollResult
-import tf.veriny.wishport.io.fs.FileOpenType
-import tf.veriny.wishport.io.fs.FilesystemHandle
-import tf.veriny.wishport.io.fs.PosixPurePath
-import tf.veriny.wishport.io.fs.openFile
+import tf.veriny.wishport.io.fs.*
+import tf.veriny.wishport.io.net.*
+import tf.veriny.wishport.sync.Event
 import tf.veriny.wishport.sync.Promise
-import tf.veriny.wishport.util.kstrerror
-import kotlin.test.Test
-import kotlin.test.assertContentEquals
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 /**
  * Tests reading /dev/zero on Linux. This is a basic test for io_uring, rather than higher-level
@@ -53,35 +45,25 @@ class `Test IOUring` {
     /**
      * Tests cancelling an io_uring result.
      */
-    @OptIn(LowLevelApi::class)
+    @OptIn(LowLevelApi::class, Unsafe::class)
     @Test
     fun `Test io_uring cancellation`() = runUntilCompleteNoResult {
-        val sock = platform.posix.socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
-        assertTrue(sock > 0, "sock failed to allocate")
-
-        memScoped {
-            val sa = alloc<sockaddr_in>()
-            sa.sin_family = AF_INET.convert()
-            sa.sin_port = htons(6666U)
-            sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK)
-            assertTrue(
-                bind(sock, sa.ptr.reinterpret(), sizeOf<sockaddr_in>().convert()) == 0,
-                "bind failed ${kstrerror(posix_errno())}"
-            )
-        }
-
-        assertTrue(
-            listen(sock, 1) == 0,
-            "listen failed ${kstrerror(posix_errno())}"
+        val addr = Inet4SocketAddress(
+            SocketType.STREAM, SocketProtocol.TCP,
+            IPv4Address.of("127.0.0.1").expect(), 7777U
         )
-        val handle = Fd(sock)
+
+        val sock = Socket(addr).expect()
+        sock.bind(addr)
+        sock.listen()
+
         val p = Promise<CancellableResourceResult<PollResult>>()
 
         Nursery.open { n ->
             val io = getIOManager()
             // POLL_READ on a server socket works for waiting until accept()
             n.startSoonNoResult {
-                val res = io.pollHandle(handle, setOf(Poll.POLL_READ))
+                val res = io.pollHandle(sock.raw, setOf(Poll.POLL_READ))
                 p.set(res)
             }
 
@@ -119,6 +101,51 @@ class `Test IOUring` {
             }
 
             Cancellable.empty()
+        }
+    }
+
+    @OptIn(LowLevelApi::class)
+    @Test
+    fun `Test submitting a linked request`() = runWithClosingScope { scope ->
+        val addr = Inet4SocketAddress(
+            SocketType.STREAM, SocketProtocol.TCP,
+            IPv4Address.of("127.0.0.1").expect(), 7777U
+        )
+
+        Nursery.open { n ->
+            // synchronise point
+            val startup = Event()
+            val shutdown = Event()
+
+            // server code
+            n.startSoonNoResult { assertFailureWith(BrokenPipe) {
+                Socket(scope, addr)
+                    .andAlso { it.setSocketOption(SO_REUSEADDR, true) }
+                    .andAlso { it.bind(addr) }
+                    .andAlso { it.listen(1).notCancelled() }
+                    .also { startup.set() }
+                    .andThen {
+                        it.acceptInto(scope)
+                    }
+                    .andAlso { shutdown.wait() }
+                    .andThen {
+                        repeatedly {
+                            it.writeFrom(b("should fail eventually!").toByteArray())
+                        }
+                    }
+            } }
+
+            // client code
+            n.startSoonNoResult {
+                Socket(scope, addr)
+                    .andAlso { startup.wait() }
+                    .andAlso {
+                        it.connect(addr)
+                    }
+                    .andAlso {
+                        it.close().also { shutdown.set() }
+                    }
+            }
         }
     }
 }

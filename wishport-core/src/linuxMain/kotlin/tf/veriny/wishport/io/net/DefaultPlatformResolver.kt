@@ -93,7 +93,7 @@ public actual object DefaultPlatformResolver : NameResolver {
                     assert(nextEntry.ai_addrlen == sizeOf<sockaddr_in>().toUInt())
                     val addr = nextEntry.ai_addr!!.reinterpret<sockaddr_in>()
                     val ip = IPv4Address(ntohl(addr.pointed.sin_addr.s_addr).toByteArray())
-                    Inet4SocketAddress(proto, type, ip, ntohs(addr.pointed.sin_port))
+                    Inet4SocketAddress(type, proto, ip, ntohs(addr.pointed.sin_port))
                 }
                 SocketFamily.IPV6.number -> {
                     assert(nextEntry.ai_addrlen == sizeOf<sockaddr_in6>().toUInt())
@@ -101,7 +101,7 @@ public actual object DefaultPlatformResolver : NameResolver {
                     // XXX: kotlin sin6_addr doesn't have any members...
                     val ipBytes = addr.pointed.sin6_addr.arrayMemberAt<ByteVar>(0)
                     val ip = IPv6Address(ipBytes.readBytesFast(16))
-                    Inet6SocketAddress(proto, type, ip, ntohs(addr.pointed.sin6_port))
+                    Inet6SocketAddress(type, proto, ip, ntohs(addr.pointed.sin6_port))
                 }
                 else -> null
             }

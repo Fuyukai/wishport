@@ -70,6 +70,12 @@ public expect class IOManager : Closeable {
         how: ShutdownHow
     ): CancellableResourceResult<Empty>
 
+    /**
+     * Closes a [SocketHandle] in a more efficient way if supported. This obeys the same rules as
+     * [closeHandle].
+     */
+    public suspend fun closeSocket(socket: SocketHandle): CancellableResourceResult<Empty>
+
     // CreateFileEx isn't async so we have to punt it off to a worker on windows.
 
     /**
@@ -122,6 +128,7 @@ public expect class IOManager : Closeable {
     /**
      * Accepts a new connection for the specified [sock].
      */
+    @Unsafe
     public suspend fun accept(sock: SocketHandle): CancellableResourceResult<SocketHandle>
 
     /**

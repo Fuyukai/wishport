@@ -42,7 +42,7 @@ public class UnknownError(errno: Int) : SyscallError(errno)
  * Converts an errno into an [SyscallError].
  */
 public fun Int.toSysError(): SyscallError =
-    ERRNO_MAPPING[this]
+    ERRNO_MAPPING.getOrNull(this) ?: UnknownError(this)
 
 /**
  * Converts an errno into an [ResourceResult].

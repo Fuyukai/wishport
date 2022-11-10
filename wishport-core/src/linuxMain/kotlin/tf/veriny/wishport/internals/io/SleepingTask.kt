@@ -19,10 +19,13 @@ internal data class SleepingTask @OptIn(LowLevelApi::class) constructor(
     val id: ULong,
     val why: SleepingWhy
 ) {
+    // decremented by 1 for every sqe with the specified ID return, and then reschedules with the
+    // last non-cancelled result
+    var sqeCount = 1
     var completed: Boolean = false
 
     // set by the cqe poller
-    lateinit var wakeupData: CancellableResourceResult<IOResult>
+    var wakeupData: CancellableResourceResult<IOResult>? = null
 }
 
 /** Enumeration of what the task is sleeping on. */

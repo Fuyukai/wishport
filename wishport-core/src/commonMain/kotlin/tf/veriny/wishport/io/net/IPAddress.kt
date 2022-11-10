@@ -97,11 +97,15 @@ public class IPv4Address(private val bytes: ByteArray) : IPAddress() {
         return representation.joinToString(".") { it.toUByte().toString() }
     }
 
+    // dear whoever made the choice to not have << but shift left and shift right ops:
+    // kill yourself!
+    // number of times I have been bitten by not being able to tell left from right: 7
+    // (as of writing this comment)
     public fun toUInt(): UInt {
         var cnt = 0U
-        cnt = cnt.or(bytes[0].toUInt().shr(24))
-        cnt = cnt.or(bytes[1].toUInt().shr(16))
-        cnt = cnt.or(bytes[2].toUInt().shr(8))
+        cnt = cnt.or(bytes[0].toUInt().shl(24))
+        cnt = cnt.or(bytes[1].toUInt().shl(16))
+        cnt = cnt.or(bytes[2].toUInt().shl(8))
         cnt = cnt.or(bytes[3].toUInt())
         return cnt
     }

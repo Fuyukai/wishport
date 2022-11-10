@@ -163,31 +163,45 @@ public actual class IOManager(
             return
         }
 
-        task.completed = true
-        tasks.remove(task.id)
         val result = unwrapped.res
 
         // potential error result
         if (result < 0) {
-            // successful cancellation
-            if (result == -EINTR || result == -ECANCELED) {
-                task.wakeupData = Cancellable.cancelled()
-                task.task.reschedule()
-                return
+            // for linked SQEs, we only store the result if there's been no other error result
+            // as the others will all have EINTR/ECANCELED.
+            if (task.wakeupData == null) {
+                // cancelled normally
+                if (result == -EINTR || result == -ECANCELED) {
+                    task.wakeupData = Cancellable.cancelled()
+                } else {
+                    task.wakeupData = Cancellable.failed(abs(unwrapped.res).toSysError())
+                }
+            } else {
+                // error result from a linked task, *should* be a cancelled if it follows the
+                // other SQE values.
+                assert(result == -EINTR || result == -ECANCELED) {
+                    "something went wrong inside the i/o manager, please report"
+                }
             }
 
-            task.wakeupData = Cancellable.failed(abs(unwrapped.res).toSysError())
-            task.task.reschedule()
+            task.sqeCount--
+            if (task.sqeCount == 0) {
+                task.completed = true
+                task.task.reschedule()
+                tasks.remove(task.id)
+            }
+
             return
         }
 
         // gross!
         // TODO: replace this with enum methods maybe
         val data = when (task.why) {
-            // ignore cancellation requests
+            // ignore SUCCESSFUL cancellation requests
             SleepingWhy.CANCEL -> {
                 task.completed = true
                 task.wakeupData = Cancellable.cancelled()
+                tasks.remove(task.id)
                 return
             }
 
@@ -215,9 +229,13 @@ public actual class IOManager(
             }
         }
 
-        task.completed = true
-        task.wakeupData = data
-        task.task.reschedule()
+        task.sqeCount--
+        if (task.sqeCount == 0) {
+            task.completed = true
+            task.wakeupData = data
+            task.task.reschedule()
+            tasks.remove(task.id)
+        }
     }
 
     // e.g. wait with a timeout would use io_uring_cqe_wait_nr
@@ -309,7 +327,7 @@ public actual class IOManager(
         //      thanks liburing! genuinely great feature, makes my life 10000x easier
         //      as i dont have to care about if i actually should enter or not, just pawn it off
         //      to the end user.
-        var submitResult = -1
+        var submitResult: Int
 
         // run loop submission in a loop so that we can immediately reap and reschedule all waiting
         // for I/O tasks if the completion queue is full.
@@ -341,10 +359,12 @@ public actual class IOManager(
     private suspend fun <T : IOResult> submitAndWait(
         task: Task,
         id: ULong,
-        why: SleepingWhy
+        why: SleepingWhy,
+        sqeCounter: Int = 1
     ): CancellableResourceResult<T> {
         // add first, idk why, just vibes
         val sleepy = SleepingTask(task, id, why)
+        sleepy.sqeCount = sqeCounter
         tasks[id] = sleepy
 
         submit()
@@ -358,7 +378,7 @@ public actual class IOManager(
         // in the latter case, we just pretend that actually we never got cancelled. not our
         // problem!
         if (!result.isCancelled || sleepy.completed) {
-            return sleepy.wakeupData as CancellableResourceResult<T>
+            return sleepy.wakeupData!! as CancellableResourceResult<T>
         }
 
         // sad path, we have to send a cancel request
@@ -388,7 +408,7 @@ public actual class IOManager(
 
         waitUntilRescheduled()
 
-        assert(sleepy.completed)
+        assert(sleepy.completed) { "task should be finished by now!!!" }
         return sleepy.wakeupData as CancellableResourceResult<T>
     }
 
@@ -438,6 +458,42 @@ public actual class IOManager(
 
                 submitAndWait(task, seq, SleepingWhy.SHUTDOWN)
             }
+    }
+
+    public actual suspend fun closeSocket(socket: SocketHandle): CancellableResourceResult<Empty> {
+        val task = getCurrentTask()
+        assert(!task.checkIfCancelled().isCancelled) {
+            "closeHandle should never be called from a cancelled context!"
+        }
+
+        // try 1: submit a linked shutdown->close request
+        // this should work for most sockets that don't explicitly send_eof().
+
+        val seq = counter++
+
+        run {
+            val shut = getsqe()
+            io_uring_prep_shutdown(shut, socket.actualFd, SHUT_RDWR)
+            io_uring_sqe_set_data64(shut, seq)
+            shut.pointed.flags = shut.pointed.flags.or(IOSQE_IO_LINK.toUByte())
+        }
+
+        run {
+            val close = getsqe()
+            io_uring_prep_close(close, socket.actualFd)
+            io_uring_sqe_set_data64(close, seq)
+        }
+
+        val result = submitAndWait<Empty>(task, seq, SleepingWhy.CLOSE, sqeCounter = 2)
+        if (!result.isFailure || result.getFailure()!! != TransportEndpointIsNotConnected) {
+            return result
+        }
+
+        // try 2: just a close().
+        val sqe = getsqe()
+        io_uring_prep_close(sqe, socket.actualFd)
+        io_uring_sqe_set_data64(sqe, seq)
+        return submitAndWait(task, seq, SleepingWhy.CLOSE)
     }
 
     /**
@@ -574,7 +630,7 @@ public actual class IOManager(
                 val addr = alloc<sockaddr_in>()
                 memset(addr.ptr, 0, sizeOf<sockaddr_in>().toULong())
                 addr.sin_family = AF_INET.toUShort()
-                addr.sin_addr.s_addr = address.address.toUInt()
+                addr.sin_addr.s_addr = htonl(address.address.toUInt())
                 addr.sin_port = htons(address.port)
 
                 if (sqe != null) {
@@ -627,7 +683,7 @@ public actual class IOManager(
         return task.checkIfCancelled()
             .andThen {
                 val res = doSocketAddress(this, sock, address, null)
-                if (res < 0) res.toSysResult().notCancelled()
+                if (res < 0) posix_errno().toSysResult().notCancelled()
                 else uncancellableCheckpoint(Empty)
             }
     }
@@ -635,6 +691,7 @@ public actual class IOManager(
     /**
      * Accepts a single incoming connection on a socket.
      */
+    @Unsafe
     public actual suspend fun accept(sock: SocketHandle): CancellableResourceResult<SocketHandle> {
         val task = getCurrentTask()
 
