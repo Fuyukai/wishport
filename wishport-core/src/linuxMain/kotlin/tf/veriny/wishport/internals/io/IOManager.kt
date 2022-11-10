@@ -50,6 +50,18 @@ private fun statx_timestamp.toNs(): ULong {
     return (tv_sec.toULong() * NS_PER_SEC.toULong()) + tv_nsec.toULong()
 }
 
+private fun CPointer<io_uring_sqe>.setuserid(ref: StableRef<*>) {
+    val ptr = ref.asCPointer()
+    io_uring_sqe_set_data(this, ptr)
+    //io_uring_sqe_set_data64(this, ptr)
+}
+
+private fun CPointerVar<io_uring_cqe>.getTask(): SleepingTask {
+    val ptr = io_uring_cqe_get_data(this.value)!!
+    val ref = ptr.asStableRef<SleepingTask>()
+    return ref.get()
+}
+
 /**
  * Provides asynchronous access to the io_uring kernel interface, via liburing.
  */
@@ -78,12 +90,6 @@ public actual class IOManager(
     // THE io_uring
     private val ring = alloca.alloc<io_uring>()
 
-    // used for associating tasks and cqes
-    private var counter = 0UL
-    // todo: replace this with a generificified longmap, or hell perhaps even another ring
-    // buffer.
-    private val tasks = mutableMapOf<ULong, SleepingTask>()
-
     // used for thread-side wake ups
     private val efd = eventfd(0, EFD_CLOEXEC)
 
@@ -105,11 +111,6 @@ public actual class IOManager(
                     flags = flags.or(IORING_SETUP_TASKRUN_FLAG)
                 }
             }
-
-            // SUBMIT_ALL moves errors down the chain to stupid users
-            // COOP_TASKRUN is just faster
-            // TASKRUN_FLAG is also faster
-            // CQSIZE lets us customise the completion queue size
 
             if (pollMode) flags = flags.or(IORING_SETUP_SQPOLL)
 
@@ -140,9 +141,6 @@ public actual class IOManager(
         }
     }
 
-    public val pendingItems: Int
-        get() = tasks.size
-
     private fun setupEventFdPoller() {
         val sqe = getsqe()
         io_uring_prep_poll_multishot(sqe, efd, EPOLLIN.toUInt().or(EPOLLET))
@@ -156,12 +154,7 @@ public actual class IOManager(
         // ignore the eventfd writes, this is just to wake us up.
         if (unwrapped.user_data == EFD_SQE) { return }
 
-        val task = tasks[unwrapped.user_data]
-        if (task == null) {
-            // TODO: don't println
-            println("WARN: Incoming CQE #${unwrapped.user_data} has no associated task")
-            return
-        }
+        val task = cqe.getTask()
 
         val result = unwrapped.res
 
@@ -188,7 +181,6 @@ public actual class IOManager(
             if (task.sqeCount == 0) {
                 task.completed = true
                 task.task.reschedule()
-                tasks.remove(task.id)
             }
 
             return
@@ -201,7 +193,6 @@ public actual class IOManager(
             SleepingWhy.CANCEL -> {
                 task.completed = true
                 task.wakeupData = Cancellable.cancelled()
-                tasks.remove(task.id)
                 return
             }
 
@@ -234,7 +225,6 @@ public actual class IOManager(
             task.completed = true
             task.wakeupData = data
             task.task.reschedule()
-            tasks.remove(task.id)
         }
     }
 
@@ -358,15 +348,9 @@ public actual class IOManager(
     @Suppress("UNCHECKED_CAST")
     private suspend fun <T : IOResult> submitAndWait(
         task: Task,
-        id: ULong,
-        why: SleepingWhy,
-        sqeCounter: Int = 1
+        sleepy: SleepingTask,
+        ref: StableRef<SleepingTask>
     ): CancellableResourceResult<T> {
-        // add first, idk why, just vibes
-        val sleepy = SleepingTask(task, id, why)
-        sleepy.sqeCount = sqeCounter
-        tasks[id] = sleepy
-
         submit()
 
         // scary use of low-level primitives here
@@ -378,25 +362,26 @@ public actual class IOManager(
         // in the latter case, we just pretend that actually we never got cancelled. not our
         // problem!
         if (!result.isCancelled || sleepy.completed) {
+            ref.dispose()
             return sleepy.wakeupData!! as CancellableResourceResult<T>
         }
 
         // sad path, we have to send a cancel request
         // io_uring cancellation is.... complicated
-        val cancellationId = counter++
-        val sleep2 = SleepingTask(task, cancellationId, SleepingWhy.CANCEL)
-        tasks[cancellationId] = sleep2
+        val firstTaskRefId = ref.asCPointer().toLong().toULong()
+        val sleep2 = SleepingTask(task, SleepingWhy.CANCEL)
+        val newTaskRef = StableRef.create(sleep2)
 
         // for poll events, we can't use prep_cancel (... as far as I know, anyway)
         // so we have to use poll_remove. it's the same thing, according to the man pages.
         val sqe = getsqe()
-        if (why == SleepingWhy.POLL_ADD) {
-            io_uring_prep_poll_remove(sqe, id)
+        if (sleepy.why == SleepingWhy.POLL_ADD) {
+            io_uring_prep_poll_remove(sqe, firstTaskRefId)
         } else {
-            io_uring_prep_cancel64(sqe, id, 0)
+            io_uring_prep_cancel64(sqe, firstTaskRefId, 0)
         }
 
-        io_uring_sqe_set_data64(sqe, cancellationId)
+        sqe.setuserid(newTaskRef)
         submit()
 
         // we can't use the result here as we are DEFINITELY cancelled.
@@ -408,8 +393,26 @@ public actual class IOManager(
 
         waitUntilRescheduled()
 
+        ref.dispose()
+        newTaskRef.dispose()
+
         assert(sleepy.completed) { "task should be finished by now!!!" }
         return sleepy.wakeupData as CancellableResourceResult<T>
+    }
+
+    private suspend inline fun <T : IOResult> submitAndWait(
+        task: Task, why: SleepingWhy, sqeCount: Int = 1,
+        block: (StableRef<SleepingTask>) -> Unit
+    ): CancellableResourceResult<T> {
+        val sleepy = SleepingTask(task, why)
+        sleepy.sqeCount = sqeCount
+        val ref = StableRef.create(sleepy)
+        ref.asCPointer()
+
+        block(ref)
+
+        // the ref is disposed by submitAndWait (real)
+        return submitAndWait<T>(task, sleepy, ref)
     }
 
     // some notes on stability
@@ -430,10 +433,8 @@ public actual class IOManager(
 
         val sqe = getsqe()
         io_uring_prep_close(sqe, handle.actualFd)
-        val seq = counter++
-        io_uring_sqe_set_data64(sqe, seq)
 
-        return submitAndWait(task, seq, SleepingWhy.CLOSE)
+        return submitAndWait(task, SleepingWhy.CLOSE) { sqe.setuserid(it) }
     }
 
     public actual suspend fun shutdown(
@@ -453,10 +454,8 @@ public actual class IOManager(
                 val sqe = getsqe()
 
                 io_uring_prep_shutdown(sqe, handle.actualFd, why)
-                val seq = counter++
-                io_uring_sqe_set_data64(sqe, seq)
 
-                submitAndWait(task, seq, SleepingWhy.SHUTDOWN)
+                submitAndWait(task, SleepingWhy.SHUTDOWN) { sqe.setuserid(it) }
             }
     }
 
@@ -469,22 +468,17 @@ public actual class IOManager(
         // try 1: submit a linked shutdown->close request
         // this should work for most sockets that don't explicitly send_eof().
 
-        val seq = counter++
+        val shut = getsqe()
+        io_uring_prep_shutdown(shut, socket.actualFd, SHUT_RDWR)
+        shut.pointed.flags = shut.pointed.flags.or(IOSQE_IO_LINK.toUByte())
 
-        run {
-            val shut = getsqe()
-            io_uring_prep_shutdown(shut, socket.actualFd, SHUT_RDWR)
-            io_uring_sqe_set_data64(shut, seq)
-            shut.pointed.flags = shut.pointed.flags.or(IOSQE_IO_LINK.toUByte())
-        }
+        val close = getsqe()
+        io_uring_prep_close(close, socket.actualFd)
 
-        run {
-            val close = getsqe()
-            io_uring_prep_close(close, socket.actualFd)
-            io_uring_sqe_set_data64(close, seq)
-        }
 
-        val result = submitAndWait<Empty>(task, seq, SleepingWhy.CLOSE, sqeCounter = 2)
+        val result = submitAndWait<Empty>(
+            task, SleepingWhy.CLOSE, sqeCount = 2
+        ) { shut.setuserid(it); close.setuserid(it) }
         if (!result.isFailure || result.getFailure()!! != TransportEndpointIsNotConnected) {
             return result
         }
@@ -492,8 +486,8 @@ public actual class IOManager(
         // try 2: just a close().
         val sqe = getsqe()
         io_uring_prep_close(sqe, socket.actualFd)
-        io_uring_sqe_set_data64(sqe, seq)
-        return submitAndWait(task, seq, SleepingWhy.CLOSE)
+
+        return submitAndWait(task, SleepingWhy.CLOSE) { sqe.setuserid(it) }
     }
 
     /**
@@ -603,12 +597,10 @@ public actual class IOManager(
 
                 // io_uring_prep_openat2(sqe, dirfd, cPath, how.ptr)
                 io_uring_prep_openat(sqe, dirfd, cPath, openFlags, mode)
-                val seq = counter++
-                io_uring_sqe_set_data64(sqe, seq)
 
                 submitAndWait(
-                    task, seq, SleepingWhy.OPEN_FILE
-                )
+                    task, SleepingWhy.OPEN_FILE
+                ) { sqe.setuserid(it) }
             }
     }
 
@@ -700,10 +692,7 @@ public actual class IOManager(
                 val sqe = getsqe()
                 io_uring_prep_accept(sqe, sock.actualFd, null, null, SOCK_CLOEXEC)
 
-                val seq = counter++
-                io_uring_sqe_set_data64(sqe, seq)
-
-                submitAndWait(task, seq, SleepingWhy.ACCEPT)
+                submitAndWait(task, SleepingWhy.ACCEPT) { sqe.setuserid(it) }
             }
     }
 
@@ -720,10 +709,7 @@ public actual class IOManager(
                 // ignore return value, it's always 0
                 doSocketAddress(this, sock, address, sqe)
 
-                val seq = counter++
-                io_uring_sqe_set_data64(sqe, seq)
-
-                submitAndWait(task, seq, SleepingWhy.CONNECT)
+                submitAndWait(task, SleepingWhy.CONNECT) { sqe.setuserid(it) }
             }
     }
 
@@ -747,9 +733,7 @@ public actual class IOManager(
                 io_uring_prep_read(
                     sqe, handle.actualFd, buf.addressOf(bufferOffset), size, fileOffset
                 )
-                val seq = counter++
-                io_uring_sqe_set_data64(sqe, seq)
-                submitAndWait(task, seq, SleepingWhy.OPEN_FILE)
+                submitAndWait(task, SleepingWhy.READ_WRITE) { sqe.setuserid(it) }
             }
     }
 
@@ -777,9 +761,8 @@ public actual class IOManager(
                     size,
                     fileOffset
                 )
-                val seq = counter++
-                io_uring_sqe_set_data64(sqe, seq)
-                submitAndWait(task, seq, SleepingWhy.READ_WRITE)
+
+                submitAndWait(task, SleepingWhy.READ_WRITE) { sqe.setuserid(it) }
             }
     }
 
@@ -803,10 +786,8 @@ public actual class IOManager(
                 defer { pinned.unpin() }
 
                 io_uring_prep_recv(sqe, handle.actualFd, pinned.addressOf(bufferOffset), size.toULong(), flags)
-                val seq = counter++
-                io_uring_sqe_set_data64(sqe, seq)
 
-                submitAndWait(task, seq, SleepingWhy.READ_WRITE)
+                submitAndWait(task, SleepingWhy.READ_WRITE) { sqe.setuserid(it) }
         }
     }
 
@@ -830,10 +811,8 @@ public actual class IOManager(
                 defer { pinned.unpin() }
 
                 io_uring_prep_send(sqe, handle.actualFd, pinned.addressOf(bufferOffset), size.toULong(), flags)
-                val seq = counter++
-                io_uring_sqe_set_data64(sqe, seq)
 
-                submitAndWait(task, seq, SleepingWhy.READ_WRITE)
+                submitAndWait(task, SleepingWhy.READ_WRITE) { sqe.setuserid(it) }
             }
     }
 
@@ -849,9 +828,8 @@ public actual class IOManager(
 
                 val flags = if (withMetadata) IORING_FSYNC_DATASYNC else 0u
                 io_uring_prep_fsync(sqe, handle.actualFd, flags)
-                val seq = counter++
-                io_uring_sqe_set_data64(sqe, seq)
-                submitAndWait(task, seq, SleepingWhy.FSYNC)
+
+                submitAndWait(task, SleepingWhy.FSYNC) { sqe.setuserid(it) }
             }
     }
 
@@ -900,10 +878,7 @@ public actual class IOManager(
                     STATX_BASIC_STATS,
                     out.ptr
                 )
-                val seq = counter++
-                io_uring_sqe_set_data64(sqe, seq)
-
-                submitAndWait<Empty>(task, seq, SleepingWhy.STATX)
+                submitAndWait<Empty>(task, SleepingWhy.STATX)  { sqe.setuserid(it) }
             }
             .andThen {
                 Cancellable.ok(
@@ -949,10 +924,8 @@ public actual class IOManager(
                 val sqe = getsqe()
 
                 io_uring_prep_poll_add(sqe, handle.actualFd, flags)
-                val seq = counter++
-                io_uring_sqe_set_data64(sqe, seq)
 
-                submitAndWait(task, seq, SleepingWhy.POLL_ADD)
+                submitAndWait(task, SleepingWhy.POLL_ADD) { sqe.setuserid(it) }
             }
     }
 
@@ -976,9 +949,8 @@ public actual class IOManager(
                 if (mode == 0U) mode = 511U /* 777 */
 
                 io_uring_prep_mkdirat(sqe, dirFd, buf.addressOf(0), mode)
-                val seq = counter++
-                io_uring_sqe_set_data64(sqe, seq)
-                submitAndWait(task, seq, SleepingWhy.MKDIR)
+
+                submitAndWait(task, SleepingWhy.MKDIR) { sqe.setuserid(it) }
             }
     }
 
@@ -1018,13 +990,10 @@ public actual class IOManager(
                     fromBuf.addressOf(0),
                     toDir,
                     toBuf.addressOf(0),
-                    realFlags
+                    realFlags.toUInt()
                 )
 
-                val seq = counter++
-                io_uring_sqe_set_data64(sqe, seq)
-
-                submitAndWait(task, seq, SleepingWhy.RENAME)
+                submitAndWait(task, SleepingWhy.RENAME) { sqe.setuserid(it) }
             }
     }
 
@@ -1057,10 +1026,7 @@ public actual class IOManager(
                     0
                 )
 
-                val seq = counter++
-                io_uring_sqe_set_data64(sqe, seq)
-
-                submitAndWait(task, seq, SleepingWhy.LINK)
+                submitAndWait(task, SleepingWhy.LINK) { sqe.setuserid(it) }
             }
     }
 
@@ -1084,10 +1050,8 @@ public actual class IOManager(
                 defer { targetBuf.unpin() }
 
                 io_uring_prep_symlinkat(sqe, targetBuf.addressOf(0), toDir, pathBuf.addressOf(0))
-                val seq = counter++
-                io_uring_sqe_set_data64(sqe, seq)
 
-                submitAndWait(task, seq, SleepingWhy.SYMLINK)
+                submitAndWait(task, SleepingWhy.SYMLINK) { sqe.setuserid(it) }
             }
     }
 
@@ -1111,9 +1075,8 @@ public actual class IOManager(
                 val flags = if (!removeDir) 0 else _AT_REMOVEDIR
 
                 io_uring_prep_unlinkat(sqe, dirFd, buf.addressOf(0), flags)
-                val seq = counter++
-                io_uring_sqe_set_data64(sqe, seq)
-                submitAndWait(task, seq, SleepingWhy.UNLINK)
+
+                submitAndWait(task, SleepingWhy.UNLINK) { sqe.setuserid(it) }
             }
     }
 

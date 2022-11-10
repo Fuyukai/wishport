@@ -16,7 +16,6 @@ import tf.veriny.wishport.io.IOResult
  */
 internal data class SleepingTask @OptIn(LowLevelApi::class) constructor(
     val task: Task,
-    val id: ULong,
     val why: SleepingWhy
 ) {
     // decremented by 1 for every sqe with the specified ID return, and then reschedules with the

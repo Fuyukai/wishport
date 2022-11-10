@@ -75,7 +75,6 @@ class `Test IOUring` {
                 val i = p.wait()
                 assertTrue(i.isSuccess)
                 assertTrue(i.get()!!.isCancelled)
-                assertEquals(0, io.pendingItems)
             }
         }
     }
