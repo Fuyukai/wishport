@@ -224,7 +224,7 @@ private constructor(
      */
     private fun quantumObserve(time: Long) {
         if (!permanentlyCancelled) {
-            if (!shield && parent?.isEffectivelyCancelled() == true) {
+            if (!shield && parent?.isEffectivelyCancelled(time) == true) {
                 permanentlyCancelled = true
             } else if (effectiveDeadline <= time) {
                 permanentlyCancelled = true
@@ -265,14 +265,18 @@ private constructor(
         quantumObserve()
     }
 
+    private fun isEffectivelyCancelled(time: Long): Boolean {
+        quantumObserve(time)
+        return permanentlyCancelled
+    }
+
     /**
      * Checks if this cancel scope is effectively cancelled.
      */
     public fun isEffectivelyCancelled(): Boolean {
         assert(!exited) { "something has gone wrong!" }
 
-        quantumObserve()
-        return permanentlyCancelled
+        return isEffectivelyCancelled(loop.clock.getCurrentTime())
     }
 
     override fun toString(): String {
