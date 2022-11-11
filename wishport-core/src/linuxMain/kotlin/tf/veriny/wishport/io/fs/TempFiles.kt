@@ -126,7 +126,7 @@ public actual suspend fun <S, F : Fail> createTemporaryDirectory(
         for (seq in 0 until 100) {
             val result = systemPathFor(fileName)
                 .andAlso {
-                    SystemFilesystem.mkdirRelative(tmp, it)
+                    SystemFilesystem.createDirectoryRelative(tmp, it)
                 }
                 .andThen {
                     SystemFilesystem.getRelativeFileHandle(tmp, it, FileOpenType.READ_WRITE, flags)

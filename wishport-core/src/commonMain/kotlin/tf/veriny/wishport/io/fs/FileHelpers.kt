@@ -30,14 +30,28 @@ public suspend fun FilesystemHandle.Companion.openFile(
  * Opens a file on the specified [Filesystem], and adds it to the specified [ClosingScope].
  */
 @OptIn(Unsafe::class)
-public suspend fun <Flavour : PurePath<Flavour>, M : FileMetadata> Filesystem<Flavour, M>.openFile(
+public suspend fun <F : PurePath<F>, M : FileMetadata> Filesystem<F, M>.openFile(
     scope: AsyncClosingScope,
-    path: Flavour,
+    path: F,
     fileOpenType: FileOpenType = FileOpenType.READ_ONLY,
     flags: Set<FileOpenFlags> = setOf()
-): CancellableResourceResult<FilesystemHandle<Flavour, M>> {
+): CancellableResourceResult<FilesystemHandle<F, M>> {
     return getFileHandle(path, fileOpenType, flags).andAddTo(scope)
 }
+
+/**
+ * Removes a file or empty directory at the specified location.
+ */
+public suspend fun <F : PurePath<F>, M : FileMetadata> Filesystem<F, M>.remove(
+    path: F
+): CancellableResourceResult<Empty> {
+    return unlink(path).combinate(
+        { Cancellable.ok(it) },
+        { unlink(path, removeDir = true) }
+    ) as CancellableResourceResult<Empty>
+}
+
+// == Filesystem Handle ops == //
 
 /**
  * Opens a file relative to this file if (and only if) this file is a directory. This will
@@ -81,13 +95,24 @@ public suspend fun <F : PurePath<F>, M : FileMetadata> FilesystemHandle<F, M>.fl
  * Creates a new directory relative to this filesystem handle.
  */
 public suspend fun <F : PurePath<F>, M : FileMetadata> FilesystemHandle<F, M>.createDirectoryRelative(
-    path: F
+    path: F, permissions: Set<FilePermissions> = setOf()
 ): CancellableResult<Empty, Fail> {
-    return filesystem.mkdirRelative(this, path)
+    return filesystem.createDirectoryRelative(this, path, permissions)
 }
 
 /**
- * Gets the metadata either for this file,
+ * Removes a file or directory relative to this filesystem handle.
+ */
+@Suppress("UNCHECKED_CAST")
+public suspend fun <F : PurePath<F>, M : FileMetadata> FilesystemHandle<F, M>.removeRelative(
+    path: F,
+    isDirectory: Boolean = false,
+): CancellableResourceResult<Empty> {
+    return filesystem.unlinkRelative(this, path, isDirectory) as CancellableResourceResult<Empty>
+}
+
+/**
+ * Gets the metadata either for this file, or the file at [path] relative to this open file.
  */
 public suspend fun <F : PurePath<F>, M : FileMetadata> FilesystemHandle<F, M>.getMetadata(
     path: F? = null

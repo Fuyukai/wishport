@@ -91,7 +91,7 @@ public interface Filesystem<Flavour : PurePath<Flavour>, Metadata : FileMetadata
     /**
      * Creates a new, empty directory at [path].
      */
-    public suspend fun mkdir(
+    public suspend fun createDirectory(
         path: Flavour,
         permissions: Set<FilePermissions> = FilePermissions.DEFAULT_DIRECTORY
     ): CancellableResourceResult<Empty>
@@ -99,10 +99,32 @@ public interface Filesystem<Flavour : PurePath<Flavour>, Metadata : FileMetadata
     /**
      * Creates a new, empty directory at the [path] relative to the directory at [otherHandle].
      */
-    public suspend fun mkdirRelative(
+    public suspend fun createDirectoryRelative(
         otherHandle: FilesystemHandle<Flavour, Metadata>,
         path: Flavour,
         permissions: Set<FilePermissions> = FilePermissions.DEFAULT_DIRECTORY
+    ): CancellableResult<Empty, Fail>
+
+    /**
+     * Renames the file or directory at [fromPath] to [toPath].
+     */
+    public suspend fun rename(
+        fromPath: Flavour,
+        toPath: Flavour,
+        flags: Set<RenameFlags> = setOf()
+    ): CancellableResourceResult<Empty>
+
+    /**
+     * Renames the file or directory at the path [fromPath] relative to [fromHandle] to the path
+     * [toPath] relative to [toHandle]. [fromHandle] or [toHandle] can be null; if both are null,
+     * this method acts identically to [rename].
+     */
+    public suspend fun renameRelative(
+        fromHandle: FilesystemHandle<Flavour, Metadata>?,
+        fromPath: Flavour,
+        toHandle: FilesystemHandle<Flavour, Metadata>?,
+        toPath: Flavour,
+        flags: Set<RenameFlags> = setOf()
     ): CancellableResult<Empty, Fail>
 
     /**

@@ -132,6 +132,19 @@ public inline fun <Success, F : Fail> Either<Success, F>.expect(
     }
 
 /**
+ * If this is a success, calls [left]. Otherwise, calls [right].
+ */
+public inline fun <Out, Success, F : Fail> Either<Success, F>.fold(
+    left: (Success) -> Out,
+    right: (F) -> Out,
+): Out =
+    when (this) {
+        is Ok<Success> -> left(value)
+        is Err<F> -> right(value)
+    }
+
+
+/**
  * If this is a success, then return the unwrapped value. Otherwise, return the constant provided
  * to this function.
  */

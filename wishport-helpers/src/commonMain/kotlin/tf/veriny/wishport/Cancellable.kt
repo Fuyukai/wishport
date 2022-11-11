@@ -173,6 +173,26 @@ public inline fun <Out, S : Out, F : Fail> CancellableResult<S, F>.unwrapOr(
         }
     }
 
+// idk what a good name for this would be. its clearly not a fold.
+/**
+ * If this is a non-cancelled success, calls [left] with the success. If this is a non-cancelled
+ * failure, calls [right] with the failure. Otherwise, returns Cancelled.
+ */
+public inline fun <Out, S, F : Fail> CancellableResult<S, F>.combinate(
+    left: (S) -> CancellableResult<Out, Fail>,
+    right: (F) -> CancellableResult<Out, Fail>
+): CancellableResult<Out, Fail> =
+    when (this) {
+        is Cancelled -> this
+        is NotCancelled<S, F, Either<S, F>> -> {
+            when (wrapped) {
+                is Ok<S> -> left(wrapped.value)
+                is Err<F> -> right(wrapped.value)
+            }
+        }
+    }
+
+
 /**
  * If this is a non-cancelled success, then return the unwrapped value. Otherwise, panic with the
  * specified error message.

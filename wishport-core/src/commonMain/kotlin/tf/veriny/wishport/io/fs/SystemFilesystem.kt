@@ -87,14 +87,14 @@ public object SystemFilesystem : Filesystem<SystemPurePath, PlatformFileMetadata
         return manager.fsync(handle.raw, withMetadata = withMetadata)
     }
 
-    override suspend fun mkdir(
+    override suspend fun createDirectory(
         path: SystemPurePath,
         permissions: Set<FilePermissions>
     ): CancellableResourceResult<Empty> {
         return getIOManager().makeDirectoryAt(null, path.toByteString(withNullSep = true), permissions)
     }
 
-    override suspend fun mkdirRelative(
+    override suspend fun createDirectoryRelative(
         otherHandle: SysFsHandle,
         path: SystemPurePath,
         permissions: Set<FilePermissions>
@@ -106,6 +106,43 @@ public object SystemFilesystem : Filesystem<SystemPurePath, PlatformFileMetadata
             otherHandle.raw as DirectoryHandle,
             path.toByteString(withNullSep = true),
             permissions
+        )
+    }
+
+    override suspend fun rename(
+        fromPath: SystemPurePath,
+        toPath: SystemPurePath,
+        flags: Set<RenameFlags>
+    ): CancellableResourceResult<Empty> {
+       return getIOManager().renameAt(
+           null, fromPath.toByteString(withNullSep = true),
+           null, toPath.toByteString(withNullSep = true),
+           flags
+       )
+    }
+
+    override suspend fun renameRelative(
+        fromHandle: FilesystemHandle<SystemPurePath, PlatformFileMetadata>?,
+        fromPath: SystemPurePath,
+        toHandle: FilesystemHandle<SystemPurePath, PlatformFileMetadata>?,
+        toPath: SystemPurePath,
+        flags: Set<RenameFlags>
+    ): CancellableResult<Empty, Fail> {
+        if (fromHandle != null) {
+            if (fromHandle.raw !is DirectoryHandle) return Cancellable.failed(NotADirectory)
+            if (fromHandle.filesystem != this) return Cancellable.failed(WrongFilesystemError)
+        }
+        if (toHandle != null) {
+            if (toHandle.raw !is DirectoryHandle) return Cancellable.failed(NotADirectory)
+            if (toHandle.filesystem != this) return Cancellable.failed(WrongFilesystemError)
+        }
+
+        return getIOManager().renameAt(
+            fromHandle?.raw as DirectoryHandle?,
+            fromPath.toByteString(withNullSep = true),
+            toHandle?.raw as DirectoryHandle?,
+            toPath.toByteString(withNullSep = true),
+            flags
         )
     }
 

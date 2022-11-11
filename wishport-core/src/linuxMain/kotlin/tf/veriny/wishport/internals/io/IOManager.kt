@@ -56,6 +56,10 @@ private fun CPointer<io_uring_sqe>.setuserid(ref: StableRef<*>) {
     // io_uring_sqe_set_data64(this, ptr)
 }
 
+private fun CPointer<io_uring_sqe>.link() {
+    pointed.flags = pointed.flags.or(IOSQE_IO_LINK.toUByte())
+}
+
 private fun CPointerVar<io_uring_cqe>.getTask(): SleepingTask {
     val ptr = io_uring_cqe_get_data(this.value)!!
     val ref = ptr.asStableRef<SleepingTask>()
@@ -472,7 +476,7 @@ public actual class IOManager(
 
         val shut = getsqe()
         io_uring_prep_shutdown(shut, socket.actualFd, SHUT_RDWR)
-        shut.pointed.flags = shut.pointed.flags.or(IOSQE_IO_LINK.toUByte())
+        shut.link()
 
         val close = getsqe()
         io_uring_prep_close(close, socket.actualFd)
@@ -889,7 +893,8 @@ public actual class IOManager(
                         linkCount = out.stx_nlink,
                         ownerUid = out.stx_uid,
                         ownerGid = out.stx_gid,
-                        blockSize = out.stx_blksize
+                        blockSize = out.stx_blksize,
+                        fileMode = out.stx_mode,
                     )
                 )
             }

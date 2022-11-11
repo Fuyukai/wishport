@@ -6,7 +6,10 @@
 
 package tf.veriny.wishport.io.fs
 
-public actual data class PlatformFileMetadata(
+/**
+ * Platform metadata for statx() data.
+ */
+public actual class PlatformFileMetadata(
     override val size: ULong,
     override val creationTime: ULong,
     override val modificationTime: ULong,
@@ -18,4 +21,12 @@ public actual data class PlatformFileMetadata(
     public val ownerGid: UInt,
     /** The block size for the filesystem that this file resides on. */
     public val blockSize: UInt,
-) : FileMetadata
+
+    // raw params
+    fileMode: UShort,
+) : FileMetadata {
+    /** The type of this file. */
+    public override val type: Set<FileType> = FileType.values().filter {
+        fileMode.or(it.number) != (0U).toUShort()
+    }.toSet()
+}

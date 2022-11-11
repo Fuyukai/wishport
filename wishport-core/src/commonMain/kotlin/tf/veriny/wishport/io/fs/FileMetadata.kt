@@ -18,4 +18,7 @@ public interface FileMetadata {
 
     /** The modification time, in positive nanoseconds. */
     public val modificationTime: ULong
+
+    /** The set of file types that this file is. */
+    public val type: Set<FileType>
 }
