@@ -53,7 +53,7 @@ private fun statx_timestamp.toNs(): ULong {
 private fun CPointer<io_uring_sqe>.setuserid(ref: StableRef<*>) {
     val ptr = ref.asCPointer()
     io_uring_sqe_set_data(this, ptr)
-    //io_uring_sqe_set_data64(this, ptr)
+    // io_uring_sqe_set_data64(this, ptr)
 }
 
 private fun CPointerVar<io_uring_cqe>.getTask(): SleepingTask {
@@ -401,7 +401,9 @@ public actual class IOManager(
     }
 
     private suspend inline fun <T : IOResult> submitAndWait(
-        task: Task, why: SleepingWhy, sqeCount: Int = 1,
+        task: Task,
+        why: SleepingWhy,
+        sqeCount: Int = 1,
         block: (StableRef<SleepingTask>) -> Unit
     ): CancellableResourceResult<T> {
         val sleepy = SleepingTask(task, why)
@@ -412,7 +414,7 @@ public actual class IOManager(
         block(ref)
 
         // the ref is disposed by submitAndWait (real)
-        return submitAndWait<T>(task, sleepy, ref)
+        return submitAndWait(task, sleepy, ref)
     }
 
     // some notes on stability
@@ -474,7 +476,6 @@ public actual class IOManager(
 
         val close = getsqe()
         io_uring_prep_close(close, socket.actualFd)
-
 
         val result = submitAndWait<Empty>(
             task, SleepingWhy.CLOSE, sqeCount = 2
@@ -570,8 +571,7 @@ public actual class IOManager(
 
         val mode = if (filePermissions.isEmpty()) {
             0U
-        }
-        else {
+        } else {
             filePermissions
                 .map { it.posixNumber }
                 .reduce { acc, i -> acc.or(i) }
@@ -688,7 +688,7 @@ public actual class IOManager(
         val task = getCurrentTask()
 
         return task.checkIfCancelled()
-        .andThen {
+            .andThen {
                 val sqe = getsqe()
                 io_uring_prep_accept(sqe, sock.actualFd, null, null, SOCK_CLOEXEC)
 
@@ -788,7 +788,7 @@ public actual class IOManager(
                 io_uring_prep_recv(sqe, handle.actualFd, pinned.addressOf(bufferOffset), size.toULong(), flags)
 
                 submitAndWait(task, SleepingWhy.READ_WRITE) { sqe.setuserid(it) }
-        }
+            }
     }
 
     public actual suspend fun send(
@@ -878,7 +878,7 @@ public actual class IOManager(
                     STATX_BASIC_STATS,
                     out.ptr
                 )
-                submitAndWait<Empty>(task, SleepingWhy.STATX)  { sqe.setuserid(it) }
+                submitAndWait<Empty>(task, SleepingWhy.STATX) { sqe.setuserid(it) }
             }
             .andThen {
                 Cancellable.ok(
@@ -1054,7 +1054,6 @@ public actual class IOManager(
                 submitAndWait(task, SleepingWhy.SYMLINK) { sqe.setuserid(it) }
             }
     }
-
 
     @OptIn(Unsafe::class)
     public actual suspend fun unlinkAt(

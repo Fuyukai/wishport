@@ -22,7 +22,8 @@ private constructor(override val raw: SocketHandle) : FileLikeHandle {
     public companion object {
         @OptIn(Unsafe::class)
         public operator fun invoke(
-            scope: AsyncClosingScope, address: SocketAddress
+            scope: AsyncClosingScope,
+            address: SocketAddress
         ): ResourceResult<Socket> {
             return Socket(address).andAddTo(scope)
         }

@@ -117,22 +117,24 @@ class `Test IOUring` {
             val shutdown = Event()
 
             // server code
-            n.startSoonNoResult { assertFailureWith(BrokenPipe) {
-                Socket(scope, addr)
-                    .andAlso { it.setSocketOption(SO_REUSEADDR, true) }
-                    .andAlso { it.bind(addr) }
-                    .andAlso { it.listen(1).notCancelled() }
-                    .also { startup.set() }
-                    .andThen {
-                        it.acceptInto(scope)
-                    }
-                    .andAlso { shutdown.wait() }
-                    .andThen {
-                        repeatedly {
-                            it.writeFrom(b("should fail eventually!").toByteArray())
+            n.startSoonNoResult {
+                assertFailureWith(BrokenPipe) {
+                    Socket(scope, addr)
+                        .andAlso { it.setSocketOption(SO_REUSEADDR, true) }
+                        .andAlso { it.bind(addr) }
+                        .andAlso { it.listen(1).notCancelled() }
+                        .also { startup.set() }
+                        .andThen {
+                            it.acceptInto(scope)
                         }
-                    }
-            } }
+                        .andAlso { shutdown.wait() }
+                        .andThen {
+                            repeatedly {
+                                it.writeFrom(b("should fail eventually!").toByteArray())
+                            }
+                        }
+                }
+            }
 
             // client code
             n.startSoonNoResult {
