@@ -27,9 +27,9 @@ public inline fun <S, F : Fail> repeatedly(fn: () -> Either<S, F>): Either<*, F>
 @OverloadResolutionByLambdaReturnType
 public inline fun <S, F : Fail> repeatedly(
     fn: () -> CancellableResult<S, F>
-): CancellableResult<*, F> {
+): CancellableResult<Nothing, F> {
     while (true) {
         val result = fn()
-        if (result.isFailure) return result
+        if (result.isFailure) return result as CancellableResult<Nothing, F>
     }
 }

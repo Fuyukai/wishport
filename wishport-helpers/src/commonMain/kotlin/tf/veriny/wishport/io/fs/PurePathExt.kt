@@ -27,6 +27,7 @@ public fun PurePath<*>.toByteString(withNullSep: Boolean = false): ByteString {
             is RootDir -> {
                 buf.add(PATH_SEP)
                 size += PATH_SEP.size
+                continue
             }
             is CurrentDir -> {
                 buf.add(CurrentDir.DOT)

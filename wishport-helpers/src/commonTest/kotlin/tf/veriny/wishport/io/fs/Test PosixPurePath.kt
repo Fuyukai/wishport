@@ -7,8 +7,8 @@
 package tf.veriny.wishport.io.fs
 
 import tf.veriny.wishport.collections.b
+import tf.veriny.wishport.expect
 import tf.veriny.wishport.get
-import tf.veriny.wishport.isSuccess
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -16,36 +16,33 @@ import kotlin.test.assertTrue
 class `Test PosixPurePath` {
     @Test
     public fun `Test parsing absolute paths`() {
-        val path = PosixPurePath.from("/var/lib")
-        assertTrue(path.isSuccess)
+        val path = PosixPurePath.from("/var/lib").expect()
         assertEquals(
             listOf(
                 PathComponent.RootDir,
                 PathComponent.Normal(b("var")),
                 PathComponent.Normal(b("lib"))
             ),
-            path.get()?.components
+            path.components
         )
-        assertTrue(path.get()!!.isAbsolute)
+        assertTrue(path.isAbsolute)
     }
 
     @Test
     fun `Test parsing relative paths`() {
-        val path = PosixPurePath.from("tmp/abc")
-        assertTrue(path.isSuccess)
+        val path = PosixPurePath.from("tmp/abc").expect()
         assertEquals(
             listOf(
                 PathComponent.Normal(b("tmp")),
                 PathComponent.Normal(b("abc"))
             ),
-            path.get()?.components
+            path.components
         )
     }
 
     @Test
     fun `Test parsing dots`() {
-        val path = PosixPurePath.from("abc/./../xyz")
-        assertTrue(path.isSuccess)
+        val path = PosixPurePath.from("abc/./../xyz").expect()
         assertEquals(
             listOf(
                 PathComponent.Normal(b("abc")),
@@ -53,20 +50,19 @@ class `Test PosixPurePath` {
                 PathComponent.PreviousDir,
                 PathComponent.Normal(b("xyz"))
             ),
-            path.get()?.components
+            path.components
         )
     }
 
     @Test
     fun `Test parsing extra slashes`() {
-        val path = PosixPurePath.from("test///1///2")
-        assertTrue(path.isSuccess)
-        assertEquals(3, path.get()!!.components.size)
+        val path = PosixPurePath.from("test///1///2").expect()
+        assertEquals(3, path.components.size)
     }
 
     @Test
     fun `Test parent`() {
-        val path = PosixPurePath.from("/a/b/c").get()!!
+        val path = PosixPurePath.from("/a/b/c").expect()
         assertEquals(b("/a/b"), path.parent?.toByteString(), "parent should be /a/b")
 
         assertEquals(b("/a"), path.parent?.parent?.toByteString(), "parent should be just /a")

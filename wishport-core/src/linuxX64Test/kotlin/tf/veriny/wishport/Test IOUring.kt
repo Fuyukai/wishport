@@ -44,17 +44,18 @@ class `Test IOUring` {
     /**
      * Tests cancelling an io_uring result.
      */
-    @OptIn(LowLevelApi::class, Unsafe::class)
+    @OptIn(LowLevelApi::class)
     @Test
-    fun `Test io_uring cancellation`() = runUntilCompleteNoResult {
+    fun `Test io_uring cancellation`() = runWithClosingScope {
         val addr = Inet4SocketAddress(
             SocketType.STREAM, SocketProtocol.TCP,
             IPv4Address.of("127.0.0.1").expect(), 7777U
         )
 
-        val sock = Socket(addr).expect()
-        sock.bind(addr)
-        sock.listen()
+        val sock = Socket(it, addr)
+            .andAlso { it.bind(addr) }
+            .andAlso { it.listen().notCancelled()  }
+            .expect("socket failed to initialise propertly")
 
         val p = Promise<CancellableResourceResult<PollResult>>()
 
@@ -102,6 +103,7 @@ class `Test IOUring` {
         }
     }
 
+    @Suppress("IMPLICIT_NOTHING_TYPE_ARGUMENT_IN_RETURN_POSITION")
     @OptIn(LowLevelApi::class)
     @Test
     fun `Test submitting a linked request`() = runWithClosingScope { scope ->
