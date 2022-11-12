@@ -15,7 +15,6 @@ import tf.veriny.wishport.io.Poll
 import tf.veriny.wishport.io.PollResult
 import tf.veriny.wishport.io.fs.*
 import tf.veriny.wishport.io.net.*
-import tf.veriny.wishport.sync.Event
 import tf.veriny.wishport.sync.Promise
 import kotlin.test.*
 
@@ -28,7 +27,7 @@ class `Test IOUring` {
     fun `Test reading dev zero`() = runUntilCompleteNoResult {
         AsyncClosingScope {
             val path = PosixPurePath.from("/dev/zero").get()!!
-            val res = FilesystemHandle.openFile(it, path)
+            val res = FilesystemHandle.openRawFile(it, path)
             assertTrue(res.isSuccess)
             val handle = res.get()!!
             val buf = ByteArray(8) { 1 }
@@ -111,41 +110,21 @@ class `Test IOUring` {
             IPv4Address.of("127.0.0.1").expect(), 7777U
         )
 
-        Nursery.open { n ->
-            // synchronise point
-            val startup = Event()
-            val shutdown = Event()
+        assertFailureWith(BrokenPipe) {
+            Imperatavize.cancellable {
+                val serverSocket = Socket(scope, addr)
+                    .andAlso { it.setSocketOption(SO_REUSEADDR, true) }
+                    .andAlso { it.bind(addr) }
+                    .andAlso { it.listen(1).notCancelled() }.q()
 
-            // server code
-            n.startSoonNoResult {
-                assertFailureWith(BrokenPipe) {
-                    Socket(scope, addr)
-                        .andAlso { it.setSocketOption(SO_REUSEADDR, true) }
-                        .andAlso { it.bind(addr) }
-                        .andAlso { it.listen(1).notCancelled() }
-                        .also { startup.set() }
-                        .andThen {
-                            it.acceptInto(scope)
-                        }
-                        .andAlso { shutdown.wait() }
-                        .andThen {
-                            repeatedly {
-                                it.writeFrom(b("should fail eventually!").toByteArray())
-                            }
-                        }
-                }
-            }
+                val clientSocket = Socket(scope, addr)
+                    .andAlso { it.connect(addr) }.q()
 
-            // client code
-            n.startSoonNoResult {
-                Socket(scope, addr)
-                    .andAlso { startup.wait() }
-                    .andAlso {
-                        it.connect(addr)
-                    }
-                    .andAlso {
-                        it.close().also { shutdown.set() }
-                    }
+                val acceptedClient = serverSocket.acceptInto(scope).q()
+                clientSocket.close().q()
+                repeatedly {
+                    acceptedClient.writeFrom(b("should fail eventually!").toByteArray())
+                }.q()
             }
         }
     }

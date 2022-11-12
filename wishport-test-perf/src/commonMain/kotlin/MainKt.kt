@@ -14,7 +14,7 @@ public fun main(): Unit = runUntilCompleteNoResult {
             val path = PosixPurePath.from("/dev/zero").get()!!
             Nursery.open { n ->
                 repeat(1024) {
-                    n.startSoon { FilesystemHandle.openFile(scope, path) }
+                    n.startSoon { FilesystemHandle.openRawFile(scope, path) }
                 }
             }
         }

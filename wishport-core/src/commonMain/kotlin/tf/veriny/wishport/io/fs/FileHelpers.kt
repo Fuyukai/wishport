@@ -16,7 +16,7 @@ import tf.veriny.wishport.io.Empty
  * Opens a file on the system filesystem and adds it to the specified [ClosingScope].
  */
 @OptIn(Unsafe::class)
-public suspend fun FilesystemHandle.Companion.openFile(
+public suspend fun FilesystemHandle.Companion.openRawFile(
     scope: AsyncClosingScope,
     path: SystemPurePath,
     fileOpenType: FileOpenType = FileOpenType.READ_ONLY,
@@ -30,7 +30,7 @@ public suspend fun FilesystemHandle.Companion.openFile(
  * Opens a file on the specified [Filesystem], and adds it to the specified [ClosingScope].
  */
 @OptIn(Unsafe::class)
-public suspend fun <F : PurePath<F>, M : FileMetadata> Filesystem<F, M>.openFile(
+public suspend fun <F : PurePath<F>, M : FileMetadata> Filesystem<F, M>.openRawFile(
     scope: AsyncClosingScope,
     path: F,
     fileOpenType: FileOpenType = FileOpenType.READ_ONLY,
