@@ -111,6 +111,9 @@ public actual class IOManager(
                     flags = flags.or(IORING_SETUP_COOP_TASKRUN)
                     flags = flags.or(IORING_SETUP_TASKRUN_FLAG)
                 }
+                uname.major >= 6 || uname.minor >= 18 -> {
+                    flags = flags.or(IORING_SETUP_SUBMIT_ALL)
+                }
             }
 
             if (pollMode) flags = flags.or(IORING_SETUP_SQPOLL)
@@ -313,7 +316,7 @@ public actual class IOManager(
         return res
     }
 
-    private fun submit() {
+    private fun submit(): Int {
         // XXX: in poll mode, this is essentially a null-op.
         //      thanks liburing! genuinely great feature, makes my life 10000x easier
         //      as i dont have to care about if i actually should enter or not, just pawn it off
@@ -341,6 +344,8 @@ public actual class IOManager(
                 throw InternalWishportError("io_uring_submit failed: $result")
             }
         }
+
+        return submitResult
     }
 
     /**
@@ -352,6 +357,11 @@ public actual class IOManager(
         sleepy: SleepingTask,
         ref: StableRef<SleepingTask>
     ): CancellableResourceResult<T> {
+        assert(pollMode || io_uring_sq_ready(ring.ptr) > 0U) {
+            "submitAndWait was called without anything to submit, this is probably a Wishport bug! " +
+            "please report!"
+        }
+
         submit()
 
         // scary use of low-level primitives here
@@ -442,6 +452,44 @@ public actual class IOManager(
         }
 
         return close(handle.actualFd, task)
+    }
+
+    public actual suspend fun closeMany(vararg handles: IOHandle): CancellableResourceResult<Empty> {
+        if (handles.isEmpty()) {
+            // bruh
+            return Cancellable.ok(Empty)
+        }
+
+        val task = getCurrentTask()
+        assert(!task.checkIfCancelled().isCancelled) {
+            "closeHandle should never be called from a cancelled context!"
+        }
+
+        val sleepy = SleepingTask(task, SleepingWhy.CLOSE)
+        sleepy.sqeCount = 0
+        val ref = StableRef.create(sleepy)
+
+        for (handle in handles) {
+            // bypass a lot of our safety logic...
+            // we repeatedly add close requests onto the loop until the queue is full, then
+            // submit. this avoids repeated io_uring_enter() calls.
+
+            var sqe = io_uring_get_sqe(ring.ptr)
+            if (sqe == null) {
+                val waiting = io_uring_sq_ready(ring.ptr)
+                submit()
+
+                // safe call now, as the queue will be empty
+                sqe = getsqe()
+            }
+
+            io_uring_prep_close(sqe, handle.actualFd)
+            sqe.setuserid(ref)
+            sleepy.sqeCount++
+        }
+
+        // no need to dispose ref, submitAndWait does it for us.
+        return submitAndWait(task, sleepy, ref)
     }
 
     public actual suspend fun shutdown(

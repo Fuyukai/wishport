@@ -25,6 +25,7 @@ import tf.veriny.wishport.io.streams.writeMost
 public class TcpSocketStream
 public constructor(public val sock: Socket) : PartialStream {
     override val closed: Boolean by sock::closed
+    override val closing: Boolean by sock::closing
 
     override var damaged: Boolean = false
         private set

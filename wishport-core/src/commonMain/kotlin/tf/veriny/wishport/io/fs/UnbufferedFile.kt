@@ -11,6 +11,8 @@ import tf.veriny.wishport.CancellableResult
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.ProvisionalApi
 import tf.veriny.wishport.io.ByteCountResult
+import tf.veriny.wishport.io.FasterCloseable
+import tf.veriny.wishport.io.IOHandle
 import tf.veriny.wishport.io.SeekPosition
 import tf.veriny.wishport.io.streams.*
 
@@ -20,10 +22,19 @@ import tf.veriny.wishport.io.streams.*
 @ProvisionalApi
 public class UnbufferedFile(
     public val handle: FilesystemHandle<*, *>,
-) : PartialStream {
+) : PartialStream, FasterCloseable {
     override val closed: Boolean by handle::closed
+    override val closing: Boolean by handle::closing
     override var damaged: Boolean = false
         private set
+
+    override fun provideHandleForClosing(): IOHandle? {
+        return (handle as? FasterCloseable)?.provideHandleForClosing()
+    }
+
+    override fun notifyClosed() {
+        (handle as? FasterCloseable)?.notifyClosed()
+    }
 
     public suspend fun seek(
         position: Long,

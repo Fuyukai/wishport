@@ -11,6 +11,9 @@ import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.IdentitySet
 import tf.veriny.wishport.core.CancelScope
 import tf.veriny.wishport.core.checkIfCancelled
+import tf.veriny.wishport.core.getIOManager
+import tf.veriny.wishport.io.FasterCloseable
+import tf.veriny.wishport.io.IOHandle
 
 /**
  * Like [ClosingScope], but it supports both [Closeable] and [AsyncCloseable]. This should be
@@ -63,39 +66,61 @@ public class AsyncClosingScopeImpl @Unsafe constructor() : AsyncClosingScope {
     override var closed: Boolean = false
         private set
 
+    override var closing: Boolean = false
+        private set
+
     // Note: This is an identity set to ensure that two objects which may be equal are both added
     // to the set.
     // This ensures that they both get closed.
-    private val toClose = IdentitySet<Any>()
+    private val closeables = IdentitySet<Closeable>()
+    private val toClose = IdentitySet<AsyncCloseable>()
 
     override fun add(closeable: AsyncCloseable) {
         toClose.add(closeable)
     }
 
     override fun add(closeable: Closeable) {
+        closeables.add(closeable)
+    }
+
+    override fun remove(closeable: AsyncCloseable) {
         toClose.add(closeable)
     }
 
     override fun remove(closeable: Closeable) {
-        toClose.remove(closeable)
+        closeables.remove(closeable)
     }
 
-    override fun remove(closeable: AsyncCloseable) {
-        toClose.remove(closeable)
-    }
 
     @OptIn(LowLevelApi::class)
     override suspend fun close(): CancellableResult<Unit, Fail> {
-        if (closed) return Cancellable.failed(AlreadyClosedError)
+        if (closing || closed) return Cancellable.empty()
+        closing = true
 
         // open our own shield to protect against improperly written closes
         CancelScope.open(shield = true) {
+            closeables.forEach(Closeable::close)
+
+            // separate out the fastercloseables
+            val faster = mutableListOf<IOHandle>()
+
             for (item in toClose) {
-                if (item is Closeable) item.close()
-                else if (item is AsyncCloseable) item.close()
+                if (item is FasterCloseable) {
+                    val handle = item.provideHandleForClosing()
+                    if (handle == null) item.close()
+                    else faster.add(handle)
+                } else {
+                    item.close()
+                }
+            }
+
+            if (faster.isNotEmpty()) {
+                val manager = getIOManager()
+                manager.closeMany(*faster.toTypedArray())
             }
         }
 
+        closed = true
         return checkIfCancelled()
     }
 }

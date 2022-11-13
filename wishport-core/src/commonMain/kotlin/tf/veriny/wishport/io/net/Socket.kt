@@ -41,6 +41,9 @@ private constructor(override val raw: SocketHandle) : FileLikeHandle {
     override var closed: Boolean = false
         private set
 
+    override var closing: Boolean = false
+        private set
+
     /**
      * Binds this socket to the specified address.
      */
@@ -136,14 +139,14 @@ private constructor(override val raw: SocketHandle) : FileLikeHandle {
 
     @OptIn(LowLevelApi::class)
     override suspend fun close(): CancellableResult<Unit, Fail> {
-        return if (!closed) {
-            CancelScope(shield = true) {
-                val io = getIOManager()
-                // ignore return value, suppress error
-                io.closeSocket(raw).also { closed = true }
-            }.andThen { Cancellable.empty() }
-        } else {
-            Cancellable.empty()
-        }
+        if (closed || closing) return Cancellable.empty()
+
+        closing = true
+
+        return CancelScope(shield = true) {
+            val io = getIOManager()
+            // ignore return value, suppress error
+            io.closeSocket(raw).also { closed = true }
+        }.andThen { Cancellable.empty() }
     }
 }

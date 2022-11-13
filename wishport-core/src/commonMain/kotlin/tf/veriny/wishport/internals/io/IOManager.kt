@@ -63,6 +63,12 @@ public expect class IOManager : Closeable {
     public suspend fun closeHandle(handle: IOHandle): CancellableResourceResult<Empty>
 
     /**
+     * Attempts to close multiple handles in a more efficient manner than repeatedly calling
+     * closeHandle(). This will return the FIRST error encountered.
+     */
+    public suspend fun closeMany(vararg handles: IOHandle): CancellableResourceResult<Empty>
+
+    /**
      * Shuts down one or both sides of an [IOHandle], without closing it.
      */
     public suspend fun shutdown(

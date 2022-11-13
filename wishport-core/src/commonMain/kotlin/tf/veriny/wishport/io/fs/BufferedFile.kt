@@ -13,6 +13,8 @@ import tf.veriny.wishport.core.getCurrentTask
 import tf.veriny.wishport.internals.checkIfCancelled
 import tf.veriny.wishport.internals.getIdealBlockSize
 import tf.veriny.wishport.io.ByteCountResult
+import tf.veriny.wishport.io.FasterCloseable
+import tf.veriny.wishport.io.IOHandle
 import tf.veriny.wishport.io.SeekPosition
 import tf.veriny.wishport.io.streams.BufferedPartialStream
 import tf.veriny.wishport.io.streams.EofNotSupported
@@ -28,7 +30,7 @@ public class BufferedFile
 private constructor(
     public val handle: SystemFilesystemHandle,
     public val bufferSize: UInt,
-) : BufferedPartialStream {
+) : BufferedPartialStream, FasterCloseable {
     public companion object {
         @OptIn(LowLevelApi::class)
         public suspend operator fun invoke(
@@ -45,7 +47,16 @@ private constructor(
 
     private val backing = UnbufferedFile(handle)
     override val closed: Boolean by backing::closed
+    override val closing: Boolean by backing::closing
     override val damaged: Boolean by backing::damaged
+
+    override fun provideHandleForClosing(): IOHandle {
+        return handle.provideHandleForClosing()
+    }
+
+    override fun notifyClosed() {
+        handle.notifyClosed()
+    }
 
     /**
      * Seeks this file to the specified [position], using the behaviour specified by [whence].

@@ -16,6 +16,13 @@ public interface AsyncCloseable {
     public val closed: Boolean
 
     /**
+     * If True, then this Closeable is currently trying to close. Repeated calls to close() will
+     * have no effect. Asynchronous operations on this resource may still succeed when this is
+     * True.
+     */
+    public val closing: Boolean
+
+    /**
      * Closes this object. This is a unique function in that it is the only one that completely
      * ignores cancellation; all cancellations will simply be suppressed until the close operation
      * completes.
@@ -38,8 +45,3 @@ public suspend inline fun <S : AsyncCloseable, R> S.use(
         close()
     }
 }
-
-/**
- * Error object for trying to use an object that's already been closed.
- */
-public object ResourceClosed : Fail
