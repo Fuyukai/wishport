@@ -23,7 +23,7 @@ private object TempFileNamer : Iterator<String>, Iterable<String> {
     }
 
     override fun next(): String {
-        return SecureRandom.randomString(26)
+        return "wishport-" + SecureRandom.randomString(26)
     }
 }
 
@@ -40,8 +40,8 @@ private fun getCandidateDirectories(): List<SystemPurePath> {
         if (result.isSuccess) dirs.add(result.get()!!)
     }
 
-    dirs.add(systemPathFor("/tmp").get()!!)
-    dirs.add(systemPathFor("/var/tmp").get()!!)
+    dirs.add(systemPathFor("/tmp"))
+    dirs.add(systemPathFor("/var/tmp"))
 
     // use current dir as a fallback
     getWorkingDirectory().get()?.also { dirs.add(it) }
@@ -124,12 +124,11 @@ public actual suspend fun <S, F : Fail> createTemporaryDirectory(
         val flags = setOf(FileOpenFlags.DIRECTORY, FileOpenFlags.PATH)
 
         for (seq in 0 until 100) {
-            val result = systemPathFor(fileName)
-                .andAlso {
-                    SystemFilesystem.createDirectoryRelative(tmp, it)
-                }
+            val path = systemPathFor(fileName)
+
+            val result = SystemFilesystem.createDirectoryRelative(tmp, path)
                 .andThen {
-                    SystemFilesystem.getRelativeFileHandle(tmp, it, FileOpenType.READ_WRITE, flags)
+                    SystemFilesystem.getRelativeFileHandle(tmp, path, FileOpenType.READ_WRITE, flags)
                 }
 
             return@andThen if (result.isFailure) {

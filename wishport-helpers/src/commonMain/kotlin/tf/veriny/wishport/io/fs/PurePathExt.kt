@@ -79,3 +79,8 @@ public inline fun <Flavour : PurePath<Flavour>> Flavour.isParentOf(
 ): Boolean {
     return other.isChildOf(this)
 }
+
+// operator shortcuts
+public inline operator fun <Flavour : PurePath<Flavour>> Flavour.div(other: Flavour): Flavour {
+    return resolveChild(other)
+}

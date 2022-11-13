@@ -66,7 +66,7 @@ class `Test File IO` {
     // checks for metadata relative
     @Test
     fun `Test getting file metadata`() = runWithClosingScope { scope ->
-        val path = systemPathFor("test.txt").get()!!
+        val path = systemPathFor("test.txt")
 
         assertSuccess {
             createTemporaryDirectory { handle ->
@@ -87,7 +87,7 @@ class `Test File IO` {
 
     @Test
     fun `Test buffered file IO`() = runWithClosingScope { scope ->
-        val path = systemPathFor("test.bin").get()!!
+        val path = systemPathFor("test.bin")
 
         assertSuccess {
             createTemporaryDirectory { handle ->

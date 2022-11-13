@@ -239,10 +239,7 @@ public suspend fun AsyncClosingScope.openUnbufferedSystemFile(
     mode: FileOpenType = FileOpenType.READ_ONLY,
     flags: Set<FileOpenFlags> = setOf()
 ): CancellableResult<UnbufferedFile, Fail> =
-    systemPathFor(path)
-        .andThen {
-            openUnbufferedSystemFile(otherHandle, it, mode, flags)
-        }
+    openUnbufferedSystemFile(otherHandle, systemPathFor(path), mode, flags)
 
 /**
  * Opens a new [UnbufferedFile] for the specified [path], with the specified [mode] and file open
@@ -268,10 +265,7 @@ public suspend fun AsyncClosingScope.openUnbufferedSystemFile(
     mode: FileOpenType = FileOpenType.READ_ONLY,
     flags: Set<FileOpenFlags> = setOf()
 ): CancellableResult<UnbufferedFile, Fail> =
-    systemPathFor(path)
-        .andThen {
-            openUnbufferedSystemFile(it, mode, flags)
-        }
+    openUnbufferedSystemFile(systemPathFor(path), mode, flags)
 
 /**
  * Opens a new [BufferedFile] for the specified [path], relative to the [otherHandle],
@@ -300,10 +294,7 @@ public suspend fun AsyncClosingScope.openBufferedSystemFile(
     mode: FileOpenType = FileOpenType.READ_ONLY,
     flags: Set<FileOpenFlags> = setOf()
 ): CancellableResult<BufferedFile, Fail> =
-    systemPathFor(path)
-        .andThen {
-            openBufferedSystemFile(otherHandle, it, mode, flags)
-        }
+    openBufferedSystemFile(otherHandle, systemPathFor(path), mode, flags)
 
 /**
  * Opens a new [BufferedFile] for the specified [path], with the specified [mode] and file open
@@ -329,10 +320,7 @@ public suspend fun AsyncClosingScope.openBufferedSystemFile(
     mode: FileOpenType = FileOpenType.READ_ONLY,
     flags: Set<FileOpenFlags> = setOf()
 ): CancellableResult<BufferedFile, Fail> =
-    systemPathFor(path)
-        .andThen {
-            openBufferedSystemFile(it, mode, flags)
-        }
+    openBufferedSystemFile(systemPathFor(path), mode, flags)
 
 /**
  * Opens a new TCP stream to the specified [SocketAddress].

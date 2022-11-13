@@ -27,6 +27,13 @@ public actual class PlatformFileMetadata(
 ) : FileMetadata {
     /** The type of this file. */
     public override val type: Set<FileType> = FileType.values().filter {
-        fileMode.or(it.number) != (0U).toUShort()
+        // mask off file permission bits, forgot to do this :yert:
+        val mode = fileMode.and(0xF000U)
+        mode.and(it.number) != (0U).toUShort()
+    }.toSet()
+
+    public val permissions: Set<FilePermissions> = FilePermissions.values().filter {
+        val perms = fileMode.and(0x1ffU)
+        perms.and(it.posixNumber) != (0U).toUShort()
     }.toSet()
 }

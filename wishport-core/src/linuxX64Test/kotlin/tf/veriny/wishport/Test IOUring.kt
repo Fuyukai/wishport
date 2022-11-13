@@ -54,7 +54,7 @@ class `Test IOUring` {
 
         val sock = Socket(it, addr)
             .andAlso { it.bind(addr) }
-            .andAlso { it.listen().notCancelled()  }
+            .andAlso { it.listen().notCancelled() }
             .expect("socket failed to initialise propertly")
 
         val p = Promise<CancellableResourceResult<PollResult>>()
@@ -122,8 +122,9 @@ class `Test IOUring` {
                 val clientSocket = Socket(scope, addr)
                     .andAlso { it.connect(addr) }.q()
 
-                val acceptedClient = serverSocket.acceptInto(scope).q()
-                clientSocket.close().q()
+                val acceptedClient = serverSocket.acceptInto(scope)
+                    .andAlso { clientSocket.close() }.q()
+
                 repeatedly {
                     acceptedClient.writeFrom(b("should fail eventually!").toByteArray())
                 }.q()

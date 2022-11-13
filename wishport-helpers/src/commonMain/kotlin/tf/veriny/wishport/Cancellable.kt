@@ -192,7 +192,6 @@ public inline fun <Out, S, F : Fail> CancellableResult<S, F>.combinate(
         }
     }
 
-
 /**
  * If this is a non-cancelled success, then return the unwrapped value. Otherwise, panic with the
  * specified error message.

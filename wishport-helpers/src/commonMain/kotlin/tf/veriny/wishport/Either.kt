@@ -143,7 +143,6 @@ public inline fun <Out, Success, F : Fail> Either<Success, F>.fold(
         is Err<F> -> right(value)
     }
 
-
 /**
  * If this is a success, then return the unwrapped value. Otherwise, return the constant provided
  * to this function.

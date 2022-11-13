@@ -95,7 +95,8 @@ public suspend fun <F : PurePath<F>, M : FileMetadata> FilesystemHandle<F, M>.fl
  * Creates a new directory relative to this filesystem handle.
  */
 public suspend fun <F : PurePath<F>, M : FileMetadata> FilesystemHandle<F, M>.createDirectoryRelative(
-    path: F, permissions: Set<FilePermissions> = setOf()
+    path: F,
+    permissions: Set<FilePermissions> = setOf()
 ): CancellableResult<Empty, Fail> {
     return filesystem.createDirectoryRelative(this, path, permissions)
 }

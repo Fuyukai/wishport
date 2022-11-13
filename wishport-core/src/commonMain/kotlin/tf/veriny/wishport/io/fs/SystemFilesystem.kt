@@ -114,11 +114,11 @@ public object SystemFilesystem : Filesystem<SystemPurePath, PlatformFileMetadata
         toPath: SystemPurePath,
         flags: Set<RenameFlags>
     ): CancellableResourceResult<Empty> {
-       return getIOManager().renameAt(
-           null, fromPath.toByteString(withNullSep = true),
-           null, toPath.toByteString(withNullSep = true),
-           flags
-       )
+        return getIOManager().renameAt(
+            null, fromPath.toByteString(withNullSep = true),
+            null, toPath.toByteString(withNullSep = true),
+            flags
+        )
     }
 
     override suspend fun renameRelative(

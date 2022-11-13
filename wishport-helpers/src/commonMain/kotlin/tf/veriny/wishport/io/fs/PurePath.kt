@@ -186,7 +186,7 @@ public expect class SystemPurePath : PurePath<SystemPurePath>
 /**
  * Gets a [SystemPurePath] for the specified [s]tring.
  */
-public expect fun systemPathFor(s: String): PathResult<SystemPurePath>
+public expect fun systemPathFor(s: String): SystemPurePath
 
 /**
  * Gets a [SystemPurePath] for the specified ByteString.

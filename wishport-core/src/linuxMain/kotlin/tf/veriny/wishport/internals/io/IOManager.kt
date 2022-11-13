@@ -17,10 +17,7 @@ import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.ByteString
-import tf.veriny.wishport.core.InternalWishportError
-import tf.veriny.wishport.core.NS_PER_SEC
-import tf.veriny.wishport.core.getCurrentTask
-import tf.veriny.wishport.core.waitUntilRescheduled
+import tf.veriny.wishport.core.*
 import tf.veriny.wishport.internals.Task
 import tf.veriny.wishport.internals.checkIfCancelled
 import tf.veriny.wishport.io.*
@@ -431,16 +428,20 @@ public actual class IOManager(
     //       as it could return AlreadyAcquired.
     //       but we know that's not the case, so we just cast it and override it.
 
+    private suspend fun close(fd: Int, task: Task): CancellableResourceResult<Empty> {
+        val sqe = getsqe()
+        io_uring_prep_close(sqe, fd)
+
+        return submitAndWait(task ?: getCurrentTask(), SleepingWhy.CLOSE) { sqe.setuserid(it) }
+    }
+
     public actual suspend fun closeHandle(handle: IOHandle): CancellableResourceResult<Empty> {
         val task = getCurrentTask()
         assert(!task.checkIfCancelled().isCancelled) {
             "closeHandle should never be called from a cancelled context!"
         }
 
-        val sqe = getsqe()
-        io_uring_prep_close(sqe, handle.actualFd)
-
-        return submitAndWait(task, SleepingWhy.CLOSE) { sqe.setuserid(it) }
+        return close(handle.actualFd, task)
     }
 
     public actual suspend fun shutdown(
