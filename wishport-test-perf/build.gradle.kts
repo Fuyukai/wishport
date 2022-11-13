@@ -10,9 +10,21 @@ kotlin {
         }
     }
 
+    sourceSets.all {
+        languageSettings {
+
+        }
+    }
+
     linuxX64() {
         binaries {
             executable() {
+            }
+        }
+
+        val main by compilations.getting {
+            kotlinOptions {
+
             }
         }
     }

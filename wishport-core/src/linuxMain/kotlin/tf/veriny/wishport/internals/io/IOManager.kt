@@ -30,8 +30,6 @@ import tf.veriny.wishport.util.kstrerror
 import kotlin.math.min
 
 // TODO: consider enabling poll mode by default
-// TODO: I was wrong about how the SQ works, so maybe remove the capacity limiter?
-//       Right now it avoids the apparent slow kernel buffering though...
 
 private val MISSING_NODROP = """
     io_uring reports that it is missing the IORING_FEAT_NODROP feature. This feature is essential to
@@ -359,7 +357,7 @@ public actual class IOManager(
     ): CancellableResourceResult<T> {
         assert(pollMode || io_uring_sq_ready(ring.ptr) > 0U) {
             "submitAndWait was called without anything to submit, this is probably a Wishport bug! " +
-            "please report!"
+                "please report!"
         }
 
         submit()
@@ -476,7 +474,6 @@ public actual class IOManager(
 
             var sqe = io_uring_get_sqe(ring.ptr)
             if (sqe == null) {
-                val waiting = io_uring_sq_ready(ring.ptr)
                 submit()
 
                 // safe call now, as the queue will be empty

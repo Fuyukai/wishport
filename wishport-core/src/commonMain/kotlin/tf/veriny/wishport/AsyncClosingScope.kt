@@ -91,7 +91,6 @@ public class AsyncClosingScopeImpl @Unsafe constructor() : AsyncClosingScope {
         closeables.remove(closeable)
     }
 
-
     @OptIn(LowLevelApi::class)
     override suspend fun close(): CancellableResult<Unit, Fail> {
         if (closing || closed) return Cancellable.empty()
