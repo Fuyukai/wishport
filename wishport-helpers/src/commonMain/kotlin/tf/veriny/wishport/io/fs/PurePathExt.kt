@@ -11,42 +11,43 @@ import tf.veriny.wishport.collections.ByteString
 import tf.veriny.wishport.collections.FastArrayList
 import tf.veriny.wishport.io.fs.PathComponent.*
 
+@ThreadLocal
+private val cachedBuf = FastArrayList<ByteString>()
+
 /**
  * Concatenates all the underlying components of this path into a [ByteString]. The result will be
  * null terminated if [withNullSep] is true.
  */
 @OptIn(Unsafe::class)
 public fun PurePath<*>.toByteString(withNullSep: Boolean = false): ByteString {
-    // we take some liberties with internal apis!
-    // TODO: once we get a real byte buffer like, we can avoid using the internal apis altogether
     var size = 0
     // size is *2 as we need extra for the PATH_SEP.
-    val buf = FastArrayList<ByteString>(components.size * 2)
+    cachedBuf.clearTo(components.size * 2)
 
     for (idx in components.indices) {
         when (val comp = components[idx]) {
             is Prefix -> TODO()
             is RootDir -> {
-                buf.add(PATH_SEP)
+                cachedBuf.add(PATH_SEP)
                 size += PATH_SEP.size
                 continue
             }
             is CurrentDir -> {
-                buf.add(CurrentDir.DOT)
+                cachedBuf.add(CurrentDir.DOT)
                 size += CurrentDir.DOT.size
             }
             is PreviousDir -> {
-                buf.add(PreviousDir.DOTDOT)
+                cachedBuf.add(PreviousDir.DOTDOT)
                 size += PreviousDir.DOTDOT.size
             }
             is Normal -> {
-                buf.add(comp.data)
+                cachedBuf.add(comp.data)
                 size += comp.data.size
             }
         }
 
         if (idx != components.size - 1) {
-            buf.add(PATH_SEP)
+            cachedBuf.add(PATH_SEP)
             size += 1
         }
     }
@@ -56,7 +57,7 @@ public fun PurePath<*>.toByteString(withNullSep: Boolean = false): ByteString {
     val out = ByteArray(size)
     var cursor = 0
 
-    for (item in buf) {
+    for (item in cachedBuf) {
         item.unwrap().copyInto(out, destinationOffset = cursor)
         cursor += item.size
     }

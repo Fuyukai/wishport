@@ -9,6 +9,7 @@ package tf.veriny.wishport.io.fs
 import tf.veriny.wishport.Either
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.ByteString
+import tf.veriny.wishport.collections.FastArrayList
 import tf.veriny.wishport.collections.b
 import tf.veriny.wishport.collections.startsWith
 import tf.veriny.wishport.get
@@ -44,7 +45,7 @@ public open class PosixPurePath(
          */
         @OptIn(Unsafe::class)
         public fun from(bs: ByteString): PathResult<PosixPurePath> {
-            val components = mutableListOf<PathComponent>()
+            val components = FastArrayList<PathComponent>()
 
             // check for absolute paths
             var cursor = if (bs.startsWith(SEP)) {

@@ -322,4 +322,12 @@ private constructor(private var backing: Array<Any?>) : MutableList<E> {
         Array(newSize) { backing[it] }.also { backing = it }
     }
 
+    /**
+     * Clears this list and reallocates with the specified size.
+     */
+    public fun clearTo(size: Int) {
+        backing = Array(size) { null }
+        this.size = 0
+    }
+
 }
