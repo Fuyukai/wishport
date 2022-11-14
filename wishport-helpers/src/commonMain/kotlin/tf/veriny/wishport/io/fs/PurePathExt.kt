@@ -8,6 +8,7 @@ package tf.veriny.wishport.io.fs
 
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.ByteString
+import tf.veriny.wishport.collections.FastArrayList
 import tf.veriny.wishport.io.fs.PathComponent.*
 
 /**
@@ -19,7 +20,8 @@ public fun PurePath<*>.toByteString(withNullSep: Boolean = false): ByteString {
     // we take some liberties with internal apis!
     // TODO: once we get a real byte buffer like, we can avoid using the internal apis altogether
     var size = 0
-    val buf = ArrayList<ByteString>(components.size)
+    // size is *2 as we need extra for the PATH_SEP.
+    val buf = FastArrayList<ByteString>(components.size * 2)
 
     for (idx in components.indices) {
         when (val comp = components[idx]) {

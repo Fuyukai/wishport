@@ -8,7 +8,7 @@ package tf.veriny.wishport
 
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.Unsafe
-import tf.veriny.wishport.collections.IdentitySet
+import tf.veriny.wishport.collections.FastArrayList
 import tf.veriny.wishport.core.CancelScope
 import tf.veriny.wishport.core.checkIfCancelled
 import tf.veriny.wishport.core.getIOManager
@@ -43,20 +43,6 @@ public interface AsyncClosingScope : AsyncCloseable {
      * Adds a regular closeable to this scope.
      */
     public fun add(closeable: Closeable)
-
-    /**
-     * Removes an async closeable from this scope, stopping it from being tracked.
-     *
-     * This is useful for avoiding memory leaks with long-lived scopes and objects that are
-     * explicitly closed. It is safe to close a Closeable without doing this method, as ``close`` is
-     * idempotent.
-     */
-    public fun remove(closeable: AsyncCloseable)
-
-    /**
-     * Removes a regular async closeable from this scope,.
-     */
-    public fun remove(closeable: Closeable)
 }
 
 /**
@@ -69,11 +55,8 @@ public class AsyncClosingScopeImpl @Unsafe constructor() : AsyncClosingScope {
     override var closing: Boolean = false
         private set
 
-    // Note: This is an identity set to ensure that two objects which may be equal are both added
-    // to the set.
-    // This ensures that they both get closed.
-    private val closeables = IdentitySet<Closeable>()
-    private val toClose = IdentitySet<AsyncCloseable>()
+    private val closeables = FastArrayList<Closeable>()
+    private val toClose = FastArrayList<AsyncCloseable>()
 
     override fun add(closeable: AsyncCloseable) {
         toClose.add(closeable)
@@ -81,14 +64,6 @@ public class AsyncClosingScopeImpl @Unsafe constructor() : AsyncClosingScope {
 
     override fun add(closeable: Closeable) {
         closeables.add(closeable)
-    }
-
-    override fun remove(closeable: AsyncCloseable) {
-        toClose.add(closeable)
-    }
-
-    override fun remove(closeable: Closeable) {
-        closeables.remove(closeable)
     }
 
     @OptIn(LowLevelApi::class)

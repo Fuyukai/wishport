@@ -7,6 +7,7 @@
 package tf.veriny.wishport.internals
 
 import tf.veriny.wishport.annotations.LowLevelApi
+import tf.veriny.wishport.collections.FastArrayList
 import tf.veriny.wishport.core.CancelScope
 
 // This is based off of using a simple set of active cancel scopes, rather than a list.
@@ -108,7 +109,7 @@ public class Deadlines {
         // small micro-opt but w/e
         var min: CancelScope? = null
         var minDl: Long = 0L
-        val purged = mutableListOf<CancelScope>()
+        val purged = FastArrayList<CancelScope>()
         for (item in scopes) {
             val dl = item.effectiveDeadline
 
