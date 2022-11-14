@@ -52,5 +52,5 @@ public fun `main`(): Unit = runUntilCompleteNoResult {
         result += r
     }
 
-    print("average ns: ${result / 10000L}")
+    print("average ns: ${result / 1000L}")
 }

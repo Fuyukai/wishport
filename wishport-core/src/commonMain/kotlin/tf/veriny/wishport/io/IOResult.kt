@@ -6,6 +6,8 @@
 
 package tf.veriny.wishport.io
 
+import tf.veriny.wishport.Cancellable
+
 /**
  * A readable handle for usage in I/O methods.
  */
@@ -20,7 +22,9 @@ public expect sealed interface IOResult
 /**
  * An empty result for system calls that don't return anything.
  */
-public object Empty : IOResult
+public object Empty : IOResult {
+    internal val RESULT = Cancellable.ok(Empty)
+}
 
 /**
  * A handle to an open socket.

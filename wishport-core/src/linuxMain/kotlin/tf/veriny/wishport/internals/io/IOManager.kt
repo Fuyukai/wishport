@@ -218,7 +218,7 @@ public actual class IOManager(
             SleepingWhy.STATX, SleepingWhy.CONNECT,
             SleepingWhy.RENAME, SleepingWhy.SYMLINK,
             SleepingWhy.LINK, -> {
-                Cancellable.ok(Empty)
+                Empty.RESULT
             }
         }
 
@@ -455,7 +455,7 @@ public actual class IOManager(
     public actual suspend fun closeMany(vararg handles: IOHandle): CancellableResourceResult<Empty> {
         if (handles.isEmpty()) {
             // bruh
-            return Cancellable.ok(Empty)
+            return Empty.RESULT
         }
 
         val task = getCurrentTask()

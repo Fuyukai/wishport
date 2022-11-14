@@ -13,6 +13,8 @@ package tf.veriny.wishport
  */
 public sealed interface Cancellable<out S, out F : Fail, out T : Either<S, F>> {
     public companion object {
+        private val EMPTY = ok(Unit)
+
         /**
          * Helper function for ``Either.ok(item).notCancelled()``.
          */
@@ -38,7 +40,7 @@ public sealed interface Cancellable<out S, out F : Fail, out T : Either<S, F>> {
          * Returns an empty uncancelled.
          */
         public fun empty(): CancellableEmpty {
-            return ok(Unit)
+            return EMPTY
         }
     }
 }
