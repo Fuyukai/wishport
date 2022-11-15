@@ -47,7 +47,7 @@ public fun main(): Unit = runUntilCompleteNoResult {
                     val second = openTemporaryFile(scope, FileOpenType.WRITE_ONLY).q()
                     first.readUpto(4096U).andThen { second.writeAll(it) }.q()
                 }
-            }
+            }.expect()
         }
         result += r
     }
