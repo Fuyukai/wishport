@@ -76,7 +76,7 @@ public class AsyncClosingScopeImpl @Unsafe constructor() : AsyncClosingScope {
             closeables.forEach(Closeable::close)
 
             // separate out the fastercloseables
-            val faster = mutableListOf<IOHandle>()
+            val faster = FastArrayList<IOHandle>()
 
             for (item in toClose) {
                 if (item is FasterCloseable) {

@@ -24,7 +24,7 @@ public actual fun makeSocket(
     return if (s < 0) {
         posix_errno().toSysResult()
     } else {
-        Either.ok(Fd(s))
+        Either.ok(Fd.get(s))
     }
 }
 

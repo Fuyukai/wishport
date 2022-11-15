@@ -167,7 +167,8 @@ private constructor(
 
             val parent = parent
             if (!shield && parent != null) {
-                if (parent.effectiveDeadline < localDeadline) return parent.effectiveDeadline
+                val parentDeadline = parent.effectiveDeadline
+                if (parentDeadline < localDeadline) return parentDeadline
             }
 
             return localDeadline

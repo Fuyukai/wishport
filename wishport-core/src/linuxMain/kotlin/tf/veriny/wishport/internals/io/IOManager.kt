@@ -90,7 +90,8 @@ public actual class IOManager(
     private val ring = alloca.alloc<io_uring>()
 
     // used for thread-side wake ups
-    private val efd = eventfd(0, EFD_CLOEXEC)
+    @Suppress("RemoveRedundantQualifierName")
+    private val efd = platform.extra.eventfd(0, EFD_CLOEXEC)
 
     init {
         memScoped {
@@ -201,7 +202,7 @@ public actual class IOManager(
             // impl note, these are the same (openat2) on linux
             SleepingWhy.OPEN_DIRECTORY, SleepingWhy.OPEN_FILE, SleepingWhy.ACCEPT -> {
                 val fd = unwrapped.res
-                Cancellable.ok(Fd(fd))
+                Cancellable.ok(Fd.get(fd))
             }
 
             SleepingWhy.READ_WRITE -> {
@@ -622,10 +623,11 @@ public actual class IOManager(
         val mode = if (filePermissions.isEmpty()) {
             0U
         } else {
-            filePermissions
-                .map { it.posixNumber }
-                .reduce { acc, i -> acc.or(i) }
-                .toUInt()
+            var perms = (0U).toUShort()
+            for (i in filePermissions) {
+                perms = perms.or(i.posixNumber)
+            }
+            perms
         }
 
         val task = getCurrentTask()
@@ -646,7 +648,7 @@ public actual class IOManager(
                 val cPath = pin.addressOf(0)
 
                 // io_uring_prep_openat2(sqe, dirfd, cPath, how.ptr)
-                io_uring_prep_openat(sqe, dirfd, cPath, openFlags, mode)
+                io_uring_prep_openat(sqe, dirfd, cPath, openFlags, mode.toUInt())
 
                 submitAndWait(
                     task, SleepingWhy.OPEN_FILE

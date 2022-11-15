@@ -26,6 +26,11 @@ public fun PurePath<*>.toByteString(withNullSep: Boolean = false): ByteString {
 
     for (idx in components.indices) {
         when (val comp = components[idx]) {
+            is Normal -> {
+                cachedBuf.add(comp.data)
+                size += comp.data.size
+            }
+
             is Prefix -> TODO()
             is RootDir -> {
                 cachedBuf.add(PATH_SEP)
@@ -39,10 +44,6 @@ public fun PurePath<*>.toByteString(withNullSep: Boolean = false): ByteString {
             is PreviousDir -> {
                 cachedBuf.add(PreviousDir.DOTDOT)
                 size += PreviousDir.DOTDOT.size
-            }
-            is Normal -> {
-                cachedBuf.add(comp.data)
-                size += comp.data.size
             }
         }
 

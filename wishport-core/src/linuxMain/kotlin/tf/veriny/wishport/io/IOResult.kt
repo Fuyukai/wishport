@@ -9,6 +9,7 @@ package tf.veriny.wishport.io
 import platform.linux.EPOLLERR
 import platform.linux.EPOLLIN
 import platform.linux.EPOLLOUT
+import tf.veriny.wishport.collections.FastArrayList
 
 // marker interfaces
 public actual interface IOHandle {
@@ -16,7 +17,16 @@ public actual interface IOHandle {
 }
 public actual sealed interface IOResult
 
-public class Fd(override val actualFd: Int) : IOHandle, IOResult
+private val PREALLOCATED_FDS = (0..256).mapTo(FastArrayList(256)) { Fd(it) }
+
+public class Fd(override val actualFd: Int) : IOHandle, IOResult {
+    public companion object {
+        public fun get(actualFd: Int): Fd {
+            return if (actualFd <= 256) PREALLOCATED_FDS[actualFd]
+            else Fd(actualFd)
+        }
+    }
+}
 
 public actual typealias SocketHandle = Fd
 public actual typealias DirectoryHandle = Fd

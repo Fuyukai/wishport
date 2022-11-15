@@ -1,11 +1,12 @@
-import tf.veriny.wishport.AsyncClosingScope
+import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
+import tf.veriny.wishport.annotations.ProvisionalApi
 import tf.veriny.wishport.collections.FastArrayList
-import tf.veriny.wishport.core.Nursery
-import tf.veriny.wishport.core.open
-import tf.veriny.wishport.get
-import tf.veriny.wishport.io.fs.*
-import tf.veriny.wishport.runUntilCompleteNoResult
+import tf.veriny.wishport.io.fs.FileOpenType
+import tf.veriny.wishport.io.fs.openTemporaryFile
+import tf.veriny.wishport.io.fs.systemPathFor
+import tf.veriny.wishport.io.readUpto
+import tf.veriny.wishport.io.writeAll
 import kotlin.system.measureNanoTime
 
 public fun main_1() {
@@ -34,23 +35,22 @@ public fun main_1() {
     println("Kotlin ArrayList avg: ${kTime / 10_000}")
 }
 
-@OptIn(LowLevelApi::class)
-public fun `main`(): Unit = runUntilCompleteNoResult {
+@OptIn(LowLevelApi::class, ProvisionalApi::class)
+public fun main(): Unit = runUntilCompleteNoResult {
     var result = 0L
 
-    repeat(1000) {
+    repeat(10_000) {
         val r = measureNanoTime {
             AsyncClosingScope { scope ->
-                val path = PosixPurePath.from("/dev/zero").get()!!
-                Nursery.open { n ->
-                    repeat(1024) {
-                        n.startSoon { FilesystemHandle.openRawFile(scope, path) }
-                    }
+                Imperatavize.cancellable<Unit, Fail> {
+                    val first = scope.openUnbufferedSystemFile(systemPathFor("/dev/zero")).q()
+                    val second = openTemporaryFile(scope, FileOpenType.WRITE_ONLY).q()
+                    first.readUpto(4096U).andThen { second.writeAll(it) }.q()
                 }
             }
         }
         result += r
     }
 
-    print("average ns: ${result / 1000L}")
+    print("average us: ${result / 10000L / 1000L}")
 }
