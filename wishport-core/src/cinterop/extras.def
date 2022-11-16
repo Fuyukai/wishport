@@ -77,6 +77,7 @@ struct statx {
    uint32_t stx_uid;         /* User ID of owner */
    uint32_t stx_gid;         /* Group ID of owner */
    uint16_t stx_mode;        /* File type and mode */
+   uint16_t __statx_pad1[1];
    uint64_t stx_ino;         /* Inode number */
    uint64_t stx_size;        /* Total size in bytes */
    uint64_t stx_blocks;      /* Number of 512B blocks allocated */
@@ -100,5 +101,11 @@ struct statx {
    uint32_t stx_dev_major;   /* Major ID */
    uint32_t stx_dev_minor;   /* Minor ID */
    uint64_t stx_mnt_id;      /* Mount ID */
+
+   /* Direct I/O alignment restrictions */
+   uint32_t stx_dio_mem_align;
+   uint32_t stx_dio_offset_align;
+
+   uint64_t __statx_pad2[16];
 };
 
