@@ -14,7 +14,10 @@ import kotlin.test.assertTrue
 @OverloadResolutionByLambdaReturnType
 inline fun <S, F : Fail> assertSuccess(fn: () -> Either<S, F>): S {
     val result = fn()
-    assertTrue(result.isSuccess, "should have returned a success")
+    assertTrue(
+        result.isSuccess,
+        "should have returned a success, instead got ${result.getFailure()}"
+    )
     return result.get()!!
 }
 
@@ -41,7 +44,7 @@ inline fun <F : Fail> assertFailure(fn: () -> Either<*, F>): F {
 @OverloadResolutionByLambdaReturnType
 inline fun <F : Fail> assertFailure(fn: () -> CancellableResult<*, F>): F {
     val result = fn()
-    assertTrue(result.isFailure, "should have returned failure")
+    assertTrue(result.isFailure, "should have returned failure, instead got $result")
     return result.getFailure()!!
 }
 
@@ -49,7 +52,7 @@ inline fun <F : Fail> assertFailure(fn: () -> CancellableResult<*, F>): F {
 @OverloadResolutionByLambdaReturnType
 inline fun <F : Fail> assertFailureWith(f: F, fn: () -> Either<*, F>): F {
     val result = fn()
-    assertTrue(result.isFailure, "should have returned failure")
+    assertTrue(result.isFailure, "should have returned failure $f, instead got $result")
     assertEquals(f, result.getFailure())
     return result.getFailure()!!
 }
@@ -58,7 +61,7 @@ inline fun <F : Fail> assertFailureWith(f: F, fn: () -> Either<*, F>): F {
 @OverloadResolutionByLambdaReturnType
 inline fun <F : Fail> assertFailureWith(f: F, fn: () -> CancellableResult<*, F>): F {
     val result = fn()
-    assertTrue(result.isFailure, "should have returned failure")
+    assertTrue(result.isFailure, "should have returned failure $f, instead got $result")
     assertEquals(f, result.getFailure())
     return result.getFailure()!!
 }

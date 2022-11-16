@@ -20,12 +20,40 @@ import tf.veriny.wishport.io.*
 public class Socket
 private constructor(override val raw: SocketHandle) : FileLikeHandle {
     public companion object {
+        /**
+         * Creates a new [Socket] with the specified socket address, and adds it to [scope].
+         */
         @OptIn(Unsafe::class)
         public operator fun invoke(
             scope: AsyncClosingScope,
             address: SocketAddress
         ): ResourceResult<Socket> {
             return Socket(address).andAddTo(scope)
+        }
+
+        /**
+         * Creates a new [Socket] with the specified socket parameters, and adds it to [scope].
+         */
+        @OptIn(Unsafe::class)
+        public operator fun invoke(
+            scope: AsyncClosingScope,
+            family: SocketFamily,
+            type: SocketType,
+            protocol: SocketProtocol,
+        ): ResourceResult<Socket> {
+            return Socket(family, type, protocol).andAddTo(scope)
+        }
+
+        /**
+         * Creates a new [Socket] with the specified socket parameters, and adds it to [scope].
+         */
+        @Unsafe
+        public operator fun invoke(
+            family: SocketFamily,
+            type: SocketType,
+            protocol: SocketProtocol,
+        ): ResourceResult<Socket> {
+            return makeSocket(family, type, protocol).andThen { Either.ok(Socket(it)) }
         }
 
         /**

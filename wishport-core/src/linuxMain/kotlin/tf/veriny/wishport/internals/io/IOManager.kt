@@ -31,11 +31,6 @@ import kotlin.math.min
 
 // TODO: consider enabling poll mode by default
 
-private val MISSING_NODROP = """
-    io_uring reports that it is missing the IORING_FEAT_NODROP feature. This feature is essential to
-    Wishport. You should upgrade your kernel!
-""".trimIndent()
-
 private val EMPTY_PATH = byteArrayOf(0)
 
 // TODO: Don't hardcode this.
@@ -136,13 +131,6 @@ public actual class IOManager(
             if (res < 0) {
                 val result = kstrerror(abs(res))
                 throw InternalWishportError("io_uring_queue_init failed: $result")
-            }
-
-            // check features
-            val features = params.features
-            if (features.and(IORING_FEAT_NODROP) == 0U) {
-                close()
-                throw InternalWishportError(MISSING_NODROP)
             }
 
             setupEventFdPoller()
