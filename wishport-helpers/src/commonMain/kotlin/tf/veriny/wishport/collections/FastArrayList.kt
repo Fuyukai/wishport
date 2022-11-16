@@ -330,4 +330,35 @@ private constructor(private var backing: Array<Any?>) : MutableList<E> {
         this.size = 0
     }
 
+    override fun equals(other: Any?): Boolean {
+        // blatantly violate the equals contract
+        if (other == null) return false
+        if (other === this) return true
+        if (other !is List<*>) return false
+
+        if (other.size != size) return false
+        for ((i1, i2) in other.zip(this)) {
+            if (i1 != i2) return false
+        }
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return backing.contentDeepHashCode()
+    }
+
+    override fun toString(): String {
+        val builder = StringBuilder()
+        builder.append('<')
+
+        val iterator = this.iterator()
+        while (iterator.hasNext()) {
+            val el = iterator.next()
+            builder.append(el.toString())
+            if (iterator.hasNext()) builder.append(", ")
+        }
+
+        return builder.append('>').toString()
+    }
 }
