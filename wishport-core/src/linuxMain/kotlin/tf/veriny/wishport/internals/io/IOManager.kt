@@ -101,6 +101,11 @@ public actual class IOManager(
             val uname = getKernelInfo()
             var flags = flags(IORING_SETUP_CQSIZE, IORING_SETUP_CLAMP)
 
+            // check for at least kernel 5.15, which is needed for mkdirat/symlinkat/linkat.
+            if (uname.major < 5 || (uname.major < 6 && uname.minor < 15)) {
+                throw InternalWishportError("Wishport requires at least Linux kernel 5.15")
+            }
+
             when {
                 uname.major >= 6 -> {
                     // we're single threaded wrt the io_uring so this is good and fast

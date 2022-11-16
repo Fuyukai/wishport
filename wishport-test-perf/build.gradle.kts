@@ -19,7 +19,7 @@ kotlin {
     linuxX64() {
         binaries {
             executable() {
-
+                debuggable = true
             }
         }
 
