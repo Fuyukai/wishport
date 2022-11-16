@@ -6,6 +6,8 @@
 
 package tf.veriny.wishport.io.fs
 
+import tf.veriny.wishport.annotations.ProvisionalApi
+
 // bleghhhhh... constants are diff. on platforms.
 // but the windows constants suck so we just use unix ones lol!
 
@@ -28,6 +30,12 @@ public enum class FileType(internal val number: UShort) {
     /** A FIFO. */
     FIFO(0x1000U),
     ;
+
+    public companion object {
+        // .entries keep was merged, but apparently this doesn't exist?
+        @ProvisionalApi
+        public val _entries: Array<FileType> = FileType.values()
+    }
 }
 
 // todo: add the rest of these

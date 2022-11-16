@@ -25,12 +25,10 @@ class `Test Basic Running` {
 
     @Test
     fun `Test suspending and rescheduling a function`() {
-        runUntilComplete {
+        runUntilCompleteNoResult {
             val task = getCurrentTask()
             reschedule(task)
             waitUntilRescheduled()
-
-            Either.ok(Unit).notCancelled()
         }
 
         // no need for asserts as this automatically works
@@ -41,5 +39,12 @@ class `Test Basic Running` {
         assertFails {
             runUntilComplete<Nothing, Nothing> { throw Throwable("abcdef") }
         }
+    }
+
+    @Test
+    fun `Test rescheduling a task twice works fine`() = runUntilCompleteNoResult {
+        val task = getCurrentTask()
+        repeat(2) { reschedule(task) }
+        waitUntilRescheduled()
     }
 }

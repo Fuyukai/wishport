@@ -40,6 +40,8 @@ public class Task(
     // marker variable used inside CancelScope to avoid extra reschedules
     internal var wasRescheduledForCancellation = false
 
+    internal var wasRescheduledAtAll = false
+
     // guard
     public var finished: Boolean = false
         private set
@@ -88,11 +90,13 @@ public class Task(
      * Steps this task once.
      */
     internal fun step() {
+        assert(wasRescheduledAtAll) { "Task step() was called without this task being scheduled!" }
         assert(!finished) { "Task has already completed!" }
-        assert(cancelScope != null) { "Task stepped without a valid canceel scope!" }
+        assert(cancelScope != null) { "Task stepped without a valid cancel scope!" }
 
         val lastContinuation = this.continuation
         running = true
+        wasRescheduledAtAll = false
         lastContinuation.resume(Unit)
         wasRescheduledForCancellation = false
         running = false

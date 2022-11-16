@@ -74,7 +74,7 @@ private constructor(private var backing: Array<Any?>) : MutableList<E> {
         }
     }
 
-    public constructor(initialSize: Int = 16) : this(Array<Any?>(initialSize) { null })
+    public constructor(initialSize: Int = 16) : this(arrayOfNulls(initialSize))
 
     // == impl details == //
     override var size: Int = 0

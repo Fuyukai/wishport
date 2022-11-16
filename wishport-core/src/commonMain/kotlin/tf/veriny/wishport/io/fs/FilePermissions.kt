@@ -6,6 +6,8 @@
 
 package tf.veriny.wishport.io.fs
 
+import tf.veriny.wishport.annotations.ProvisionalApi
+
 // TODO: linux-only sticky bits?
 
 /**
@@ -36,6 +38,10 @@ public enum class FilePermissions(public val posixNumber: UShort) {
             GROUP_READ, GROUP_EXEC,
             ANY_READ, ANY_EXEC
         )
+
+        // .entries keep was merged, but apparently this doesn't exist?
+        @ProvisionalApi
+        public val _entries: Array<FilePermissions> = FilePermissions.values()
     }
 }
 

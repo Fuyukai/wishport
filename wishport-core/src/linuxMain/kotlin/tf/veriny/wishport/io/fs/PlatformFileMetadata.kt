@@ -26,14 +26,29 @@ public actual class PlatformFileMetadata(
     fileMode: UShort,
 ) : FileMetadata {
     /** The type of this file. */
-    public override val type: Set<FileType> = FileType.values().filter {
-        // mask off file permission bits, forgot to do this :yert:
+    public override val type: Set<FileType> by lazy {
         val mode = fileMode.and(0xF000U)
-        mode.and(it.number) != (0U).toUShort()
-    }.toSet()
+        val items = mutableSetOf<FileType>()
+        for (type in FileType._entries) {
+            if (mode.and(type.number) != (0U).toUShort()) {
+                items.add(type)
+            }
+        }
 
-    public val permissions: Set<FilePermissions> = FilePermissions.values().filter {
+        items
+    }
+
+    /** The set of permissions for this file. */
+    public val permissions: Set<FilePermissions> by lazy {
         val perms = fileMode.and(0x1ffU)
-        perms.and(it.posixNumber) != (0U).toUShort()
-    }.toSet()
+        val items = mutableSetOf<FilePermissions>()
+        for (type in FilePermissions._entries) {
+            if (perms.and(type.posixNumber) != (0U).toUShort()) {
+                items.add(type)
+            }
+        }
+
+        items
+    }
+
 }

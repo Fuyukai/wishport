@@ -12,6 +12,7 @@ import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.StableApi
 import tf.veriny.wishport.annotations.Unsafe
+import tf.veriny.wishport.collections.FastArrayList
 import tf.veriny.wishport.core.AutojumpClock
 import tf.veriny.wishport.core.CancelScope
 import tf.veriny.wishport.core.Clock
@@ -75,7 +76,7 @@ public class EventLoop private constructor(
     }
 
     // set of tasks that are immediately going to run
-    private var scheduledTasks = linkedSetOf<Task>()
+    private var scheduledTasks = FastArrayList<Task>()
 
     internal val deadlines = Deadlines()
 
@@ -182,7 +183,11 @@ public class EventLoop private constructor(
     @LowLevelApi
     @StableApi
     public fun directlyReschedule(task: Task) {
+        // TODO: maybe assert false?
+        if (task.wasRescheduledAtAll) return
+
         scheduledTasks.add(task)
+        task.wasRescheduledAtAll = true
     }
 
     /**
@@ -220,7 +225,7 @@ public class EventLoop private constructor(
             // avoid a copy by using the set in-place and just allocating a new set
 
             val tasks = this.scheduledTasks
-            scheduledTasks = linkedSetOf()
+            scheduledTasks = FastArrayList()
 
             for (task in tasks) {
                 task.step()
