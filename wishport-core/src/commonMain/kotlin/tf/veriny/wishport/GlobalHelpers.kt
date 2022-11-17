@@ -330,7 +330,7 @@ public suspend fun AsyncClosingScope.openBufferedSystemFile(
 public suspend fun <T : SocketAddress> AsyncClosingScope.openTcpStream(
     address: T
 ): CancellableResult<TcpSocketStream, Fail> {
-    if (address.protocol != SocketProtocol.TCP) TODO("errors")
+    if (address.protocol != SocketProtocol.TCP) return Cancellable.failed(ProtocolNotSupported)
 
     return Socket(address)
         .andAddTo(this)
