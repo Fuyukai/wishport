@@ -216,7 +216,7 @@ private constructor(
 
             // don't try and reschedule the running task, it'll go badly
             if (task.running) continue
-            loop.directlyReschedule(task)
+            task.reschedule(Cancellable.cancelled())
         }
     }
     /**

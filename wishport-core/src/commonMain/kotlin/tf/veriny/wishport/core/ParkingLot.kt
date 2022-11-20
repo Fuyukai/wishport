@@ -41,7 +41,7 @@ public class ParkingLot {
         return task.checkIfCancelled()
             .andThen {
                 tasks.append(task)
-                waitUntilRescheduled()
+                waitUntilRescheduled() as CancellableEmpty
             }
             .also { tasks.removeTask(task) }
     }
@@ -59,13 +59,13 @@ public class ParkingLot {
      */
     public fun unpark(count: Int = 1) {
         if (count <= 0) return
-        popMany(count) { it.reschedule() }
+        popMany(count) { it.reschedule(Cancellable.empty()) }
     }
 
     /**
      * Unparks all the tasks in this depot.
      */
     public fun unparkAll() {
-        popMany(tasks.size) { it.reschedule() }
+        popMany(tasks.size) { it.reschedule(Cancellable.empty()) }
     }
 }

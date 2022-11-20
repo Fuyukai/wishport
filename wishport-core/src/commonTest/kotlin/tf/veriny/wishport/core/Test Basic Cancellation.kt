@@ -8,11 +8,11 @@
 
 package tf.veriny.wishport.core
 
+import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
-import tf.veriny.wishport.checkpoint
-import tf.veriny.wishport.isCancelled
-import tf.veriny.wishport.runUntilCompleteNoResult
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 /**
  * Tests that cancellation works.
@@ -117,5 +117,18 @@ class `Test Basic Cancellation` {
                 assert(checkIfCancelled().isCancelled)
             }
         }
+    }
+
+    @Test
+    fun `Test cancellation is suppressed during a reschedule`() = runUntilCompleteNoResult {
+        val task = getCurrentTask()
+        task.reschedule(Cancellable.ok(123))
+        val result = CancelScope { scope ->
+            scope.cancel()
+            waitUntilRescheduled()
+        }
+
+        assertFalse(result.isCancelled, "result was cancelled despite reschedule")
+        assertEquals(123, result.get()!!)
     }
 }

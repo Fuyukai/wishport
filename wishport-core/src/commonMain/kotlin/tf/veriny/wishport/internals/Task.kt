@@ -16,6 +16,9 @@ import kotlin.coroutines.*
 // the spawner functions automatically convert a () -> Unit into a CancellableResult<Unit, Nothing>
 // and a () -> Either<S, F> into a CancellableResult<S, F>
 
+// TODO: We can most likely make rescheduling type-safe by having `waitUntilRescheduled` provide
+//       a callback with a RescheduleToken<S, F> that needs to be used. Not sure though.
+
 /**
  * Encapsulates the details for an asynchronous task. This is a low-level API primarily used in
  * internals - user code should have no reason to touch this.
@@ -39,8 +42,9 @@ public class Task(
 
     // marker variable used inside CancelScope to avoid extra reschedules
     internal var wasRescheduledForCancellation = false
-
     internal var wasRescheduledAtAll = false
+
+    internal var isWaitUntilAll = false
 
     // guard
     public var finished: Boolean = false
@@ -49,6 +53,9 @@ public class Task(
     private lateinit var result: CancellableResult<*, *>
     // generator coroutine
     private var continuation = coro.createCoroutine(this)
+
+    // returned by waitUntilRescheduled
+    internal var passedInValue: CancellableResult<*, *> = Cancellable.empty()
 
     internal lateinit var nursery: Nursery
 
@@ -109,25 +116,25 @@ public class Task(
     /**
      * Reschedules this task to be ran on the next event loop iteration.
      */
-    internal fun reschedule() {
+    internal fun reschedule(passedInValue: CancellableResult<*, *>) {
         assert(!finished) { "cannot reschedule a finished task!" }
+        assert(!isWaitUntilAll || passedInValue.isCancelled) {
+            "you can't manually reschedule the waitUntilAllTasksAreBlocked task!"
+        }
+
+        this.passedInValue = passedInValue
         loop.directlyReschedule(this)
     }
 
     /**
      * Suspends the current task.
      */
-    internal suspend fun suspendTask(): CancellableEmpty {
+    internal suspend fun suspendTask(): CancellableResult<Any?, Fail> {
         suspendCoroutine {
             this.continuation = it
         }
 
-        // cancel scope can never be null when the task is suspended
-        return if (cancelScope!!.isEffectivelyCancelled()) {
-            Cancellable.cancelled()
-        } else {
-            Cancellable.empty()
-        }
+        return passedInValue
     }
 
     /**
@@ -157,15 +164,16 @@ public fun Task.checkIfCancelled(): CancellableEmpty {
  */
 @OptIn(LowLevelApi::class)
 public suspend fun <S, F : Fail> Task.checkpoint(data: S): CancellableResult<S, F> {
+    // checkpoint won't return a Fail ever so this cast is safe.
     return this.checkIfCancelled()
         .andThen {
             // force immediate reschedule
-            reschedule()
+            reschedule(Cancellable.empty())
             suspendTask()
         }
         .andThen {
             Cancellable.ok(data)
-        }
+        } as CancellableResult<S, F>
 }
 
 /**
@@ -174,7 +182,7 @@ public suspend fun <S, F : Fail> Task.checkpoint(data: S): CancellableResult<S, 
  */
 @OptIn(LowLevelApi::class)
 public suspend fun <S> Task.uncancellableCheckpoint(data: S): CancellableSuccess<S> {
-    reschedule()
+    reschedule(Cancellable.empty())
     // eat cancelled
     suspendTask()
 

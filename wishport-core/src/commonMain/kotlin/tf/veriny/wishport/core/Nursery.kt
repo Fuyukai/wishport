@@ -119,9 +119,8 @@ public class Nursery @PublishedApi internal constructor(private val invokerTask:
         if (closed) return Either.err(NurseryClosed)
 
         val loop = invokerTask.context.eventLoop
-        val task = loop.makeTask(fn, this)
+        loop.spawnTaskImpl(fn, this)
         openTasks++
-        loop.directlyReschedule(task)
 
         return Either.ok(Unit)
     }

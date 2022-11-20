@@ -36,6 +36,7 @@ public fun <S, F : Fail> EventLoop.runUntilComplete(
     fn: suspend () -> CancellableResult<S, F>
 ): CancellableResult<S, F> {
     val task = makeRootTask(fn)
+    // fine to use directlyReschedule here, as tthe default value is what we want
     directlyReschedule(task)
 
     runWithErrorPrint()
@@ -108,13 +109,12 @@ public suspend inline fun getIOManager(): IOManager {
  */
 @LowLevelApi
 @StableApi
-public fun reschedule(task: Task) {
-    task.reschedule()
+public fun reschedule(task: Task, with: CancellableResult<Any?, Fail> = Cancellable.empty()) {
+    task.reschedule(with)
 }
 
 /**
- * Waits until this task is rescheduled. This returns an empty cancellation result that can be used
- * for monadic chaining.
+ * Waits until this task is rescheduled. Thia returns the value passed by a call to reschedule().
  *
  * This is a fragile, low-level API that is prone to failing. For example, this doesn't care if the
  * task is cancelled before suspending, allowing for deadlocks. Any usage of this function should
@@ -129,10 +129,13 @@ public fun reschedule(task: Task) {
  *     /*await*/ waitUntilRescheduled()
  * }
  * ```
+ *
+ * This API is *not* typesafe; it returns an `Any?` as the success. Use channels or ``ParkingLot``
+ * instead!
  */
 @LowLevelApi
 @StableApi
-public suspend fun waitUntilRescheduled(): CancellableEmpty {
+public suspend fun waitUntilRescheduled(): CancellableResult<Any?, Fail> {
     return getCurrentTask().suspendTask()
 }
 

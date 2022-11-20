@@ -61,7 +61,7 @@ public class WorkerPool(public val loop: EventLoop, public val size: Int) {
 
         for (fut in iterator) {
             if (fut.future.state == FutureState.COMPUTED) {
-                fut.task.reschedule()
+                fut.task.reschedule(Cancellable.empty())
                 iterator.remove()
 
                 if (!fut.dead) {

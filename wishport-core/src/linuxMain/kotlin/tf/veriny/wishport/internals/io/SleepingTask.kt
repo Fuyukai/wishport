@@ -23,7 +23,7 @@ internal data class SleepingTask @OptIn(LowLevelApi::class) constructor(
     var sqeCount = 1
     var completed: Boolean = false
 
-    // set by the cqe poller
+    // set by the cqe poller for multiple results
     var wakeupData: CancellableResourceResult<IOResult>? = null
 }
 

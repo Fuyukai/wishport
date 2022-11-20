@@ -176,7 +176,7 @@ public actual class IOManager(
             task.sqeCount--
             if (task.sqeCount == 0) {
                 task.completed = true
-                task.task.reschedule()
+                task.task.reschedule(task.wakeupData!!)
             }
 
             return
@@ -220,7 +220,7 @@ public actual class IOManager(
         if (task.sqeCount == 0) {
             task.completed = true
             task.wakeupData = data
-            task.task.reschedule()
+            task.task.reschedule(task.wakeupData!!)
         }
     }
 

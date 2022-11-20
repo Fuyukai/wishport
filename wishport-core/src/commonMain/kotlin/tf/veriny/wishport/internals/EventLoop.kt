@@ -6,6 +6,7 @@
 
 package tf.veriny.wishport.internals
 
+import tf.veriny.wishport.Cancellable
 import tf.veriny.wishport.CancellableResult
 import tf.veriny.wishport.Closeable
 import tf.veriny.wishport.Fail
@@ -135,11 +136,22 @@ public class EventLoop private constructor(
         return Task(coro, this, nursery.cancelScope).also { it.nursery = nursery }
     }
 
+    internal fun spawnTaskImpl(
+        coro: suspend () -> CancellableResult<*, *>,
+        nursery: Nursery,
+        with: CancellableResult<Any?, Fail> = Cancellable.empty()
+    ) {
+        val task = makeTask(coro, nursery)
+        task.passedInValue = with
+        directlyReschedule(task)
+    }
+
     /** Checks for the task waiting for all other tasks to be blocking. */
     private fun checkWaiter(): Boolean {
         val wt = waitingAllTasksBlocked
         if (wt != null) {
             waitingAllTasksBlocked = null
+            wt.passedInValue = Cancellable.empty()
             directlyReschedule(wt)
             return true
         }
@@ -180,9 +192,7 @@ public class EventLoop private constructor(
     /**
      * Directly reschedules a task, adding it to the task queue.
      */
-    @LowLevelApi
-    @StableApi
-    public fun directlyReschedule(task: Task) {
+    internal fun directlyReschedule(task: Task) {
         // TODO: maybe assert false?
         if (task.wasRescheduledAtAll) return
 

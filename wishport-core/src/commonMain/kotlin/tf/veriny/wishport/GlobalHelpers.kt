@@ -100,17 +100,21 @@ public suspend fun uncancellableCheckpoint(): CancellableEmpty {
  * Waits until all other tasks are currently blocked (waiting to be rescheduled). This will
  * ONLY fire if there are no possible other tasks that can run on the next iteration of
  * the event loop.
+ *
+ * Rescheduling this task manually is NOT supported!
  */
 @OptIn(LowLevelApi::class)
 public suspend fun waitUntilAllTasksAreBlocked(): CancellableEmpty {
     val task = getCurrentTask()
+    task.isWaitUntilAll = true
     val loop = task.context.eventLoop
 
+    // safe cast, we only get rescheduled
     return task.checkIfCancelled()
         .andThen {
             loop.waitingAllTasksBlocked = task
-            task.suspendTask()
-        }
+            task.suspendTask().also { task.isWaitUntilAll = false }
+        } as CancellableEmpty
 }
 
 // == Sleep/Timeout Helpers == //
@@ -157,7 +161,7 @@ public suspend inline fun <S, F : Fail> moveOnAt(
  * Sleeps forever (or, until cancelled).
  */
 @OptIn(LowLevelApi::class)
-public suspend fun sleepForever(): CancellableEmpty {
+public suspend fun sleepForever(): CancellableResult<Any?, Fail> {
     return checkIfCancelled().andThen { waitUntilRescheduled() }
 }
 
