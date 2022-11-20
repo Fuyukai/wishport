@@ -221,14 +221,8 @@ public class EventLoop private constructor(
         //
         // If there are no cancellations, and the root task is NOT finished, then we can safely
         // block in I/O wait forever until something comes in - there's nothing to run.
-        //
-        // If this is ordered differently, then the loop will deadlock on I/O forever despite
-        // the main task (and thus all children tasks) having been completed. I do have a potential
-        // safety check for this (wrap the main task with opening a pipe, registering it for read,
-        // closing it at exit, and then making the io_uring loop fail if there's no SQEs) but I
-        // would rather have the event loop code work than this.
-        // In the future we may need internal pipes, so this could be revisited as a mechanism
-        // anyway, as an additional safety check.
+
+        // As a side note, we also want to check cancellation after reschedules to prevent that
 
         while (true) {
             // pt 1: run any scheduled tasks

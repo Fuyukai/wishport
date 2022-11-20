@@ -13,6 +13,7 @@ import tf.veriny.wishport.annotations.LowLevelApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * Tests that cancellation works.
@@ -22,9 +23,9 @@ class `Test Basic Cancellation` {
     @Test
     fun `Test cancelling ourselves`() = runUntilCompleteNoResult {
         val x = CancelScope.open {
-            assert(!checkIfCancelled().isCancelled)
+            assertTrue(!checkIfCancelled().isCancelled)
             it.cancel()
-            assert(checkIfCancelled().isCancelled)
+            assertTrue(checkIfCancelled().isCancelled)
         }
     }
 
@@ -34,24 +35,24 @@ class `Test Basic Cancellation` {
             checkpoint()
             it.cancel()
 
-            assert(checkpoint().isCancelled)
+            assertTrue(checkpoint().isCancelled)
         }
     }
 
     @Test
     fun `Test nested scopes`() = runUntilCompleteNoResult {
         CancelScope.open { outer ->
-            assert(!checkIfCancelled().isCancelled)
+            assertTrue(!checkIfCancelled().isCancelled)
 
             val innerRes = CancelScope { inner ->
                 inner.cancel()
                 checkIfCancelled()
             }
 
-            assert(innerRes.isCancelled)
+            assertTrue(innerRes.isCancelled)
 
             // inner cancellation should have no effect on us
-            assert(!checkIfCancelled().isCancelled)
+            assertTrue(!checkIfCancelled().isCancelled)
         }
     }
 
@@ -61,8 +62,8 @@ class `Test Basic Cancellation` {
             outer.cancel()
 
             CancelScope.open { inner ->
-                assert(!inner.cancelCalled)
-                assert(checkIfCancelled().isCancelled)
+                assertTrue(!inner.cancelCalled)
+                assertTrue(checkIfCancelled().isCancelled)
             }
         }
     }
@@ -72,8 +73,8 @@ class `Test Basic Cancellation` {
         CancelScope.open { outer ->
             CancelScope.open { inner ->
                 outer.cancel()
-                assert(!inner.cancelCalled)
-                assert(checkIfCancelled().isCancelled)
+                assertTrue(!inner.cancelCalled)
+                assertTrue(checkIfCancelled().isCancelled)
             }
         }
     }
@@ -84,8 +85,11 @@ class `Test Basic Cancellation` {
             outer.cancel()
 
             CancelScope.open(shield = true) {
-                assert(it.shield)
-                assert(!checkIfCancelled().isCancelled) { "task is cancelled, but it should not be" }
+                assertTrue(it.shield)
+                assertTrue(
+                    !checkIfCancelled().isCancelled,
+                    "task is cancelled, but it should not be"
+                )
             }
         }
     }
@@ -97,9 +101,16 @@ class `Test Basic Cancellation` {
             outer.cancel()
 
             CancelScope.open(shield = true) {
-                assert(!checkIfCancelled().isCancelled) { "task is cancelled, but it should not be" }
+                assertTrue(
+                    !checkIfCancelled().isCancelled,
+                    "task is cancelled, but it should not be"
+                )
                 it.shield = false
-                assert(checkIfCancelled().isCancelled) { "task is not cancelled, but it should be" }
+                assertTrue(
+                    checkIfCancelled().isCancelled,
+                    "task is not cancelled, but it should be"
+                )
+
             }
         }
     }
@@ -110,11 +121,11 @@ class `Test Basic Cancellation` {
             first.cancel()
 
             CancelScope.open(shield = true) {
-                assert(!checkIfCancelled().isCancelled)
+                assertTrue(!checkIfCancelled().isCancelled)
                 it.shield = false
-                assert(checkIfCancelled().isCancelled)
+                assertTrue(checkIfCancelled().isCancelled)
                 it.shield = true
-                assert(checkIfCancelled().isCancelled)
+                assertTrue(checkIfCancelled().isCancelled)
             }
         }
     }
@@ -123,12 +134,12 @@ class `Test Basic Cancellation` {
     fun `Test cancellation is suppressed during a reschedule`() = runUntilCompleteNoResult {
         val task = getCurrentTask()
         task.reschedule(Cancellable.ok(123))
-        val result = CancelScope { scope ->
+        CancelScope.open { scope ->
             scope.cancel()
-            waitUntilRescheduled()
-        }
 
-        assertFalse(result.isCancelled, "result was cancelled despite reschedule")
-        assertEquals(123, result.get()!!)
+            val result = waitUntilRescheduled()
+            assertFalse(result.isCancelled, "result was cancelled despite reschedule")
+            assertEquals(123, result.get()!!)
+        }
     }
 }
