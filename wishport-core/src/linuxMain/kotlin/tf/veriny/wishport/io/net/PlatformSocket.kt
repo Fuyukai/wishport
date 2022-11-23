@@ -20,7 +20,9 @@ public actual fun makeSocket(
     type: SocketType,
     protocol: SocketProtocol
 ): ResourceResult<SocketHandle> {
-    val s = socket(family.number, type.number, protocol.number)
+    val typeNum = type.number.or(SOCK_CLOEXEC)
+
+    val s = socket(family.number, typeNum, protocol.number)
     return if (s < 0) {
         posix_errno().toSysResult()
     } else {
