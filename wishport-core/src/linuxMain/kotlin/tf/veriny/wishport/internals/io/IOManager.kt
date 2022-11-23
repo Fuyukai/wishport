@@ -25,7 +25,7 @@ import tf.veriny.wishport.io.fs.*
 import tf.veriny.wishport.io.net.Inet4SocketAddress
 import tf.veriny.wishport.io.net.Inet6SocketAddress
 import tf.veriny.wishport.io.net.SocketAddress
-import tf.veriny.wishport.util.getKernelInfo
+import tf.veriny.wishport.util.kernelVersion
 import tf.veriny.wishport.util.kstrerror
 import kotlin.math.min
 
@@ -94,10 +94,9 @@ public actual class IOManager(
         memScoped {
             val params = alloc<io_uring_params>()
             memset(params.ptr, 0, sizeOf<io_uring_params>().convert())
-
-            val uname = getKernelInfo()
             var flags = flags(IORING_SETUP_CQSIZE, IORING_SETUP_CLAMP)
 
+            val uname = kernelVersion
             // check for at least kernel 5.15, which is needed for mkdirat/symlinkat/linkat.
             if (uname.major < 5 || (uname.major < 6 && uname.minor < 15)) {
                 throw InternalWishportError("Wishport requires at least Linux kernel 5.15")
