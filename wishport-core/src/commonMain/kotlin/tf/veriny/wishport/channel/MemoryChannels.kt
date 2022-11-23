@@ -10,7 +10,6 @@ import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.collections.FastArrayList
 import tf.veriny.wishport.core.getCurrentTask
-import tf.veriny.wishport.core.waitUntilRescheduled
 import tf.veriny.wishport.helpers.TaskList
 import tf.veriny.wishport.internals.Task
 import tf.veriny.wishport.internals.checkIfCancelled
@@ -115,6 +114,7 @@ internal class MemoryChannelState<E : Any>(private val bufferSize: Int) {
         toRemove.forEach(waitingReceives::removeTask)
     }
 
+    @Suppress("UNCHECKED_CAST")
     internal suspend fun send(
         channel: MemorySendChannel<E>,
         item: E
@@ -194,7 +194,7 @@ internal class MemoryChannelState<E : Any>(private val bufferSize: Int) {
         task.customSuspendData = channel
 
         // sender task directly puts the value into our task
-        val result = waitUntilRescheduled()
+        val result = task.suspendTask()
 
         if (result.isCancelled) waitingReceives.removeTask(task)
         return result as CancellableResult<E, AlreadyClosedError>
