@@ -236,6 +236,7 @@ internal constructor(private val state: MemoryChannelState<E>) : ReceiveChannel<
 
     override fun close() {
         state.closeReceiveChannel(this)
+        closed = true
     }
 
     override fun clone(): Either<MemoryReceiveChannel<E>, AlreadyClosedError> {
@@ -277,8 +278,7 @@ internal constructor(private val state: MemoryChannelState<E>) : SendChannel<E> 
     }
 
     override fun clone(): Either<MemorySendChannel<E>, AlreadyClosedError> {
-        if (closed || state.closed) {
-            closed = true
+        if (closed) {
             return Either.err(AlreadyClosedError)
         }
 
