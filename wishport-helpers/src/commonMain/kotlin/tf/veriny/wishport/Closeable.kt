@@ -16,6 +16,9 @@ import kotlin.contracts.contract
  * of a function and will automatically close all [Closeable] objects opened.
  */
 public interface Closeable {
+    /** If this [Closeable] is closed. */
+    public val closed: Boolean
+
     /**
      * Closes this object. This must not fail.
      */

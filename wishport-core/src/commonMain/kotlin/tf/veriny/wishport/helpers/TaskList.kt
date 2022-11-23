@@ -37,6 +37,12 @@ internal class TaskList<T> : Iterable<T> {
         return backing.keys.iterator()
     }
 
+    fun clear() {
+        backing.clear()
+        head = null
+        tail = null
+    }
+
     /**
      * Appends a task to this list of tasks.
      */

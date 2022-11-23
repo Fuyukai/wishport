@@ -33,6 +33,12 @@ public class Lock<T>(private val data: T) : Closeable {
     private val lot = ParkingLot()
     private var owner: Task? = null
 
+    override val closed: Boolean
+        get() {
+            return if (data is Closeable) data.closed
+            else false
+        }
+
     /**
      * Acquires this lock.
      */

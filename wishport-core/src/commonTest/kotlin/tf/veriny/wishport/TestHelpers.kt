@@ -27,7 +27,7 @@ inline fun <S, F : Fail> assertSuccess(fn: () -> CancellableResult<S, F>): S {
     val result = fn()
     assertTrue(
         result.isSuccess,
-        "should have returned a success, instead got ${result.getFailure()}"
+        "should have returned a success, instead got $result"
     )
     return result.get()!!
 }
@@ -64,4 +64,9 @@ inline fun <F : Fail> assertFailureWith(f: F, fn: () -> CancellableResult<*, F>)
     assertTrue(result.isFailure, "should have returned failure $f, instead got $result")
     assertEquals(f, result.getFailure())
     return result.getFailure()!!
+}
+
+inline fun assertCancelled(fn: () -> CancellableResult<*, *>) {
+    val result = fn()
+    assertTrue(result.isCancelled, "result should have been cancelled, but got $result")
 }

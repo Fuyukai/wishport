@@ -48,6 +48,9 @@ public interface ClosingScope : Closeable {
  * Implementation of a closing scope that can be (unsafely) directly constructed.
  */
 public class ClosingScopeImpl @Unsafe constructor() : ClosingScope {
+    override var closed: Boolean = false
+        private set
+
     // Note: This is an identity set to ensure that two objects which may be equal are both added
     // to the set.
     // This ensures that they both get closed.
@@ -71,6 +74,7 @@ public class ClosingScopeImpl @Unsafe constructor() : ClosingScope {
             }
         }
 
+        closed = true
         if (lastException != null) throw lastException
     }
 }

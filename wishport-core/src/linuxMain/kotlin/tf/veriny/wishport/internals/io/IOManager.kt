@@ -78,7 +78,9 @@ public actual class IOManager(
         }
     }
 
-    private var closed = false
+    public override var closed: Boolean = false
+        private set
+
     private val alloca = Arena()
 
     // THE io_uring

@@ -42,13 +42,12 @@ public class Task(
 
     // marker variable used inside CancelScope to avoid extra reschedules
     internal var wasRescheduledForCancellation = false
+    // used to prevent adding a task to the list multiple times
     internal var wasRescheduledAtAll = false
-
+    // marks this task as the waitUntilAllTasksAreBlocked task. this means it cannot be manually
+    // rescheduled.
     internal var isWaitUntilAll = false
 
-    // guard
-    public var finished: Boolean = false
-        private set
     // epic kotlin result type that sucks
     private lateinit var result: CancellableResult<*, *>
     // generator coroutine
@@ -60,9 +59,19 @@ public class Task(
     internal lateinit var nursery: Nursery
 
     // public properties
+    /** If this task has completed or not. */
+    public var finished: Boolean = false
+        private set
+
     /** If this task is the currently running (i.e. primary) task. */
     public var running: Boolean = false
         private set
+
+    /**
+     * A custom tag that can be applied to a task before it suspends. This is reset before a task
+     * starts stepping again.
+     */
+    public var customSuspendData: Any? = null
 
     /** The cancellation scope currently associated with this task. */
     public var cancelScope: CancelScope? = null
@@ -91,6 +100,9 @@ public class Task(
         // disassociate to prevent being rescheduled by the cancel scope
         cancelScope = null
         nursery.taskCompleted(this)
+
+        passedInValue = Cancellable.empty()
+        customSuspendData = null
     }
 
     /**
@@ -104,7 +116,11 @@ public class Task(
         val lastContinuation = this.continuation
         running = true
         wasRescheduledAtAll = false
+        customSuspendData = null
+
         lastContinuation.resume(Unit)
+        // GC helper
+
         wasRescheduledForCancellation = false
         running = false
 

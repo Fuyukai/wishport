@@ -30,6 +30,12 @@ public class CapacityLimiter<T>(
     tokens: Int,
     private val data: T,
 ) : Closeable {
+    override val closed: Boolean
+        get() {
+            return if (data is Closeable) data.closed
+            else false
+        }
+
     /** The number of tokens available in this capacity limiter. */
     public var totalTokens: Int = tokens
         private set

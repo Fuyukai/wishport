@@ -110,7 +110,6 @@ class `Test Basic Cancellation` {
                     checkIfCancelled().isCancelled,
                     "task is not cancelled, but it should be"
                 )
-
             }
         }
     }

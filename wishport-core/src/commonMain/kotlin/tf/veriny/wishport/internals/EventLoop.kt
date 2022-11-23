@@ -12,7 +12,6 @@ import tf.veriny.wishport.Closeable
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.StableApi
-import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.FastArrayList
 import tf.veriny.wishport.core.AutojumpClock
 import tf.veriny.wishport.core.CancelScope
@@ -32,7 +31,6 @@ import kotlin.coroutines.coroutineContext
  * which will retrieve the event loop variable that is stored implicitly in every asynchronous
  * function's hidden context variable.
  */
-@OptIn(Unsafe::class)
 @LowLevelApi
 @StableApi
 public class EventLoop private constructor(
@@ -75,6 +73,9 @@ public class EventLoop private constructor(
             }
         }
     }
+
+    override var closed: Boolean = false
+        private set
 
     // set of tasks that are immediately going to run
     private var scheduledTasks = FastArrayList<Task>()
@@ -278,6 +279,8 @@ public class EventLoop private constructor(
     }
 
     override fun close() {
+        if (closed) return
         ioManager.close()
+        closed = true
     }
 }

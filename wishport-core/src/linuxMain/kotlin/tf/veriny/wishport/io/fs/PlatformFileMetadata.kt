@@ -50,5 +50,4 @@ public actual class PlatformFileMetadata(
 
         items
     }
-
 }
