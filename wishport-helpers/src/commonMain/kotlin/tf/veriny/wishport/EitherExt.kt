@@ -2,19 +2,6 @@ package tf.veriny.wishport
 
 import kotlin.experimental.ExperimentalTypeInference
 
-// helper extensions
-public inline val Either<*, *>.isSuccess: Boolean get() = this is Ok<*>
-public inline val Either<*, *>.isFailure: Boolean get() = this is Err<*>
-
-/**
- * Converts this [Either] into a nullable [Success].
- */
-public inline fun <Success, Failure : Fail> Either<Success, Failure>.get(): Success? =
-    when (this) {
-        is Ok<Success> -> value
-        is Err<Failure> -> null
-    }
-
 /**
  * Converts this [Either] into a nullable [Failure].
  */
@@ -76,7 +63,7 @@ public inline fun <Success, Failure : Fail> Either<Success, Failure>.andAlso(
             val res = block(value)
             // safe cast, <Success> isn't part of us.
             @Suppress("UNCHECKED_CAST")
-            if (res.isSuccess) this.notCancelled()
+            if (res.isSuccess) NotCancelled(this)
             else res as CancellableResult<Success, Failure>
         }
         is Err<Failure> -> this.notCancelled()

@@ -7,6 +7,7 @@
 package tf.veriny.wishport
 
 import tf.veriny.wishport.collections.NonEmptyList
+import tf.veriny.wishport.collections.nonEmptyListOf
 
 /**
  * Marker interface for all failure types. Named Fail to avoid conflicting with kotlin.Error.
@@ -14,10 +15,15 @@ import tf.veriny.wishport.collections.NonEmptyList
 public interface Fail
 
 /**
+ * The base interface for both [Either] and [Validated].
+ */
+public sealed interface ResultLike<out Success, out Failure : Fail>
+
+/**
  * Simple error returning type. Used for all Wishport functionality, as exceptions don't work
  * that well in the asynchronous world.
  */
-public sealed interface Either<out Success, out Failure : Fail> {
+public sealed interface Either<out Success, out Failure : Fail> : ResultLike<Success, Failure> {
     public companion object {
         public inline fun <Success> ok(v: Success): Either<Success, Nothing> =
             Ok(v)
@@ -30,7 +36,25 @@ public sealed interface Either<out Success, out Failure : Fail> {
 /**
  * Like an [Either], but can be used to gather up errors rather than short circuiting.
  */
-public sealed interface Validated<out Success, out Failure : Fail>
+public sealed interface Validated<out Success, out Failure : Fail> : ResultLike<Success, Failure> {
+    public companion object {
+        public inline fun <Success> ok(v: Success): Validated<Success, Nothing> =
+            Ok(v)
+
+        public inline fun <Failure : Fail> err(v: Failure): Validated<Nothing, Failure> =
+            MultiErr(nonEmptyListOf(v))
+
+        public inline fun <Failure : Fail> err(
+            v: Failure, vararg vs: Failure
+        ): Validated<Nothing, Failure> =
+            MultiErr(nonEmptyListOf(v, *vs))
+
+        public inline fun <Failure : Fail> err(
+            vs: NonEmptyList<Failure>
+        ): Validated<Nothing, Failure> =
+            MultiErr(vs)
+    }
+}
 
 /**
  * A successful result.
@@ -51,6 +75,21 @@ internal data class Err<out Failure : Fail>(val value: Failure) : Either<Nothing
 internal data class MultiErr<Failure : Fail>(
     val failures: NonEmptyList<Failure>,
 ) : Validated<Nothing, Failure>
+
+// == common extensions == //
+// helper extensions
+public inline val ResultLike<*, *>.isSuccess: Boolean get() = this is Ok<*>
+public inline val ResultLike<*, *>.isFailure: Boolean get() = this !is Ok<*>
+
+/**
+ * Converts this [ResultLike] into a nullable [Success].
+ */
+public inline fun <Success, Failure : Fail> ResultLike<Success, Failure>.get(): Success? =
+    when (this) {
+        is Ok<Success> -> value
+        else -> null
+    }
+
 
 /**
  * Runs the specified block safely, converting potential thrown errors and turning them into

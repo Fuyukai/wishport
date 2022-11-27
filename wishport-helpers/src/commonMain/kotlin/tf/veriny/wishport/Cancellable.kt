@@ -6,12 +6,14 @@
 
 package tf.veriny.wishport
 
+import tf.veriny.wishport.collections.nonEmptyListOf
+
 /**
  * A monad for representing cancellable results.
  *
  * Any asynchronous Wishport function can be cancelled (with a few very special exceptions).
  */
-public sealed interface Cancellable<out S, out F : Fail, out T : Either<S, F>> {
+public sealed interface Cancellable<out S, out F : Fail, out T : ResultLike<S, F>> {
     public companion object {
         private val EMPTY = ok(Unit)
 
@@ -45,8 +47,14 @@ public sealed interface Cancellable<out S, out F : Fail, out T : Either<S, F>> {
     }
 }
 
+/**
+ * A [Cancellable] that uses [Either].
+ */
 public typealias CancellableResult<Success, Failure> =
     Cancellable<Success, Failure, Either<Success, Failure>>
+
+public typealias CancellableValidated<Success, Failure> =
+    Cancellable<Success, Failure, Validated<Success, Failure>>
 
 public typealias CancellableSuccess<Success> = CancellableResult<Success, Nothing>
 
@@ -56,7 +64,7 @@ public typealias CancellableEmpty = CancellableSuccess<Unit>
  * Wrapper for when a function is *not* cancelled.
  */
 @PublishedApi
-internal data class NotCancelled<out S, out F : Fail, out T : Either<S, F>>(
+internal data class NotCancelled<out S, out F : Fail, out T : ResultLike<S, F>>(
     val wrapped: T,
 ) : Cancellable<S, F, T>
 
@@ -70,14 +78,17 @@ internal object Cancelled : Cancellable<Nothing, Nothing, Nothing> {
     }
 }
 
-public inline val CancellableResult<*, *>.isSuccess: Boolean get() =
+public inline val Cancellable<*, *, *>.isSuccess: Boolean get() =
     this is NotCancelled && wrapped is Ok
+
+public inline val Cancellable<*, *, *>.isCancelled: Boolean get() =
+    this is Cancelled
 
 public inline val CancellableResult<*, *>.isFailure: Boolean get() =
     this is NotCancelled && wrapped is Err
 
-public inline val CancellableResult<*, *>.isCancelled: Boolean get() =
-    this is Cancelled
+public inline val CancellableValidated<*, *>.isFailure: Boolean get() =
+    this is NotCancelled && wrapped is MultiErr
 
 /**
  * Unwraps the [Either] contained within this [CancellableResult]
@@ -89,18 +100,18 @@ public inline fun <S, F : Fail> CancellableResult<S, F>.getEither(): Either<S, F
     }
 
 /**
- * Converts this [CancellableResult] into a nullable [S].
+ * Converts this [Cancellable] into a nullable [S].
  */
-public inline fun <S, F : Fail> CancellableResult<S, F>.get(): S? {
+public inline fun <S, F : Fail> Cancellable<S, F, *>.get(): S? {
     return if (this is Cancelled) null
     else {
-        val value = (this as NotCancelled<S, F, Either<S, F>>).wrapped
+        val value = (this as NotCancelled<S, F, ResultLike<S, F>>).wrapped
         value.get()
     }
 }
 
 /**
- * Converts this [Either] into a nullable [Failure].
+ * Converts this [CancellableResult] into a nullable [F].
  */
 public inline fun <S, F : Fail> CancellableResult<S, F>.getFailure(): F? {
     return if (this is Cancelled) null
@@ -111,9 +122,48 @@ public inline fun <S, F : Fail> CancellableResult<S, F>.getFailure(): F? {
 }
 
 /**
+ * Gets the errors that this [CancellableValidated] wraps. If this is [Cancelled] or successful,
+ * this list will be empty.
+ */
+public inline fun <S, F : Fail> CancellableValidated<S, F>.getFailures(): List<F> =
+    when (this) {
+        is Cancelled -> emptyList()
+        is NotCancelled<S, F, Validated<S, F>> -> {
+            when (wrapped) {
+                is Ok<S> -> emptyList()
+                is MultiErr<F> -> wrapped.failures
+            }
+        }
+    }
+
+/**
+ * Converts this [CancellableResult] into a [CancellableValidated].
+ */
+public inline fun <S, F : Fail> CancellableResult<S, F>.validated(): CancellableValidated<S, F> {
+    return when (val outer = this) {
+        is Cancelled -> Cancelled
+        is NotCancelled<S, F, Either<S, F>> -> {
+            @Suppress("UNCHECKED_CAST")
+            when (outer.wrapped) {
+                // safe cast, as Ok<S> is *also* a Validated<S, F>.
+                is Ok<S> -> outer as CancellableValidated<S, F>
+                is Err<F> -> NotCancelled(MultiErr(nonEmptyListOf(outer.wrapped.value)))
+            }
+        }
+    }
+}
+
+/**
  * Converts a plain [Either] into a non-cancelled result.
  */
 public inline fun <S, F : Fail> Either<S, F>.notCancelled(): CancellableResult<S, F> {
+    return NotCancelled(this)
+}
+
+/**
+ * Converts a plain [Validated] into a non-cancelled result.
+ */
+public inline fun <S, F : Fail> Validated<S, F>.notCancelled(): CancellableValidated<S, F> {
     return NotCancelled(this)
 }
 

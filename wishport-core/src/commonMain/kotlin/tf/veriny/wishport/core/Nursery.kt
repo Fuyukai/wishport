@@ -8,8 +8,10 @@ package tf.veriny.wishport.core
 
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
+import tf.veriny.wishport.annotations.Unsafe
+import tf.veriny.wishport.collections.FastArrayList
+import tf.veriny.wishport.collections.NonEmptyList
 import tf.veriny.wishport.internals.Task
-import tf.veriny.wishport.internals.checkIfCancelled
 import tf.veriny.wishport.sync.Promise
 
 public sealed interface NurseryError : Fail
@@ -26,27 +28,35 @@ public object NurseryClosed : NurseryError
  * of a Nursery, however, is that the function that opened the nursery will not return until
  * all nursery tasks have completed. This is known as *structured concurrency*.
  */
-@LowLevelApi
-public class Nursery @PublishedApi internal constructor(private val invokerTask: Task) {
+@OptIn(LowLevelApi::class)
+public class Nursery private constructor(private val invokerTask: Task) {
     public companion object {
+        @Unsafe
+        internal fun unsafeCreate(task: Task) = Nursery(task)
+
         /**
          * Opens a new Nursery, and calls the specified block with it as the receiver.
          */
         @OptIn(LowLevelApi::class)
-        public suspend inline operator fun <S, F : Fail> invoke(
-            block: (Nursery) -> CancellableResult<S, F>
-        ): CancellableResult<S, F> {
+        public suspend operator fun <S, F : Fail> invoke(
+            block: suspend (Nursery) -> CancellableResult<S, F>
+        ): CancellableValidated<S, Fail> {
             val invoker = getCurrentTask()
             val n = Nursery(invoker)
+
             val result = block(n)
+
             n.waitForCompletion()
 
-            // chain this so that if we get cancelled whilst waiting for the nursery to exit then the
-            // result is cancelled.
-            // TODO: decide if this is the result we actually want
-            return invoker.checkIfCancelled().andThen { result }
+            return if (n.errors.isNotEmpty()) {
+                Validated.err(NonEmptyList(n.errors)).notCancelled()
+            } else {
+                result.validated()
+            }
         }
     }
+
+    private val errors = FastArrayList<Fail>()
 
     /**
      * The cancellation scope associated with this nursery. Cancelling this scope will cancel all
@@ -76,13 +86,26 @@ public class Nursery @PublishedApi internal constructor(private val invokerTask:
         private set
 
     internal fun taskCompleted(task: Task) {
-        // TODO: check result and cancel all tasks on an error
-
         openTasks--
 
-        // wake up
+        val result = task.result<Any?, Fail>()
+        if (result.isCancelled) {
+            if (!cancelScope.isEffectivelyCancelled()) {
+                // what?
+                // TODO: proper logging infra
+                println("[WARN] Task $task returned Cancelled from a different cancel scope to ours")
+            }
+        }
+
+        if (result.isFailure) {
+            // uh oh! cancel all other tasks.
+            errors.add(result.getFailure()!!)
+            cancelScope.cancel()
+        }
+
+        // wake up the waiting task if it's waiting for the children
         if (suspendedWaitingForChildren) {
-            invokerTask.context.eventLoop.directlyReschedule(invokerTask)
+            invokerTask.reschedule(Cancellable.empty())
         }
     }
 
@@ -90,6 +113,7 @@ public class Nursery @PublishedApi internal constructor(private val invokerTask:
     internal suspend fun waitForCompletion() {
         suspendedWaitingForChildren = true
 
+        // eat cancellation
         while (openTasks > 0) {
             val result = invokerTask.suspendTask()
             if (result.isCancelled) {
@@ -179,7 +203,7 @@ public class TaskStatus<T> internal constructor() {
 @LowLevelApi
 public suspend inline fun Nursery.Companion.open(
     crossinline fn: suspend (Nursery) -> Unit
-): CancellableEmpty {
+): CancellableValidated<Unit, Fail> {
     return Nursery { fn(it); checkIfCancelled() }
 }
 

@@ -12,6 +12,7 @@ import tf.veriny.wishport.Closeable
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.StableApi
+import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.FastArrayList
 import tf.veriny.wishport.core.AutojumpClock
 import tf.veriny.wishport.core.CancelScope
@@ -83,6 +84,7 @@ public class EventLoop private constructor(
     internal val deadlines = Deadlines()
 
     // internal consistency, the root task needs a scope and a nursery
+    // the nursery isn't used for anything, though.
     private val rootScope = CancelScope.create(this, shield = true)
     private lateinit var rootNursery: Nursery
 
@@ -120,9 +122,10 @@ public class EventLoop private constructor(
      * Creates the root task that all tasks inherit from. This will use the root cancellation scope
      * and the root nursery.
      */
+    @OptIn(Unsafe::class)
     internal fun <S, F : Fail> makeRootTask(coro: suspend () -> CancellableResult<S, F>): Task {
         val task = Task(coro, this, rootScope)
-        rootNursery = Nursery(task)
+        rootNursery = Nursery.unsafeCreate(task)
         // make sure everything works out fine
         rootNursery.cancelScope.parent = rootScope
         task.nursery = rootNursery

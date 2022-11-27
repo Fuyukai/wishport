@@ -17,23 +17,11 @@ public inline fun <S, F : Fail> Either<S, F>.validated(): Validated<S, F> =
         is Err<F> -> MultiErr<F>(nonEmptyListOf(value))
     }
 
-public inline val Validated<*, *>.isSuccess: Boolean get() = this is Ok<*>
-public inline val Validated<*, *>.isFailure: Boolean get() = this is Err<*>
-
-/**
- * Gets the actual value of this [Validated].
- */
-public inline fun <S> Validated<S, *>.get(): S? =
-    when (this) {
-        is Ok<S> -> value
-        else -> null
-    }
-
 /**
  * Gets the [List] of errors that this [Validated] wraps. If this is a success, then the list will
  * be empty. Otherwise, the list is guaranteed to be non-empty.
  */
-public inline fun <F : Fail> Validated<*, F>.getErrors(): List<F> =
+public inline fun <F : Fail> Validated<*, F>.getFailures(): List<F> =
     when (this) {
         is Ok<*> -> emptyList()
         is MultiErr<F> -> failures

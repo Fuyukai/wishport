@@ -13,6 +13,7 @@ import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @OptIn(LowLevelApi::class)
 class `Test Nurseries` {
@@ -36,6 +37,20 @@ class `Test Nurseries` {
         }
 
         assertEquals(3, result)
+    }
+
+    @Test
+    fun `Test nursery returns errors`() = runUntilCompleteNoResult {
+        val result = Nursery.open {
+            it.startSoon { sleepForever() }
+            waitUntilAllTasksAreBlocked()
+            it.startSoon { Cancellable.failed(ConnectionRefused) }
+        }
+
+        assertTrue(result.isFailure)
+        val errors = result.getFailures()
+        assertEquals(1, errors.size)
+        assertEquals(ConnectionRefused, errors.first())
     }
 
     @Test

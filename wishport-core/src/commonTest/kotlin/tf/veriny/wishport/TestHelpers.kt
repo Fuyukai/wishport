@@ -4,13 +4,13 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+@file:OptIn(ExperimentalTypeInference::class)
 package tf.veriny.wishport
 
 import kotlin.experimental.ExperimentalTypeInference
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-@OptIn(ExperimentalTypeInference::class)
 @OverloadResolutionByLambdaReturnType
 inline fun <S, F : Fail> assertSuccess(fn: () -> Either<S, F>): S {
     val result = fn()
@@ -21,7 +21,17 @@ inline fun <S, F : Fail> assertSuccess(fn: () -> Either<S, F>): S {
     return result.get()!!
 }
 
-@OptIn(ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+inline fun <S, F : Fail> assertSuccess(fn: () -> Validated<S, F>): S {
+    val result = fn()
+    assertTrue(
+        result.isSuccess,
+        "should have returned a success, instead got ${result.getFailures()}"
+    )
+    return result.get()!!
+}
+
+
 @OverloadResolutionByLambdaReturnType
 inline fun <S, F : Fail> assertSuccess(fn: () -> CancellableResult<S, F>): S {
     val result = fn()
@@ -32,7 +42,16 @@ inline fun <S, F : Fail> assertSuccess(fn: () -> CancellableResult<S, F>): S {
     return result.get()!!
 }
 
-@OptIn(ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+inline fun <S, F : Fail> assertSuccess(fn: () -> CancellableValidated<S, F>): S {
+    val result = fn()
+    assertTrue(
+        result.isSuccess,
+        "should have returned a success, instead got $result"
+    )
+    return result.get()!!
+}
+
 @OverloadResolutionByLambdaReturnType
 inline fun <F : Fail> assertFailure(fn: () -> Either<*, F>): F {
     val result = fn()
@@ -40,7 +59,6 @@ inline fun <F : Fail> assertFailure(fn: () -> Either<*, F>): F {
     return result.getFailure()!!
 }
 
-@OptIn(ExperimentalTypeInference::class)
 @OverloadResolutionByLambdaReturnType
 inline fun <F : Fail> assertFailure(fn: () -> CancellableResult<*, F>): F {
     val result = fn()
@@ -48,7 +66,6 @@ inline fun <F : Fail> assertFailure(fn: () -> CancellableResult<*, F>): F {
     return result.getFailure()!!
 }
 
-@OptIn(ExperimentalTypeInference::class)
 @OverloadResolutionByLambdaReturnType
 inline fun <F : Fail> assertFailureWith(f: F, fn: () -> Either<*, F>): F {
     val result = fn()
@@ -57,7 +74,6 @@ inline fun <F : Fail> assertFailureWith(f: F, fn: () -> Either<*, F>): F {
     return result.getFailure()!!
 }
 
-@OptIn(ExperimentalTypeInference::class)
 @OverloadResolutionByLambdaReturnType
 inline fun <F : Fail> assertFailureWith(f: F, fn: () -> CancellableResult<*, F>): F {
     val result = fn()
