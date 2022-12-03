@@ -65,6 +65,8 @@ public object SystemFilesystem : Filesystem<SystemPurePath, PlatformFileMetadata
     override suspend fun getFileMetadata(
         handle: SysFsHandle
     ): CancellableResult<PlatformFileMetadata, Fail> {
+        if (handle.filesystem != this) return Cancellable.failed(WrongFilesystemError)
+
         val io = getIOManager()
         return io.fileMetadataAt(handle.raw, null)
     }
@@ -73,8 +75,22 @@ public object SystemFilesystem : Filesystem<SystemPurePath, PlatformFileMetadata
         handle: SysFsHandle?,
         path: SystemPurePath
     ): CancellableResult<PlatformFileMetadata, Fail> {
+        if (handle != null && handle.filesystem != this) {
+            return Cancellable.failed(WrongFilesystemError)
+        }
+
         val io = getIOManager()
         return io.fileMetadataAt(handle?.raw, path.toByteString(withNullSep = true))
+    }
+
+    override suspend fun getDirectoryEntries(
+        handle: SysFsHandle
+    ): CancellableResult<List<DirectoryEntry>, Fail> {
+        if (handle.raw !is DirectoryHandle) return Cancellable.failed(NotADirectory)
+        if (handle.filesystem != this) return Cancellable.failed(WrongFilesystemError)
+
+        val io = getIOManager()
+        return io.getDirectoryEntries(handle.raw)
     }
 
     override suspend fun flushFile(

@@ -6,11 +6,18 @@
 
 package tf.veriny.wishport.util
 
-import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.toKString
-import kotlinx.cinterop.usePinned
+import kotlinx.cinterop.*
+import platform.extra.wp_openat
 import platform.posix.*
+import tf.veriny.wishport.flags
+import tf.veriny.wishport.getEnvironmentVariable
+
+// exception classes
+public class OSError(
+    public val errno: Int, message: String = "Error:",
+) : Exception("$message: ${kstrerror(errno)}")
+
+public class ProcNotFoundError : Exception("Could not find a valid /proc filesystem")
 
 /**
  * Converts an integer [errno] into a human-readable string.
@@ -47,14 +54,41 @@ public data class KernelVersion(
 )
 
 private inline fun perror(message: String): Nothing {
-    val error = kstrerror(posix_errno())
-    throw UnsupportedOperationException("$message: $error")
+    throw OSError(posix_errno(), message)
+}
+
+// this stays open
+private var procFd = -1
+
+/**
+ * Gets the file descriptor referring to the /proc filesystem. This can be used for subsequent
+ * calls to openat() to get information relating to the currently running system.
+ */
+public fun getProcFileDescriptor(): Int {
+    if (procFd > 0) return procFd
+
+    // 1) try opening /proc directly
+    val procLocation = getEnvironmentVariable("WISHPORT_PROC_LOCATION") ?: "/proc"
+    val fd = open(procLocation, flags(O_RDONLY, O_DIRECTORY, O_CLOEXEC))
+    if (fd < 0) {
+        val errno = posix_errno()
+        when (errno) {
+            ENOENT, ENOTDIR, EPERM -> throw ProcNotFoundError()
+            else -> perror("failed to open /proc")
+        }
+    }
+
+    procFd = fd
+    return procFd
 }
 
 public val kernelVersion: KernelVersion by lazy {
-    val fd = open("/proc/sys/kernel/osrelease", O_RDONLY)
+    val dirfd = getProcFileDescriptor()
+    val fd = wp_openat(dirfd, "sys/kernel/osrelease".cstr, O_RDONLY, 0)
     if (fd < 0) {
-        perror("failed to open /proc/sys/kernel/osrelease")
+        val errno = posix_errno()
+        if (errno == ENOENT) throw ProcNotFoundError()
+        else perror("failed to open /proc/sys/kernel/osrelease")
     }
 
     try {

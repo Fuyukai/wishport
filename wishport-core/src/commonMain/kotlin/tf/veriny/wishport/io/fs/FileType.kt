@@ -35,6 +35,17 @@ public enum class FileType(internal val number: UShort) {
         // .entries keep was merged, but apparently this doesn't exist?
         @ProvisionalApi
         public val _entries: Array<FileType> = FileType.values()
+
+        public fun toSet(value: UShort): Set<FileType> {
+            val items = mutableSetOf<FileType>()
+            for (type in FileType._entries) {
+                if (value.and(type.number) != (0U).toUShort()) {
+                    items.add(type)
+                }
+            }
+
+            return items
+        }
     }
 }
 

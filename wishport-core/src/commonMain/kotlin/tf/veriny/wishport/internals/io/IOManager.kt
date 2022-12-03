@@ -11,6 +11,7 @@ import tf.veriny.wishport.CancellableResult
 import tf.veriny.wishport.Closeable
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.LowLevelApi
+import tf.veriny.wishport.annotations.StableApi
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.ByteString
 import tf.veriny.wishport.io.*
@@ -25,6 +26,7 @@ import tf.veriny.wishport.io.net.SocketAddress
  * per-platform, and is responsible internally for its own set of suspended tasks.
  */
 @LowLevelApi
+@StableApi
 public expect class IOManager : Closeable {
     public companion object {
         public fun default(): IOManager
@@ -223,6 +225,18 @@ public expect class IOManager : Closeable {
         handle: IOHandle?,
         path: ByteString?,
     ): CancellableResourceResult<PlatformFileMetadata>
+
+    /**
+     * Gets the full real path for the specified open file.
+     */
+    public suspend fun realPathOf(handle: IOHandle): CancellableResourceResult<ByteString>
+
+    /**
+     * Gets a list of [DirectoryEntry] instances for the specified open directory.
+     */
+    public suspend fun getDirectoryEntries(
+        handle: IOHandle
+    ): CancellableResourceResult<List<DirectoryEntry>>
 
     // io_uring has io_uring_prep_poll_add/poll_remove
     // but windows has these absolute bastard methods in winsock that suck fuck to use

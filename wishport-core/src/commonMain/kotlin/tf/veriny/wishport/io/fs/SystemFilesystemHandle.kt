@@ -40,6 +40,17 @@ internal constructor(
         closed = true
     }
 
+    /**
+     * Gets the absolute real path for this file descriptor.
+     */
+    @OptIn(LowLevelApi::class)
+    public suspend fun getRealPath(): CancellableResourceResult<SystemPurePath> {
+        val io = getIOManager()
+        return io.realPathOf(raw)
+            .andThen { systemPathFor(it).notCancelled() }
+            as CancellableResourceResult<SystemPurePath>
+    }
+
     @OptIn(LowLevelApi::class)
     override suspend fun readInto(
         buf: ByteArray,

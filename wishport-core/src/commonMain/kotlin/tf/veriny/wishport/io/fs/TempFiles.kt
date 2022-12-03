@@ -27,5 +27,5 @@ public expect suspend fun openTemporaryFile(
  */
 @ProvisionalApi
 public expect suspend fun <S, F : Fail> createTemporaryDirectory(
-    block: suspend (FilesystemHandle<SystemPurePath, PlatformFileMetadata>) -> CancellableResult<S, F>
+    block: suspend (SystemFilesystemHandle) -> CancellableResult<S, F>
 ): CancellableResult<S, Fail>

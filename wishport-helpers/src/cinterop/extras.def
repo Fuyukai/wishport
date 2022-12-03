@@ -1,9 +1,11 @@
 package = platform.extra
-noStringConversion = strlen strnlen
+noStringConversion = strlen strnlen wp_openat
 ---
 #define _GNU_SOURCE
 #include <stddef.h>
 #include <stdlib.h>
+
+#include <fcntl.h>
 
 // Avoids the fucking auto-string conversion!
 extern size_t strlen(const char *s);
@@ -12,3 +14,9 @@ extern size_t strnlen(const char *s, size_t maxlen);
 // not exported by default platform libs
 // we link against glibc 2.19 but this was in 2.17 so its all good
 extern char* secure_getenv(const char* name);
+
+// wtf why doesn't this exist?
+// define our own as therres conflicting definitions
+static inline int wp_openat(int dirfd, const char *pathname, int flags, mode_t mode) {
+    return openat(dirfd, pathname, flags, mode);
+}

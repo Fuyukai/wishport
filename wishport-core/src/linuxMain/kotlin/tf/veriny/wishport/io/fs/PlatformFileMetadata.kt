@@ -28,14 +28,7 @@ public actual class PlatformFileMetadata(
     /** The type of this file. */
     public override val type: Set<FileType> by lazy {
         val mode = fileMode.and(0xF000U)
-        val items = mutableSetOf<FileType>()
-        for (type in FileType._entries) {
-            if (mode.and(type.number) != (0U).toUShort()) {
-                items.add(type)
-            }
-        }
-
-        items
+        FileType.toSet(mode)
     }
 
     /** The set of permissions for this file. */

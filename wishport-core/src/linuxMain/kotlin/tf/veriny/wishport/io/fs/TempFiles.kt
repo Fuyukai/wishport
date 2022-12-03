@@ -70,7 +70,7 @@ private suspend fun getTempDir(): CancellableSuccess<SystemFilesystemHandle> {
         val path = if (result.isSuccess) result.get()!! else continue
 
         // hack: openat with CURRENT_DIR
-        val opened = path.openRelative(
+        val opened = path.openRawRelative(
             PosixPurePath.CURRENT_DIR, FileOpenType.READ_WRITE,
             setOf(
                 FileOpenFlags.TEMPORARY_FILE, FileOpenFlags.MUST_CREATE
@@ -117,7 +117,7 @@ public actual suspend fun openTemporaryFile(
 @OptIn(Unsafe::class)
 @ProvisionalApi
 public actual suspend fun <S, F : Fail> createTemporaryDirectory(
-    block: suspend (FilesystemHandle<SystemPurePath, PlatformFileMetadata>) -> CancellableResult<S, F>
+    block: suspend (SystemFilesystemHandle) -> CancellableResult<S, F>
 ): CancellableResult<S, Fail> {
     val fileName = TempFileNamer.next()
     return getTempDir().andThen { tmp ->

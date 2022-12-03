@@ -420,17 +420,6 @@ public actual class IOManager(
         // the ref is disposed by submitAndWait (real)
         return submitAndWait(task, sleepy, ref)
     }
-
-    // some notes on stability
-    // until kernel 5.5, all submission queue entries had to have their data remain stable in memory
-    // whilst processing
-    // post-5.5, we only have to be stable until the enter() call. but because we suspend, the data
-    // stays within the memScope no matter what, so we'll work on both >=5.5 and <5.5.
-
-    // note: these still need the casts as the capacitylimiter converts the result to just Fail
-    //       as it could return AlreadyAcquired.
-    //       but we know that's not the case, so we just cast it and override it.
-
     private suspend fun close(fd: Int, task: Task): CancellableResourceResult<Empty> {
         val sqe = getsqe()
         io_uring_prep_close(sqe, fd)
@@ -939,6 +928,50 @@ public actual class IOManager(
                         fileMode = out.stx_mode,
                     )
                 )
+            }
+    }
+
+    /**
+     * Gets the raw real path for this open file. This may be nonsensical e.g. for temporary files.
+     */
+    @OptIn(Unsafe::class)
+    public actual suspend fun realPathOf(handle: IOHandle): CancellableResourceResult<ByteString> {
+        val task = getCurrentTask()
+        val loop = task.context.eventLoop
+
+        return task.checkIfCancelled()
+            .andThen {
+                val fd = dup(handle.actualFd)
+                if (fd < 0) {
+                    return posix_errno().toSysResult().notCancelled()
+                }
+                fcntl(fd, F_SETFD, FD_CLOEXEC)
+
+                loop.workerPool.runSyncInThread(cancellable = false, { fd }) {
+                    realPathOfFd(fd)
+                }.also { close(fd) }
+            }
+    }
+
+    public actual suspend fun getDirectoryEntries(
+        handle: IOHandle,
+    ): CancellableResourceResult<List<DirectoryEntry>> {
+        val task = getCurrentTask()
+
+        return task.checkIfCancelled()
+            .andThen {
+                val originalFd = handle.actualFd
+                val newFd = dup(originalFd)
+                if (newFd < 0) {
+                    return posix_errno().toSysResult().notCancelled()
+                }
+
+                fcntl(newFd, F_SETFD, FD_CLOEXEC)
+
+                val loop = task.context.eventLoop
+                loop.workerPool.runSyncInThread(cancellable = false, { newFd }) {
+                    doReadDir(it)
+                }.also { close(newFd) }
             }
     }
 

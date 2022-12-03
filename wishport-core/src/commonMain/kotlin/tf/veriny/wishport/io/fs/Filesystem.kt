@@ -26,7 +26,7 @@ public interface Filesystem<Flavour : PurePath<Flavour>, Metadata : FileMetadata
     public companion object;
 
     /**
-     * The [PurePath] that corresponds to the current directory of the running proceesses in the
+     * The [PurePath] that corresponds to the current directory of the running processes in the
      * flavour that this filesystem expects.
      */
     public val currentDirectoryPath: Flavour
@@ -77,6 +77,13 @@ public interface Filesystem<Flavour : PurePath<Flavour>, Metadata : FileMetadata
         handle: FilesystemHandle<Flavour, Metadata>?,
         path: Flavour
     ): CancellableResult<Metadata, Fail>
+
+    /**
+     * Gets a list of [DirectoryEntry] instances for the specified open directory.
+     */
+    public suspend fun getDirectoryEntries(
+        handle: FilesystemHandle<Flavour, Metadata>
+    ): CancellableResult<List<DirectoryEntry>, Fail>
 
     /**
      * Flushes the data written into the specified file to disk. If [withMetadata] is true, then all file

@@ -8,7 +8,10 @@ package tf.veriny.wishport.io.fs
 
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.ProvisionalApi
+import tf.veriny.wishport.collections.b
+import tf.veriny.wishport.io.writeAll
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @OptIn(ProvisionalApi::class)
@@ -21,7 +24,7 @@ class `Test Filesystem IO` {
             createTemporaryDirectory {
                 Imperatavize.cancellable {
                     it.createDirectoryRelative(path).q()
-                    val metadata = it.getMetadata(path).q()
+                    val metadata = it.metadataFor(path).q()
                     assertTrue(metadata.type.isDirectory())
                 }
             }
@@ -57,6 +60,28 @@ class `Test Filesystem IO` {
             createTemporaryDirectory {
                 it.removeRelative(notExisting, isDirectory = true)
             }
+        }
+    }
+
+    @Test
+    fun `Test listing directories`() = runUntilCompleteNoResult {
+        assertSuccess {
+            createTemporaryDirectory { AsyncClosingScope { scope ->
+                Imperatavize.cancellable {
+                    it.openBufferedRelative(
+                        scope,
+                        systemPathFor("test"), FileOpenType.WRITE_ONLY,
+                        setOf(FileOpenFlags.CREATE_IF_NOT_EXISTS)
+                    )
+                        .andAlso { it.writeAll(b("test")) }
+                        .andThen { it.close() }
+                        .q()
+
+                    val contents = it.listDirectory().q()
+                    assertEquals(1, contents.size)
+                    assertEquals(b("test"), contents.first().fileName)
+                }
+            } }
         }
     }
 }
