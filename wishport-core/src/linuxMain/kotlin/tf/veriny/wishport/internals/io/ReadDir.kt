@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.wishport.internals.io
 
 import kotlinx.cinterop.*
@@ -11,7 +17,7 @@ import tf.veriny.wishport.io.fs.*
 
 @OptIn(Unsafe::class)
 internal fun realPathOfFd(fd: Int): Either<ByteString, ResourceError> = memScoped {
-    val path = "/proc/self/fd/${fd}"
+    val path = "/proc/self/fd/$fd"
     val out = allocArray<ByteVar>(PATH_MAX)
 
     val res = readlink(path, out, PATH_MAX)

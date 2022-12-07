@@ -177,8 +177,6 @@ public suspend fun <F : PurePath<F>, M : FileMetadata> Filesystem<F, M>.listDire
 /**
  * Lists the directory contents for the specified open directory.
  */
-public suspend fun <F : PurePath<F>, M : FileMetadata> FilesystemHandle<F, M>.listDirectory(
-
-): CancellableResult<List<DirectoryEntry>, Fail> {
+public suspend fun <F : PurePath<F>, M : FileMetadata> FilesystemHandle<F, M>.listDirectory(): CancellableResult<List<DirectoryEntry>, Fail> {
     return filesystem.getDirectoryEntries(this)
 }

@@ -45,7 +45,8 @@ public sealed interface Validated<out Success, out Failure : Fail> : ResultLike<
             MultiErr(nonEmptyListOf(v))
 
         public inline fun <Failure : Fail> err(
-            v: Failure, vararg vs: Failure
+            v: Failure,
+            vararg vs: Failure
         ): Validated<Nothing, Failure> =
             MultiErr(nonEmptyListOf(v, *vs))
 
@@ -89,7 +90,6 @@ public inline fun <Success, Failure : Fail> ResultLike<Success, Failure>.get(): 
         is Ok<Success> -> value
         else -> null
     }
-
 
 /**
  * Runs the specified block safely, converting potential thrown errors and turning them into

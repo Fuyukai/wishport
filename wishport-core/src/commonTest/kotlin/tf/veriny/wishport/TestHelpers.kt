@@ -31,7 +31,6 @@ inline fun <S, F : Fail> assertSuccess(fn: () -> Validated<S, F>): S {
     return result.get()!!
 }
 
-
 @OverloadResolutionByLambdaReturnType
 inline fun <S, F : Fail> assertSuccess(fn: () -> CancellableResult<S, F>): S {
     val result = fn()

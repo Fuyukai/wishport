@@ -425,7 +425,7 @@ public actual class IOManager(
         val sqe = getsqe()
         io_uring_prep_close(sqe, fd)
 
-        return submitAndWait(task ?: getCurrentTask(), SleepingWhy.CLOSE) { sqe.setuserid(it) }
+        return submitAndWait(task, SleepingWhy.CLOSE) { sqe.setuserid(it) }
     }
 
     public actual suspend fun closeHandle(handle: IOHandle): CancellableResourceResult<Empty> {
@@ -811,7 +811,7 @@ public actual class IOManager(
     ): CancellableResult<ByteCountResult, Fail> = memScoped {
         val task = getCurrentTask()
 
-        val flags = flags.or(MSG_NOSIGNAL)
+        val recvFlags = flags.or(MSG_NOSIGNAL)
 
         return task.checkIfCancelled()
             .andThen { out.checkBuffers(size, bufferOffset).notCancelled() }
@@ -821,7 +821,7 @@ public actual class IOManager(
 
                 defer { pinned.unpin() }
 
-                io_uring_prep_recv(sqe, handle.actualFd, pinned.addressOf(bufferOffset), size.toULong(), flags)
+                io_uring_prep_recv(sqe, handle.actualFd, pinned.addressOf(bufferOffset), size.toULong(), recvFlags)
 
                 submitAndWait(task, SleepingWhy.READ_WRITE) { sqe.setuserid(it) }
             }
@@ -836,7 +836,7 @@ public actual class IOManager(
     ): CancellableResult<ByteCountResult, Fail> = memScoped {
         val task = getCurrentTask()
 
-        val flags = flags.or(MSG_NOSIGNAL)
+        val sendFlags = flags.or(MSG_NOSIGNAL)
 
         return task.checkIfCancelled()
             .andThen { input.checkBuffers(size, bufferOffset).notCancelled() }
@@ -846,7 +846,7 @@ public actual class IOManager(
 
                 defer { pinned.unpin() }
 
-                io_uring_prep_send(sqe, handle.actualFd, pinned.addressOf(bufferOffset), size.toULong(), flags)
+                io_uring_prep_send(sqe, handle.actualFd, pinned.addressOf(bufferOffset), size.toULong(), sendFlags)
 
                 submitAndWait(task, SleepingWhy.READ_WRITE) { sqe.setuserid(it) }
             }
@@ -935,10 +935,8 @@ public actual class IOManager(
     /**
      * Gets the raw real path for this open file. This may be nonsensical e.g. for temporary files.
      */
-    @OptIn(Unsafe::class)
     public actual suspend fun realPathOf(handle: IOHandle): CancellableResourceResult<ByteString> {
         val task = getCurrentTask()
-        val loop = task.context.eventLoop
 
         return task.checkIfCancelled()
             .andThen {

@@ -14,7 +14,8 @@ import tf.veriny.wishport.getEnvironmentVariable
 
 // exception classes
 public class OSError(
-    public val errno: Int, message: String = "Error:",
+    public val errno: Int,
+    message: String = "Error:",
 ) : Exception("$message: ${kstrerror(errno)}")
 
 public class ProcNotFoundError : Exception("Could not find a valid /proc filesystem")

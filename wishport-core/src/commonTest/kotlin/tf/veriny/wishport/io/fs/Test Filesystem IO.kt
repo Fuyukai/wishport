@@ -66,22 +66,24 @@ class `Test Filesystem IO` {
     @Test
     fun `Test listing directories`() = runUntilCompleteNoResult {
         assertSuccess {
-            createTemporaryDirectory { AsyncClosingScope { scope ->
-                Imperatavize.cancellable {
-                    it.openBufferedRelative(
-                        scope,
-                        systemPathFor("test"), FileOpenType.WRITE_ONLY,
-                        setOf(FileOpenFlags.CREATE_IF_NOT_EXISTS)
-                    )
-                        .andAlso { it.writeAll(b("test")) }
-                        .andThen { it.close() }
-                        .q()
+            createTemporaryDirectory {
+                AsyncClosingScope { scope ->
+                    Imperatavize.cancellable {
+                        it.openBufferedRelative(
+                            scope,
+                            systemPathFor("test"), FileOpenType.WRITE_ONLY,
+                            setOf(FileOpenFlags.CREATE_IF_NOT_EXISTS)
+                        )
+                            .andAlso { it.writeAll(b("test")) }
+                            .andThen { it.close() }
+                            .q()
 
-                    val contents = it.listDirectory().q()
-                    assertEquals(1, contents.size)
-                    assertEquals(b("test"), contents.first().fileName)
+                        val contents = it.listDirectory().q()
+                        assertEquals(1, contents.size)
+                        assertEquals(b("test"), contents.first().fileName)
+                    }
                 }
-            } }
+            }
         }
     }
 }
