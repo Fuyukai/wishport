@@ -13,7 +13,10 @@ import kotlin.experimental.ExperimentalTypeInference
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
-// == tf.veriny.wishport.validated helpers == //
+public inline operator fun <Success> Validated<Success, *>.component1(): Success? = get()
+public inline operator fun <Failure : Fail> Validated<*, Failure>.component2(): List<Failure> =
+    getFailures()
+
 /**
  * Converts this [Either] into a [Validated].
  */
@@ -105,6 +108,7 @@ public class ValidatedScope<S : Any, F : Fail>
         return prop
     }
 
+    @OverloadResolutionByLambdaReturnType
     public fun fullyValidate(block: () -> Either<S, F>): Validated<S, Fail> {
         val errors = FastArrayList<Fail>()
         for (i in properties) {
@@ -134,5 +138,10 @@ public class ValidatedScope<S : Any, F : Fail>
         } else {
             block().validated()
         }
+    }
+
+    @OverloadResolutionByLambdaReturnType
+    public fun fullyValidate(block: () -> S): Validated<S, Fail> {
+        return fullyValidate { Either.ok(block()) }
     }
 }

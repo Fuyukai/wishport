@@ -8,6 +8,9 @@ package tf.veriny.wishport
 
 import kotlin.experimental.ExperimentalTypeInference
 
+public inline operator fun <Success> Either<Success, *>.component1(): Success? = get()
+public inline operator fun <Failure : Fail> Either<*, Failure>.component2(): Failure? = getFailure()
+
 /**
  * Converts this [Either] into a nullable [Failure].
  */
