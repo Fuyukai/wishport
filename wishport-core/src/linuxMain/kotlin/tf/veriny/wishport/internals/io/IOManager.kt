@@ -20,6 +20,7 @@ import tf.veriny.wishport.collections.ByteString
 import tf.veriny.wishport.core.*
 import tf.veriny.wishport.internals.Task
 import tf.veriny.wishport.internals.checkIfCancelled
+import tf.veriny.wishport.internals.uncancellableCheckpoint
 import tf.veriny.wishport.io.*
 import tf.veriny.wishport.io.fs.*
 import tf.veriny.wishport.io.net.Inet4SocketAddress
@@ -941,16 +942,10 @@ public actual class IOManager(
 
         return task.checkIfCancelled()
             .andThen {
-                val fd = dup(handle.actualFd)
-                if (fd < 0) {
-                    return posix_errno().toSysResult().notCancelled()
-                }
-                fcntl(fd, F_SETFD, FD_CLOEXEC)
-
-                loop.workerPool.runSyncInThread(cancellable = false, { fd }) {
-                    realPathOfFd(fd)
-                }.also { close(fd) }
+                // this uses /proc/self/fd for reading the link which i believe should never block.
+                realPathOfFd(handle.actualFd).notCancelled()
             }
+            .andThen { task.uncancellableCheckpoint(it) }
     }
 
     public actual suspend fun getDirectoryEntries(
