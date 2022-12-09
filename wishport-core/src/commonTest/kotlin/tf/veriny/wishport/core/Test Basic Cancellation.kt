@@ -11,8 +11,6 @@ package tf.veriny.wishport.core
 import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -129,16 +127,4 @@ class `Test Basic Cancellation` {
         }
     }
 
-    @Test
-    fun `Test cancellation is suppressed during a reschedule`() = runUntilCompleteNoResult {
-        val task = getCurrentTask()
-        task.reschedule(Cancellable.ok(123))
-        CancelScope.open { scope ->
-            scope.cancel()
-
-            val result = waitUntilRescheduled()
-            assertFalse(result.isCancelled, "result was cancelled despite reschedule")
-            assertEquals(123, result.get()!!)
-        }
-    }
 }
