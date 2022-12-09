@@ -114,6 +114,23 @@ internal class MemoryChannelState<E : Any>(private val bufferSize: Int) {
         toRemove.forEach(waitingReceives::removeTask)
     }
 
+    internal fun sendWithoutWaiting(item: E): Boolean {
+        if (closed) return false
+
+        if (waitingReceives.size > 0) {
+            val next = waitingReceives.removeFirst()!!
+            next.reschedule(passedInValue = Cancellable.ok(item))
+            return true
+        }
+
+        if (bufferSize > 0 && buffer.size < bufferSize) {
+            buffer.addLast(item)
+            return true
+        }
+
+        return false
+    }
+
     @Suppress("UNCHECKED_CAST")
     internal suspend fun send(
         channel: MemorySendChannel<E>,
@@ -122,14 +139,7 @@ internal class MemoryChannelState<E : Any>(private val bufferSize: Int) {
         if (closed) return Cancellable.failed(AlreadyClosedError)
         val task = getCurrentTask()
 
-        if (waitingReceives.size > 0) {
-            val next = waitingReceives.removeFirst()!!
-            next.reschedule(passedInValue = Cancellable.ok(item))
-            return task.uncancellableCheckpoint(Unit)
-        }
-
-        if (bufferSize > 0 && buffer.size < bufferSize) {
-            buffer.addLast(item)
+        if (sendWithoutWaiting(item)) {
             return task.uncancellableCheckpoint(Unit)
         }
 
@@ -147,7 +157,7 @@ internal class MemoryChannelState<E : Any>(private val bufferSize: Int) {
         return res
     }
 
-    private fun receiveWithoutWaiting(): E? {
+    internal fun receiveWithoutWaiting(): E? {
         if (closed) return null
 
         if (buffer.size > 0) {
@@ -248,7 +258,19 @@ internal constructor(private val state: MemoryChannelState<E>) : ReceiveChannel<
         return Either.ok(MemoryReceiveChannel<E>(state))
     }
 
+    override fun receiveWithoutWaiting(): Either<E, Fail> {
+        if (closed) return Either.err(AlreadyClosedError)
+
+        val item = state.receiveWithoutWaiting()
+        return if (item == null) Either.err(ChannelWouldBlock)
+        else Either.ok(item)
+    }
+
     override suspend fun receive(): CancellableResult<E, AlreadyClosedError> {
+        if (closed) {
+            return Cancellable.failed(AlreadyClosedError)
+        }
+
         return state.receive(this)
     }
 }
@@ -286,7 +308,23 @@ internal constructor(private val state: MemoryChannelState<E>) : SendChannel<E> 
         return Either.ok(MemorySendChannel<E>(state))
     }
 
+    override fun sendWithoutWaiting(item: E): Either<Unit, Fail> {
+        if (closed) {
+            return Either.err(AlreadyClosedError)
+        }
+
+        return if (state.sendWithoutWaiting(item)) {
+            Either.ok(Unit)
+        } else {
+            Either.err(ChannelWouldBlock)
+        }
+    }
+
     override suspend fun send(item: E): CancellableResult<Unit, AlreadyClosedError> {
+        if (closed) {
+            return Cancellable.failed(AlreadyClosedError)
+        }
+
         return state.send(this, item)
     }
 }

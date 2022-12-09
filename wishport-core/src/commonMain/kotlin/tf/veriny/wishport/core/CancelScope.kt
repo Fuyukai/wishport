@@ -211,7 +211,7 @@ private constructor(
 
         for (task in tasks) {
             assert(!task.finished) { "task has finished, but it's still in our task list!" }
-            if (task.wasRescheduledForCancellation) continue
+            if (task.wasRescheduledForCancellation || task.wasRescheduledAtAll) continue
             task.wasRescheduledForCancellation = true
 
             // don't try and reschedule the running task, it'll go badly

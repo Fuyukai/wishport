@@ -91,7 +91,6 @@ public suspend fun <S> uncancellableCheckpoint(value: S): CancellableSuccess<S> 
 /**
  * Like [uncancellableCheckpoint], but this doesn't take a value.
  */
-@OptIn(LowLevelApi::class)
 public suspend fun uncancellableCheckpoint(): CancellableEmpty {
     return uncancellableCheckpoint(Unit)
 }
@@ -177,7 +176,6 @@ public suspend fun sleepUntil(time: Long): CancellableEmpty {
 /**
  * Sleeps for the specified amount of nanoseconds, returning an empty value.
  */
-@OptIn(LowLevelApi::class)
 public suspend fun sleep(nanos: Long): CancellableEmpty {
     return sleepUntil(getCurrentTime() + nanos)
 }

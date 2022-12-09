@@ -6,15 +6,20 @@
 
 package tf.veriny.wishport.channel
 
-import tf.veriny.wishport.AlreadyClosedError
-import tf.veriny.wishport.CancellableResult
-import tf.veriny.wishport.Closeable
-import tf.veriny.wishport.Either
+import tf.veriny.wishport.*
 
 /**
  * An object that allows receiving Kotlin objects from connected send channels.
  */
 public interface ReceiveChannel<E> : Closeable {
+    /**
+     * Receives a single object from this channel, without waiting. This will either return a
+     * success with the value received, or either a failure with [AlreadyClosedError] if this
+     * channel has been closed, or a failure with [ChannelWouldBlock] if there is no data
+     * within the channel to receive.
+     */
+    public fun receiveWithoutWaiting(): Either<E, Fail>
+
     /**
      * Receives a single object from this channel. This will return an [AlreadyClosedError] if this
      * channel has been closed, or if all of the receiving channels have been closed.

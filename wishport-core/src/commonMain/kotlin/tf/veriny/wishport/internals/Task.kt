@@ -138,6 +138,8 @@ public class Task(
             "you can't manually reschedule the waitUntilAllTasksAreBlocked task!"
         }
 
+        // TODO: this is a low level api but we should probably guard from swapping out
+        //       passedInValue from other places.
         this.passedInValue = passedInValue
         loop.directlyReschedule(this)
     }

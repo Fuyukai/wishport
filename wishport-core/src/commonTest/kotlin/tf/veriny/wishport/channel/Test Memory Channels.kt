@@ -136,4 +136,21 @@ class `Test Memory Channels` {
         // make sure all the cloned channels were closed
         assertFailureWith(AlreadyClosedError) { read.receive() }
     }
+
+    @Test
+    fun `Test sending data to a channel that is cancelled during receive`() = runUntilCompleteNoResult {
+        val (read, write) = openMemoryChannelPair<Int>()
+        Nursery.open {
+            it.startSoonNoResult {
+                val res = assertSuccess { read.receive() }
+                assertEquals(res, 1)
+            }
+
+            waitUntilAllTasksAreBlocked()
+
+            // force a reschedule of the waiter
+            assertSuccess { write.sendWithoutWaiting(1) }
+            it.cancelScope.cancel()
+        }
+    }
 }
