@@ -17,6 +17,7 @@ import tf.veriny.wishport.io.streams.PartialStream
 import tf.veriny.wishport.io.streams.StreamDamaged
 import tf.veriny.wishport.io.streams.writeAll
 import tf.veriny.wishport.io.streams.writeMost
+import tf.veriny.wishport.sync.ConflictDetector
 
 /**
  * A [PartialStream] that wraps a [Socket].
@@ -26,6 +27,8 @@ public class TcpSocketStream
 public constructor(public val sock: Socket) : PartialStream {
     override val closed: Boolean by sock::closed
     override val closing: Boolean by sock::closing
+
+    private val conflict = ConflictDetector(Unit)
 
     override var damaged: Boolean = false
         private set
@@ -43,7 +46,9 @@ public constructor(public val sock: Socket) : PartialStream {
         byteCount: UInt,
         bufferOffset: Int
     ): CancellableResult<ByteCountResult, Fail> {
-        return sock.writeMost(buffer, byteCount, bufferOffset)
+        return conflict.use {
+            sock.writeMost(buffer, byteCount, bufferOffset)
+        }
     }
 
     override suspend fun writeAll(
@@ -53,7 +58,9 @@ public constructor(public val sock: Socket) : PartialStream {
     ): CancellableResult<Unit, Fail> {
         if (damaged) return Cancellable.failed(StreamDamaged)
 
-        return sock.writeAll(buffer, byteCount, bufferOffset) { damaged = true }
+        return conflict.use {
+            sock.writeAll(buffer, byteCount, bufferOffset) { damaged = true }
+        }
     }
 
     override suspend fun sendEof(): CancellableResult<Unit, Fail> {

@@ -15,6 +15,7 @@ import tf.veriny.wishport.io.FasterCloseable
 import tf.veriny.wishport.io.IOHandle
 import tf.veriny.wishport.io.SeekPosition
 import tf.veriny.wishport.io.streams.*
+import tf.veriny.wishport.sync.ConflictDetector
 
 /**
  * A [PartialStream] that wraps a [FilesystemHandle].
@@ -27,6 +28,8 @@ public class UnbufferedFile(
     override val closing: Boolean by handle::closing
     override var damaged: Boolean = false
         private set
+
+    private val conflict = ConflictDetector(Unit)
 
     override fun provideHandleForClosing(): IOHandle? {
         return (handle as? FasterCloseable)?.provideHandleForClosing()
@@ -48,12 +51,17 @@ public class UnbufferedFile(
         byteCount: UInt,
         bufferOffset: Int
     ): CancellableResult<ByteCountResult, Fail> {
-        return handle.writeMost(buffer, byteCount, bufferOffset)
+        return conflict.use {
+            handle.writeMost(buffer, byteCount, bufferOffset)
+        }
     }
 
     override suspend fun writeAll(buffer: ByteArray, byteCount: UInt, bufferOffset: Int): CancellableResult<Unit, Fail> {
         if (damaged) return Cancellable.failed(StreamDamaged)
-        return handle.writeAll(buffer, byteCount, bufferOffset) { damaged = true }
+
+        return conflict.use {
+            handle.writeAll(buffer, byteCount, bufferOffset) { damaged = true }
+        }
     }
 
     override suspend fun close(): CancellableResult<Unit, Fail> {

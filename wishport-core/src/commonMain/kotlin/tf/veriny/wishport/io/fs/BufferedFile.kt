@@ -24,7 +24,6 @@ import tf.veriny.wishport.io.streams.EofNotSupported
 /**
  * A wrapper around a system file that automatically buffers reads.
  */
-@OptIn(LowLevelApi::class)
 @ProvisionalApi
 public class BufferedFile
 private constructor(
@@ -79,7 +78,6 @@ private constructor(
         }
     }
 
-    @OptIn(LowLevelApi::class)
     override fun readFromBuffer(into: ByteArray, byteCount: UInt, bufferOffset: Int): UInt {
         if (into.checkBuffers(byteCount, bufferOffset).isFailure) {
             return 0U
@@ -101,6 +99,7 @@ private constructor(
         byteCount: UInt,
         bufferOffset: Int
     ): CancellableResult<ByteCountResult, Fail> {
+        // no need for conflictdetector, unbufferedfile has one built-in
         return backing.writeMost(buffer, byteCount, bufferOffset)
     }
 
@@ -109,14 +108,18 @@ private constructor(
         byteCount: UInt,
         bufferOffset: Int
     ): CancellableResult<Unit, Fail> {
+        // no need for conflictdetector, unbufferedfile has one built-in
         return backing.writeAll(buffer, byteCount, bufferOffset)
     }
 
+    @OptIn(LowLevelApi::class)
     override suspend fun readIntoUpto(
         buf: ByteArray,
         byteCount: UInt,
         bufferOffset: Int
     ): CancellableResult<ByteCountResult, Fail> {
+        // TODO: consider if this needs conflict detector protection, or even a lock...
+
         val task = getCurrentTask()
 
         // this is absolutely fuck ugly
