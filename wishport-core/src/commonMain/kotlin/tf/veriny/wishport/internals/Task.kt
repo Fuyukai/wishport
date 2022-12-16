@@ -42,14 +42,17 @@ public class Task(
 
     // marker variable used inside CancelScope to avoid extra reschedules
     internal var wasRescheduledForCancellation = false
+
     // used to prevent adding a task to the list multiple times
     internal var wasRescheduledAtAll = false
+
     // marks this task as the waitUntilAllTasksAreBlocked task. this means it cannot be manually
     // rescheduled.
     internal var isWaitUntilAll = false
 
     // epic kotlin result type that sucks
     private lateinit var result: CancellableResult<*, *>
+
     // generator coroutine
     private var continuation = coro.createCoroutine(this)
 

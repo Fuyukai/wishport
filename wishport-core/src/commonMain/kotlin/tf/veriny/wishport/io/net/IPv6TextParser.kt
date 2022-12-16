@@ -179,6 +179,7 @@ public class IPv6TextParser(public val incoming: String) {
                     openBrackets = true
                     state = State.STATE_LBRACKET
                 }
+
                 ']' -> {
                     if (!openBrackets) {
                         parseError("Illegal right-bracket when there was no left bracket")
@@ -191,6 +192,7 @@ public class IPv6TextParser(public val incoming: String) {
                     state = State.STATE_RBRACKET
                     break
                 }
+
                 in '0'..'9', in 'a'..'f', in 'A'..'F' -> {
                     if (state == State.STATE_HEXDIGIT) {
                         // ensure we've only seen up to four hex digits
@@ -208,6 +210,7 @@ public class IPv6TextParser(public val incoming: String) {
                     digitCount += 1
                     state = State.STATE_HEXDIGIT
                 }
+
                 ':' -> {
                     // this has to go first, or else we might try and push a bunch of colons
                     // off the side!
@@ -247,6 +250,7 @@ public class IPv6TextParser(public val incoming: String) {
                     }
                     colons += 1
                 }
+
                 else -> return parseError("Illegal character '$nextChar'")
             }
         }

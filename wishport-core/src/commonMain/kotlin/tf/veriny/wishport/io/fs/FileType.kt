@@ -17,16 +17,22 @@ import tf.veriny.wishport.annotations.ProvisionalApi
 public enum class FileType(internal val number: UShort) {
     /** A socket file. */
     SOCKET(0xC000U),
+
     /** A symbolic link to another file. */
     SYMBOLIC_LINK(0xA000U),
+
     /** A regular file. */
     REGULAR(0x8000U),
+
     /** A block device. */
     BLOCK_DEVICE(0x6000U),
+
     /** A directory. */
     DIRECTORY(0x4000U),
+
     /** A character device. */
     CHARACTER_DEVICE(0x2000U),
+
     /** A FIFO. */
     FIFO(0x1000U),
     ;

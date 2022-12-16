@@ -18,7 +18,7 @@ private const val _SOL_SOCKET = 1
 /**
  * Sealed interface over the recognised socket option types.
  */
-public sealed class SocketOption<T> (
+public sealed class SocketOption<T>(
     /** The linux-level option name for this option. */
     public val optname: Int,
 

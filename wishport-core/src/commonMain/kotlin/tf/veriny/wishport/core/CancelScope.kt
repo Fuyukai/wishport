@@ -219,6 +219,7 @@ private constructor(
             task.reschedule(Cancellable.cancelled())
         }
     }
+
     /**
      * Updates the state of this scope, and all children scopes, as well as dispatching potential
      * reschedules.

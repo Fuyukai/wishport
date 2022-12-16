@@ -64,10 +64,12 @@ public class Supervisor
                             ErrorHandlingStrategy.RESTART_ALWAYS -> {
                                 continue
                             }
+
                             ErrorHandlingStrategy.RESTART_ON_ERROR -> {
                                 if (result.isFailure) continue
                                 else result
                             }
+
                             ErrorHandlingStrategy.LET_IT_DIE -> {
                                 if (result.isFailure) {
                                     nursery.cancelScope.cancel()

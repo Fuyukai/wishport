@@ -34,6 +34,7 @@ public class WorkerPool(public val loop: EventLoop, public val size: Int) {
         val res: I,
         val callback: (I) -> R,
     )
+
     internal class WorkerFuture<T>(
         val worker: Worker,
         val future: Future<T>,

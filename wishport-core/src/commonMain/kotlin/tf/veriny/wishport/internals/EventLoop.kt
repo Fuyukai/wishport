@@ -269,9 +269,11 @@ public class EventLoop private constructor(
                 scheduledTasks.isNotEmpty() -> {
                     peekIO()
                 }
+
                 last != null -> {
                     waitForIO(last.effectiveDeadline)
                 }
+
                 else -> {
                     waitForIOForever()
                 }

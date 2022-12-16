@@ -35,12 +35,14 @@ public suspend fun FileLikeHandle.readUntilEof(
                 // EOF
                 break
             }
+
             hintSize -> {
                 // full chunk, swap out buffer
                 bufferChunks.add(lastBuffer)
                 lastBuffer = ByteArray(hintSize.toInt())
                 lastReadCount = 0U
             }
+
             else -> {
                 // uh oh
                 lastReadCount += count
@@ -143,6 +145,7 @@ public suspend fun FileLikeHandle.writeAll(
             result.isSuccess -> {
                 runningTotal += result.get()!!.count
             }
+
             else -> {
                 cb()
                 return result as CancellableResult<Unit, Fail>

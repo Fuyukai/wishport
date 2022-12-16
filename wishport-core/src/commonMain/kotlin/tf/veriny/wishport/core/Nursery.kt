@@ -183,6 +183,7 @@ public class Nursery private constructor(private val invokerTask: Task) {
 
 public class TaskStatus<T> internal constructor() {
     private val event = Promise<T>()
+
     // XXX: https://github.com/python-trio/trio/issues/2258
     internal var taskInternallyWasCancelled = false
 
