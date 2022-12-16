@@ -7,6 +7,7 @@
 package tf.veriny.wishport.io.fs
 
 import tf.veriny.wishport.io.FileLikeHandle
+import tf.veriny.wishport.io.Flushable
 import tf.veriny.wishport.io.Seekable
 
 /**
@@ -18,7 +19,7 @@ import tf.veriny.wishport.io.Seekable
  * creating other files or directories - can be passed a FilesystemHandle to open files relative
  * to the real location of this file.
  */
-public interface FilesystemHandle<F : PurePath<F>, M : FileMetadata> : FileLikeHandle, Seekable {
+public interface FilesystemHandle<F : PP<F>, M : FM> : FileLikeHandle, Seekable, Flushable {
     public companion object;
 
     /** The filesystem this handle is open on. */

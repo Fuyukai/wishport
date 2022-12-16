@@ -1105,9 +1105,9 @@ public actual class IOManager(
 
     @OptIn(Unsafe::class)
     public actual suspend fun symlinkAt(
-        dirHandle: DirectoryHandle?,
-        path: ByteString,
         target: ByteString,
+        dirHandle: DirectoryHandle?,
+        newPath: ByteString,
     ): CancellableResourceResult<Empty> = memScoped {
         val task = getCurrentTask()
 
@@ -1116,10 +1116,10 @@ public actual class IOManager(
                 val sqe = getsqe()
                 val toDir = dirHandle?.actualFd ?: _AT_FDCWD
 
-                val pathBuf = path.pinnedTerminated()
+                val pathBuf = newPath.pinnedTerminated()
                 defer { pathBuf.unpin() }
 
-                val targetBuf = path.pinnedTerminated()
+                val targetBuf = newPath.pinnedTerminated()
                 defer { targetBuf.unpin() }
 
                 io_uring_prep_symlinkat(sqe, targetBuf.addressOf(0), toDir, pathBuf.addressOf(0))

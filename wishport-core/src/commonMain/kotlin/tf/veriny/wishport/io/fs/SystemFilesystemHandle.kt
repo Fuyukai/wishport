@@ -78,6 +78,14 @@ internal constructor(
     }
 
     @OptIn(LowLevelApi::class)
+    override suspend fun flush(withMetadata: Boolean): CancellableResult<Unit, Fail> {
+        if (closed) return Cancellable.failed(AlreadyClosedError)
+
+        val io = getIOManager()
+        return io.fsync(raw, withMetadata = withMetadata).andThen { Cancellable.empty() }
+    }
+
+    @OptIn(LowLevelApi::class)
     override suspend fun seek(
         position: Long,
         whence: SeekWhence

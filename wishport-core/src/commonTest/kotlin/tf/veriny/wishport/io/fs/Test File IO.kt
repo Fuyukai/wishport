@@ -71,7 +71,7 @@ class `Test File IO` {
         assertSuccess {
             createTemporaryDirectory { handle ->
                 val result = assertSuccess {
-                    handle.openRawRelative(scope, path, FileOpenType.READ_WRITE, setOf(FileOpenFlags.CREATE_IF_NOT_EXISTS))
+                    handle.getFileHandleRelative(scope, path, FileOpenType.READ_WRITE, setOf(FileOpenFlags.CREATE_IF_NOT_EXISTS))
                         .andAlso { it.writeFrom("test".encodeToByteArray()) }
                         .andAlso { it.flush() }
                         .andThen { it.close() }

@@ -16,10 +16,23 @@ import tf.veriny.wishport.io.fs.SeekWhence
 public interface Seekable {
     /**
      * Seeks this object to the specified [position], with varying behaviour based on the
-     * [whence] argument.
+     * [whence] argument. Returns the new seeking position.
      */
     public suspend fun seek(
         position: Long,
         whence: SeekWhence
     ): CancellableResult<SeekPosition, Fail>
+}
+
+/**
+ * Seeks this file from the start.
+ */
+public suspend fun Seekable.seekFromStart(position: Long): CancellableResult<SeekPosition, Fail> =
+    seek(position, SeekWhence.SEEK_SET)
+
+/**
+ * Gets the current position of this file.
+ */
+public suspend fun Seekable.tell(): CancellableResult<SeekPosition, Fail> {
+    return seek(0L, SeekWhence.SEEK_CURRENT)
 }

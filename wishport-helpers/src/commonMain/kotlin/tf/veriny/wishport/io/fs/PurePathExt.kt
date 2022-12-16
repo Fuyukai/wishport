@@ -9,6 +9,8 @@ package tf.veriny.wishport.io.fs
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.ByteString
 import tf.veriny.wishport.collections.FastArrayList
+import tf.veriny.wishport.collections.toByteString
+import tf.veriny.wishport.expect
 import tf.veriny.wishport.io.fs.PathComponent.*
 
 @ThreadLocal
@@ -83,6 +85,21 @@ public inline fun <Flavour : PurePath<Flavour>> Flavour.isParentOf(
 ): Boolean {
     return other.isChildOf(this)
 }
+
+/**
+ * Like [resolveChild], but takes a string argument.
+ */
+public fun <Flavour : PurePath<Flavour>> Flavour.resolveChild(name: String): Flavour {
+    return resolveChild(name.encodeToByteArray().toByteString()).expect()
+}
+
+/**
+ * Like [withName], but takes a string argument.
+ */
+public fun <Flavour : PurePath<Flavour>> Flavour.withName(name: String): Flavour {
+    return withName(name.encodeToByteArray().toByteString()).expect()
+}
+
 
 // operator shortcuts
 public inline operator fun <Flavour : PurePath<Flavour>> Flavour.div(other: Flavour): Flavour {

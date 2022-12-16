@@ -26,6 +26,8 @@ public class Imperatavize private constructor() {
                 Either.ok(block(INSTANCE))
             } catch (m: MagicFailureException) {
                 Either.err(m.f as F)
+            } catch (m: CancellationException) {
+                TODO("make this more type safe!!!")
             }
         }
 
@@ -56,7 +58,7 @@ public class Imperatavize private constructor() {
      * Unwraps the value of this [CancellableResult] into its success, or causes the entire block
      * to return either the Cancellable or the Failure.
      */
-    public inline fun <S, F : Fail> CancellableResult<S, F>.q(): S =
+    public fun <S, F : Fail> CancellableResult<S, F>.q(): S =
         when (this) {
             is Cancelled -> throw CancellationException()
             is NotCancelled<S, F, Either<S, F>> -> {

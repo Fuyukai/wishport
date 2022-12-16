@@ -7,6 +7,7 @@
 package tf.veriny.wishport.io.fs
 
 import tf.veriny.wishport.Either
+import tf.veriny.wishport.andThen
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.collections.ByteString
 import tf.veriny.wishport.collections.FastArrayList
@@ -167,6 +168,17 @@ public open class PosixPurePath(
     override fun resolveChild(path: PosixPurePath): PosixPurePath {
         return if (path.isAbsolute) path
         else PosixPurePath(components + path.components)
+    }
+
+    override fun resolveChild(other: ByteString): PathResult<PosixPurePath> {
+        return from(other).andThen { Either.ok(resolveChild(it)) }
+    }
+
+    override fun withName(other: ByteString): PathResult<PosixPurePath> {
+        return from(other).andThen {
+            val pc = parent?.components ?: mutableListOf()
+            Either.ok(PosixPurePath(pc + it.components))
+        }
     }
 
     override fun equals(other: Any?): Boolean {

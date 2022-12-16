@@ -6,14 +6,11 @@
 
 package tf.veriny.wishport.io.fs
 
-import tf.veriny.wishport.Cancellable
-import tf.veriny.wishport.CancellableResult
-import tf.veriny.wishport.Fail
+import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.ProvisionalApi
-import tf.veriny.wishport.io.ByteCountResult
-import tf.veriny.wishport.io.FasterCloseable
-import tf.veriny.wishport.io.IOHandle
-import tf.veriny.wishport.io.SeekPosition
+import tf.veriny.wishport.annotations.Unsafe
+import tf.veriny.wishport.collections.ByteString
+import tf.veriny.wishport.io.*
 import tf.veriny.wishport.io.streams.*
 import tf.veriny.wishport.sync.ConflictDetector
 
@@ -21,9 +18,12 @@ import tf.veriny.wishport.sync.ConflictDetector
  * A [PartialStream] that wraps a [FilesystemHandle].
  */
 @ProvisionalApi
-public class UnbufferedFile(
-    public val handle: FilesystemHandle<*, *>,
-) : PartialStream, FasterCloseable {
+public class UnbufferedFile<F : PP<F>, M : FM>(
+    public val handle: FilesystemHandle<F, M>,
+) : PartialStream, FasterCloseable, Flushable by handle, Seekable by handle {
+    /** The path to this file. */
+    public val path: F by handle::path
+
     override val closed: Boolean by handle::closed
     override val closing: Boolean by handle::closing
     override var damaged: Boolean = false
@@ -37,13 +37,6 @@ public class UnbufferedFile(
 
     override fun notifyClosed() {
         (handle as? FasterCloseable)?.notifyClosed()
-    }
-
-    public suspend fun seek(
-        position: Long,
-        whence: SeekWhence
-    ): CancellableResult<SeekPosition, Fail> {
-        return handle.seek(position, whence)
     }
 
     override suspend fun writeMost(
@@ -78,5 +71,17 @@ public class UnbufferedFile(
         bufferOffset: Int
     ): CancellableResult<ByteCountResult, Fail> {
         return handle.readInto(buf, byteCount, bufferOffset, ULong.MAX_VALUE)
+    }
+
+    /**
+     * Reads the entirety of this file, returning a [ByteString].
+     */
+    @OptIn(Unsafe::class)
+    public suspend fun readUntilEof(): CancellableResult<ByteString, Fail> {
+        return handle.filesystem.getFileMetadata(handle)
+            .andThen {
+                handle.readUntilEof(it.size.toUInt())
+            }
+            .andThen { Cancellable.ok(ByteString.uncopied(it)) }
     }
 }

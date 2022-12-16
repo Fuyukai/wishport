@@ -6,6 +6,8 @@
 
 package tf.veriny.wishport.io.fs
 
+import tf.veriny.wishport.annotations.ProvisionalApi
+
 /**
  * Platform metadata for statx() data.
  */
@@ -32,6 +34,7 @@ public actual class PlatformFileMetadata(
     }
 
     /** The set of permissions for this file. */
+    @OptIn(ProvisionalApi::class)
     public val permissions: Set<FilePermissions> by lazy {
         val perms = fileMode.and(0x1ffU)
         val items = mutableSetOf<FilePermissions>()

@@ -200,6 +200,7 @@ public inline fun <Success, Failure : Fail> CancellableResult<Success, Failure>.
                 is Ok<Success> -> {
                     val res = block(wrapped.value)
                     // safe cast, <Success> isn't part of us.
+                    @Suppress("UNCHECKED_CAST")
                     if (res.isSuccess) this
                     else res as CancellableResult<Success, Failure>
                 }
@@ -226,20 +227,21 @@ public inline fun <Out, S : Out, F : Fail> CancellableResult<S, F>.unwrapOr(
     }
 
 // idk what a good name for this would be. its clearly not a fold.
+// also oh god the type parameters here. good luck if you don't have type inference.
 /**
  * If this is a non-cancelled success, calls [left] with the success. If this is a non-cancelled
  * failure, calls [right] with the failure. Otherwise, returns Cancelled.
  */
-public inline fun <Out, S, F : Fail> CancellableResult<S, F>.combinate(
-    left: (S) -> CancellableResult<Out, Fail>,
-    right: (F) -> CancellableResult<Out, Fail>
-): CancellableResult<Out, Fail> =
+public inline fun <OutS, InS, InF : Fail, OutF : Fail, OutF1 : OutF, OutF2 : OutF> CancellableResult<InS, InF>.combinate(
+    left: (InS) -> CancellableResult<OutS, OutF1>,
+    right: (InF) -> CancellableResult<OutS, OutF2>
+): CancellableResult<OutS, OutF> =
     when (this) {
         is Cancelled -> this
-        is NotCancelled<S, F, Either<S, F>> -> {
+        is NotCancelled<InS, InF, Either<InS, InF>> -> {
             when (wrapped) {
-                is Ok<S> -> left(wrapped.value)
-                is Err<F> -> right(wrapped.value)
+                is Ok<InS> -> left(wrapped.value)
+                is Err<InF> -> right(wrapped.value)
             }
         }
     }

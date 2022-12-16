@@ -13,6 +13,13 @@ import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.io.Empty
 
 // see: java.nio.file.Filesystem
+// naming convention:
+// filesystem uses overloads for relatives, e.g. doX(path) and doX(relative_handle, path)
+// the relative overloads should take null for better API composability with other functions that
+// conditionally take a relative handle.
+
+internal typealias PP<F> = PurePath<F>
+internal typealias FM = FileMetadata
 
 /**
  * A Filesystem is a way of interacting with a storage mechanism for individual files indexed by
@@ -47,8 +54,8 @@ public interface Filesystem<Flavour : PurePath<Flavour>, Metadata : FileMetadata
      * Gets a relative file handle from the specified [otherHandle].
      */
     @Unsafe
-    public suspend fun getRelativeFileHandle(
-        otherHandle: FilesystemHandle<Flavour, Metadata>,
+    public suspend fun getFileHandle(
+        otherHandle: FilesystemHandle<Flavour, Metadata>?,
         path: Flavour,
         openMode: FileOpenType,
         flags: Set<FileOpenFlags> = setOf(),
@@ -73,7 +80,7 @@ public interface Filesystem<Flavour : PurePath<Flavour>, Metadata : FileMetadata
      * status of [handle], then the metadata will be for the file at the absolute path provided, or
      * the file at the path relative to the current directory if [path] is a relative path.
      */
-    public suspend fun getFileMetadataRelative(
+    public suspend fun getFileMetadata(
         handle: FilesystemHandle<Flavour, Metadata>?,
         path: Flavour
     ): CancellableResult<Metadata, Fail>
@@ -86,16 +93,6 @@ public interface Filesystem<Flavour : PurePath<Flavour>, Metadata : FileMetadata
     ): CancellableResult<List<DirectoryEntry>, Fail>
 
     /**
-     * Flushes the data written into the specified file to disk. If [withMetadata] is true, then all file
-     * metadata will be flushed; otherwise, only essential metadata relating to write consistency
-     * will be flushed.
-     */
-    public suspend fun flushFile(
-        handle: FilesystemHandle<Flavour, Metadata>,
-        withMetadata: Boolean = true
-    ): CancellableResult<Empty, Fail>
-
-    /**
      * Creates a new, empty directory at [path].
      */
     public suspend fun createDirectory(
@@ -106,8 +103,8 @@ public interface Filesystem<Flavour : PurePath<Flavour>, Metadata : FileMetadata
     /**
      * Creates a new, empty directory at the [path] relative to the directory at [otherHandle].
      */
-    public suspend fun createDirectoryRelative(
-        otherHandle: FilesystemHandle<Flavour, Metadata>,
+    public suspend fun createDirectory(
+        otherHandle: FilesystemHandle<Flavour, Metadata>?,
         path: Flavour,
         permissions: Set<FilePermissions> = FilePermissions.DEFAULT_DIRECTORY
     ): CancellableResult<Empty, Fail>
@@ -126,12 +123,51 @@ public interface Filesystem<Flavour : PurePath<Flavour>, Metadata : FileMetadata
      * [toPath] relative to [toHandle]. [fromHandle] or [toHandle] can be null; if both are null,
      * this method acts identically to [rename].
      */
-    public suspend fun renameRelative(
+    public suspend fun rename(
         fromHandle: FilesystemHandle<Flavour, Metadata>?,
         fromPath: Flavour,
         toHandle: FilesystemHandle<Flavour, Metadata>?,
         toPath: Flavour,
         flags: Set<RenameFlags> = setOf()
+    ): CancellableResult<Empty, Fail>
+
+    /**
+     * Creates a new hardlink to the file referred to by [existingFile], at the path [newFile].
+     */
+    public suspend fun hardlink(
+        existingFile: Flavour, newFile: Flavour
+    ): CancellableResourceResult<Empty>
+
+    /**
+     * Creates a new hardlink to the file referred to by [existingPath], relative to
+     * [existingHandle], at the path [newPath], relative to [newHandle].
+     *
+     * Either [existingHandle] or [newHandle] can be null; if both are null, this method will
+     * behave identically to the ordinary [hardlink] method.
+     */
+    public suspend fun hardlink(
+        existingHandle: FilesystemHandle<Flavour, Metadata>?,
+        existingPath: Flavour,
+        newHandle: FilesystemHandle<Flavour, Metadata>?,
+        newPath: Flavour,
+    ): CancellableResult<Empty, Fail>
+
+    /**
+     * Creates a new symbolic link with the content [targetPath], at the path [newPath].
+     */
+    public suspend fun symbolicLink(
+        targetPath: Flavour,
+        newPath: Flavour
+    ): CancellableResourceResult<Empty>
+
+    /**
+     * Creates a new symbolic link with the content [targetPath], at the path [newPath] that is
+     * relative to the specified [newHandle].
+     */
+    public suspend fun symbolicLink(
+        targetPath: Flavour,
+        newHandle: FilesystemHandle<Flavour, Metadata>?,
+        newPath: Flavour,
     ): CancellableResult<Empty, Fail>
 
     /**
@@ -146,8 +182,8 @@ public interface Filesystem<Flavour : PurePath<Flavour>, Metadata : FileMetadata
     /**
      * Unlinks a file from this filesystem, relative to [otherHandle].
      */
-    public suspend fun unlinkRelative(
-        otherHandle: FilesystemHandle<Flavour, Metadata>,
+    public suspend fun unlink(
+        otherHandle: FilesystemHandle<Flavour, Metadata>?,
         path: Flavour,
         removeDir: Boolean = false
     ): CancellableResult<Empty, Fail>

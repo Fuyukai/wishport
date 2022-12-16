@@ -2,9 +2,7 @@ import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.LowLevelApi
 import tf.veriny.wishport.annotations.ProvisionalApi
 import tf.veriny.wishport.collections.FastArrayList
-import tf.veriny.wishport.io.fs.FileOpenType
-import tf.veriny.wishport.io.fs.openTemporaryFile
-import tf.veriny.wishport.io.fs.systemPathFor
+import tf.veriny.wishport.io.fs.*
 import tf.veriny.wishport.io.readUpto
 import tf.veriny.wishport.io.writeAll
 import kotlin.system.measureNanoTime
@@ -43,7 +41,7 @@ public fun main(): Unit = runUntilCompleteNoResult {
         val r = measureNanoTime {
             AsyncClosingScope { scope ->
                 Imperatavize.cancellable<Unit, Fail> {
-                    val first = scope.openUnbufferedSystemFile(systemPathFor("/dev/zero")).q()
+                    val first = SystemFilesystem.openUnbufferedFile(scope, systemPathFor("/dev/zero")).q()
                     val second = openTemporaryFile(scope, FileOpenType.WRITE_ONLY).q()
                     first.readUpto(4096U).andThen { second.writeAll(it) }.q()
                 }

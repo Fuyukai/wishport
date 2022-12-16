@@ -27,7 +27,7 @@ class `Test IOUring` {
     fun `Test reading dev zero`() = runUntilCompleteNoResult {
         AsyncClosingScope {
             val path = PosixPurePath.from("/dev/zero").get()!!
-            val res = FilesystemHandle.openRawFile(it, path)
+            val res = FilesystemHandle.openRawSystemFile(it, path)
             assertTrue(res.isSuccess)
             val handle = res.get()!!
             val buf = ByteArray(8) { 1 }

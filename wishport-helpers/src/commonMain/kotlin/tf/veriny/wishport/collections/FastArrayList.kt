@@ -243,7 +243,11 @@ private constructor(private var backing: Array<Any?>) : MutableList<E> {
         if (index < 0) throw IndexOutOfBoundsException("too small: $index")
         if (index >= size) throw IndexOutOfBoundsException("too big: $index")
 
-        return backing.set(index, element) as E
+        val prev = backing[index]
+        backing.set(index, element)
+
+        @Suppress("UNCHECKED_CAST")
+        return prev as E
     }
     // == query methods == //
 

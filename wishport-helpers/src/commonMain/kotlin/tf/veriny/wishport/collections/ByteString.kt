@@ -227,7 +227,8 @@ public fun ByteString.escapedString(): String {
 }
 
 /**
- * Decodes this [ByteString] to a [String], with UTF-8 surrogate escapes in the
+ * Decodes this [ByteString] to a [String], with UTF-8 surrogate escapes in the event of invalid
+ * Unicode.
  */
 @OptIn(Unsafe::class)
 public fun ByteString.decodeToString(): String = unwrap().decodeToString()

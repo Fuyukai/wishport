@@ -176,6 +176,16 @@ public interface PurePath<Flavour : PurePath<Flavour>> {
      * If [path] is an absolute path, it will replace the current path.
      */
     public fun resolveChild(path: Flavour): Flavour
+
+    /**
+     * Appends the [other] string content to this path.
+     */
+    public fun resolveChild(other: ByteString): PathResult<Flavour>
+
+    /**
+     * Replaces the name of this path.
+     */
+    public fun withName(other: ByteString): PathResult<Flavour>
 }
 
 /**

@@ -45,6 +45,7 @@ public fun kstrerror(errno: Int): String = memScoped<String> {
     }
 
     // type inference bug?
+    @Suppress("UNREACHABLE_CODE")
     throw Throwable("unreachable")
 }
 

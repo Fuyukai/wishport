@@ -312,16 +312,16 @@ public expect class IOManager : Closeable {
     ): CancellableResourceResult<Empty>
 
     /**
-     * Creates a symbolic link with the content [target].
+     * Creates a symbolic link with the content [target], at [newPath].
      *
      * If [dirHandle] is provided, the existing path [to] will be relative to it. If null is
      * provided, then the existing path will be relative to the current working directory. If the
      * path is an absolute path, then the provided handle is ignored.
      */
     public suspend fun symlinkAt(
-        dirHandle: DirectoryHandle?,
-        path: ByteString,
         target: ByteString,
+        dirHandle: DirectoryHandle?,
+        newPath: ByteString,
     ): CancellableResourceResult<Empty>
 
     /**

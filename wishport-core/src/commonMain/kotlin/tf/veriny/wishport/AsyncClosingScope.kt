@@ -32,6 +32,15 @@ public interface AsyncClosingScope : AsyncCloseable {
         ): R {
             return AsyncClosingScopeImpl().use(block)
         }
+
+        @OptIn(Unsafe::class)
+        public suspend inline fun <S, F : Fail> withImperatavize(
+            crossinline fn: suspend Imperatavize.(AsyncClosingScope) -> S
+        ): CancellableResult<S, F> {
+            return AsyncClosingScopeImpl().use {
+                Imperatavize.cancellable { fn(it) }
+            }
+        }
     }
 
     /**

@@ -10,6 +10,7 @@ import tf.veriny.wishport.*
 import tf.veriny.wishport.annotations.ProvisionalApi
 import tf.veriny.wishport.annotations.Unsafe
 import tf.veriny.wishport.core.InternalWishportError
+import tf.veriny.wishport.io.fs.FilePermissions.*
 
 // inspired heavily by python tempfile.
 
@@ -64,17 +65,16 @@ private suspend fun getTempDir(): CancellableSuccess<SystemFilesystemHandle> {
         val result =
             SystemFilesystem.getFileHandle(
                 candidate, FileOpenType.READ_ONLY,
-                setOf(FileOpenFlags.PATH, FileOpenFlags.DIRECTORY)
+                setOf(FileOpenFlags.PATH, FileOpenFlags.DIRECTORY),
             )
 
         val path = if (result.isSuccess) result.get()!! else continue
 
         // hack: openat with CURRENT_DIR
-        val opened = path.openRawRelative(
+        val opened = path.getFileHandleRelative(
             PosixPurePath.CURRENT_DIR, FileOpenType.READ_WRITE,
-            setOf(
-                FileOpenFlags.TEMPORARY_FILE, FileOpenFlags.MUST_CREATE
-            )
+            setOf(FileOpenFlags.TEMPORARY_FILE, FileOpenFlags.MUST_CREATE),
+            setOf(OWNER_READ, OWNER_WRITE),
         )
             .andAlso { it.writeFrom(writeBuffer) }
             .andThen { it.close() }
@@ -120,15 +120,17 @@ public actual suspend fun <S, F : Fail> createTemporaryDirectory(
     block: suspend (SystemFilesystemHandle) -> CancellableResult<S, F>
 ): CancellableResult<S, Fail> {
     val fileName = TempFileNamer.next()
+    val perms = setOf(OWNER_READ, OWNER_WRITE, OWNER_EXEC)
+
     return getTempDir().andThen { tmp ->
         val flags = setOf(FileOpenFlags.DIRECTORY, FileOpenFlags.PATH)
 
         for (seq in 0 until 100) {
             val path = systemPathFor(fileName)
 
-            val result = SystemFilesystem.createDirectoryRelative(tmp, path)
+            val result = SystemFilesystem.createDirectory(tmp, path, permissions = perms)
                 .andThen {
-                    SystemFilesystem.getRelativeFileHandle(tmp, path, FileOpenType.READ_WRITE, flags)
+                    SystemFilesystem.getFileHandle(tmp, path, FileOpenType.READ_WRITE, flags)
                 }
 
             return@andThen if (result.isFailure) {

@@ -52,13 +52,13 @@ class `Test Filesystem IO` {
         assertSuccess {
             createTemporaryDirectory {
                 it.createDirectoryRelative(path)
-                    .andThen { _ -> it.removeRelative(path, isDirectory = true) }
+                    .andThen { _ -> it.removeDirectoryRelative(path) }
             }
         }
 
         assertFailureWith(NoSuchFileOrDirectory) {
             createTemporaryDirectory {
-                it.removeRelative(notExisting, isDirectory = true)
+                it.removeDirectoryRelative(notExisting)
             }
         }
     }
@@ -67,21 +67,38 @@ class `Test Filesystem IO` {
     fun `Test listing directories`() = runUntilCompleteNoResult {
         assertSuccess {
             createTemporaryDirectory {
-                AsyncClosingScope { scope ->
-                    Imperatavize.cancellable {
-                        it.openBufferedRelative(
-                            scope,
-                            systemPathFor("test"), FileOpenType.WRITE_ONLY,
-                            setOf(FileOpenFlags.CREATE_IF_NOT_EXISTS)
-                        )
-                            .andAlso { it.writeAll(b("test")) }
-                            .andThen { it.close() }
-                            .q()
+                AsyncClosingScope.withImperatavize { scope ->
+                    it.openBufferedRelative(
+                        scope,
+                        systemPathFor("test"), FileOpenType.WRITE_ONLY,
+                        setOf(FileOpenFlags.CREATE_IF_NOT_EXISTS)
+                    )
+                        .andAlso { it.writeAll(b("test")) }
+                        .andThen { it.close() }
+                        .q()
 
-                        val contents = it.listDirectory().q()
-                        assertEquals(1, contents.size)
-                        assertEquals(b("test"), contents.first().fileName)
-                    }
+                    val contents = it.listDirectory().q()
+                    assertEquals(1, contents.size)
+                    assertEquals(b("test"), contents.first().fileName)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `Test creating a hardlink`() = runUntilCompleteNoResult {
+        assertSuccess {
+            createTemporaryDirectory { tmp ->
+                AsyncClosingScope.withImperatavize {
+                    val first = systemPathFor("test-1")
+                    val second = systemPathFor("test-2")
+
+                    // test by writing data to first, hardlinking second to first, then reading
+                    // from second
+                    val flags = setOf(FileOpenFlags.MUST_CREATE)
+                    SystemFilesystem.writeTextAt(tmp, first, "data", flags = flags).q()
+                    SystemFilesystem.hardlink(tmp, first, tmp, second).q()
+                    assertEquals("data", SystemFilesystem.readTextAt(tmp, second).q())
                 }
             }
         }

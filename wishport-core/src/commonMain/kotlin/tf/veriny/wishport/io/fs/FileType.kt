@@ -36,6 +36,7 @@ public enum class FileType(internal val number: UShort) {
         @ProvisionalApi
         public val _entries: Array<FileType> = FileType.values()
 
+        @OptIn(ProvisionalApi::class)
         public fun toSet(value: UShort): Set<FileType> {
             val items = mutableSetOf<FileType>()
             for (type in FileType._entries) {

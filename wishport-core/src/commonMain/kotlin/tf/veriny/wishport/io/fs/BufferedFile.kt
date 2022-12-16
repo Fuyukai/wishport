@@ -12,10 +12,7 @@ import tf.veriny.wishport.annotations.ProvisionalApi
 import tf.veriny.wishport.core.getCurrentTask
 import tf.veriny.wishport.internals.checkIfCancelled
 import tf.veriny.wishport.internals.getIdealBlockSize
-import tf.veriny.wishport.io.ByteCountResult
-import tf.veriny.wishport.io.FasterCloseable
-import tf.veriny.wishport.io.IOHandle
-import tf.veriny.wishport.io.SeekPosition
+import tf.veriny.wishport.io.*
 import tf.veriny.wishport.io.streams.BufferedPartialStream
 import tf.veriny.wishport.io.streams.EofNotSupported
 
@@ -29,7 +26,7 @@ public class BufferedFile
 private constructor(
     public val handle: SystemFilesystemHandle,
     public val bufferSize: UInt,
-) : BufferedPartialStream, FasterCloseable {
+) : BufferedPartialStream, FasterCloseable, Flushable, Seekable {
     public companion object {
         @OptIn(LowLevelApi::class)
         public suspend operator fun invoke(
@@ -39,6 +36,9 @@ private constructor(
                 .andThen { Cancellable.ok(BufferedFile(handle, it)) }
         }
     }
+
+    /** The path to this file. */
+    public val path: SystemPurePath by handle::path
 
     private val buffer = ByteArray(bufferSize.toInt())
     private var front = 0U
@@ -60,7 +60,7 @@ private constructor(
     /**
      * Seeks this file to the specified [position], using the behaviour specified by [whence].
      */
-    public suspend fun seek(
+    public override suspend fun seek(
         position: Long,
         whence: SeekWhence
     ): CancellableResult<SeekPosition, Fail> {
@@ -170,5 +170,9 @@ private constructor(
                     uncancellableCheckpoint(ByteCountResult(total))
                 }
             }
+    }
+
+    override suspend fun flush(withMetadata: Boolean): CancellableResult<Unit, Fail> {
+        return backing.flush(withMetadata)
     }
 }
