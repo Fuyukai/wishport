@@ -100,7 +100,6 @@ public fun <Flavour : PurePath<Flavour>> Flavour.withName(name: String): Flavour
     return withName(name.encodeToByteArray().toByteString()).expect()
 }
 
-
 // operator shortcuts
 public inline operator fun <Flavour : PurePath<Flavour>> Flavour.div(other: Flavour): Flavour {
     return resolveChild(other)

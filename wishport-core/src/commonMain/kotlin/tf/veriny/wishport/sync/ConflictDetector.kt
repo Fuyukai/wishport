@@ -1,10 +1,15 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.wishport.sync
 
 import tf.veriny.wishport.Cancellable
 import tf.veriny.wishport.CancellableResult
 import tf.veriny.wishport.Fail
 import tf.veriny.wishport.annotations.LowLevelApi
-
 
 /**
  * Returned by [ConflictDetector] if two tasks try to [ConflictDetector.use] it at the same time.

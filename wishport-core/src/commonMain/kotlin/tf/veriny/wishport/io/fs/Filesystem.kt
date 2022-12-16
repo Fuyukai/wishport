@@ -135,7 +135,8 @@ public interface Filesystem<Flavour : PurePath<Flavour>, Metadata : FileMetadata
      * Creates a new hardlink to the file referred to by [existingFile], at the path [newFile].
      */
     public suspend fun hardlink(
-        existingFile: Flavour, newFile: Flavour
+        existingFile: Flavour,
+        newFile: Flavour
     ): CancellableResourceResult<Empty>
 
     /**

@@ -152,7 +152,8 @@ public object SystemFilesystem : Filesystem<SystemPurePath, PlatformFileMetadata
     }
 
     override suspend fun hardlink(
-        existingFile: SystemPurePath, newFile: SystemPurePath
+        existingFile: SystemPurePath,
+        newFile: SystemPurePath
     ): CancellableResourceResult<Empty> {
         return hardlink(null, existingFile, null, newFile)
             as CancellableResourceResult<Empty>
@@ -181,7 +182,8 @@ public object SystemFilesystem : Filesystem<SystemPurePath, PlatformFileMetadata
     }
 
     override suspend fun symbolicLink(
-        targetPath: SystemPurePath, newPath: SystemPurePath
+        targetPath: SystemPurePath,
+        newPath: SystemPurePath
     ): CancellableResourceResult<Empty> {
         val io = getIOManager()
         return io.symlinkAt(

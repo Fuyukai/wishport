@@ -169,7 +169,8 @@ public suspend inline fun FileLikeHandle.writeAll(
  */
 @OptIn(Unsafe::class)
 public suspend fun FileLikeHandle.writeAll(
-    bs: ByteString, cb: () -> Unit
+    bs: ByteString,
+    cb: () -> Unit
 ): CancellableResult<Unit, Fail> {
     return writeAll(bs.unwrap(), cb = cb)
 }

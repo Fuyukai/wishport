@@ -75,8 +75,6 @@ public suspend fun <F : PP<F>, M : FM> Filesystem<F, M>.listDirectory(
 /**
  * Lists the directory contents for the specified open directory.
  */
-public suspend fun <F : PP<F>, M : FM> FilesystemHandle<F, M>.listDirectory(
-
-): CancellableResult<List<DirectoryEntry>, Fail> {
+public suspend fun <F : PP<F>, M : FM> FilesystemHandle<F, M>.listDirectory(): CancellableResult<List<DirectoryEntry>, Fail> {
     return filesystem.getDirectoryEntries(this)
 }

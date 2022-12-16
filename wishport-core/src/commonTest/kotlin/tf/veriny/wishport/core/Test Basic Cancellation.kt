@@ -126,5 +126,4 @@ class `Test Basic Cancellation` {
             }
         }
     }
-
 }
