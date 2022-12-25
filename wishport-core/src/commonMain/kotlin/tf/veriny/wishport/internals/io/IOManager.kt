@@ -6,6 +6,7 @@
 
 package tf.veriny.wishport.internals.io
 
+import kotlinx.cinterop.COpaquePointer
 import tf.veriny.wishport.CancellableResourceResult
 import tf.veriny.wishport.CancellableResult
 import tf.veriny.wishport.Closeable
@@ -139,6 +140,19 @@ public expect class IOManager : Closeable {
     @Unsafe
     public suspend fun accept(sock: SocketHandle): CancellableResourceResult<SocketHandle>
 
+    // also useful for the buffer API
+    /**
+     * Reads data from the specified [IOHandle] straight into the provided pointer. This is useful
+     * for reading structs from kernel control sockets, as an example.
+     */
+    @Unsafe
+    public suspend fun read(
+        handle: IOHandle,
+        ptr: COpaquePointer,
+        size: UInt,
+        fileOffset: ULong = ULong.MAX_VALUE,
+    ): CancellableResourceResult<ByteCountResult>
+
     /**
      * Reads up to [size] bytes from a [IOHandle] into [out], starting at [fileOffset] from the
      * file's current position, and at [bufferOffset] into the provided buffer.
@@ -150,6 +164,17 @@ public expect class IOManager : Closeable {
         fileOffset: ULong,
         bufferOffset: Int,
     ): CancellableResult<ByteCountResult, Fail>
+
+    /**
+     * Writes data straight from the provided pointer into the specified [IOHandle].
+     */
+    @Unsafe
+    public suspend fun write(
+        handle: IOHandle,
+        ptr: COpaquePointer,
+        size: UInt,
+        fileOffset: ULong = ULong.MAX_VALUE,
+    ): CancellableResourceResult<ByteCountResult>
 
     /**
      * Writes up to [size] bytes from [input] into an [IOHandle], starting from [bufferOffset] in the

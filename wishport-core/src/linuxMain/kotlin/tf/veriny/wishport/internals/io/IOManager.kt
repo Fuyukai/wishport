@@ -752,30 +752,56 @@ public actual class IOManager(
             }
     }
 
+    @Unsafe
+    public actual suspend fun read(
+        handle: IOHandle,
+        ptr: COpaquePointer,
+        size: UInt,
+        fileOffset: ULong,
+    ): CancellableResourceResult<ByteCountResult> {
+        val task = getCurrentTask()
+
+        return task.checkIfCancelled()
+            .andThen {
+                val sqe = getsqe()
+                io_uring_prep_read(sqe, handle.actualFd, ptr, size, fileOffset)
+                submitAndWait(task, SleepingWhy.READ_WRITE) { sqe.setuserid(it) }
+            }
+    }
+
+    @OptIn(Unsafe::class)
     public actual suspend fun read(
         handle: IOHandle,
         out: ByteArray,
         size: UInt,
         fileOffset: ULong,
         bufferOffset: Int,
-    ): CancellableResult<ByteCountResult, Fail> = memScoped {
+    ): CancellableResult<ByteCountResult, Fail> {
+        return out.checkBuffers(size, bufferOffset).andThen {
+            it.usePinned { pinned ->
+                read(handle, pinned.addressOf(bufferOffset), size, fileOffset)
+            }
+        }
+    }
+
+    @Unsafe
+    public actual suspend fun write(
+        handle: IOHandle,
+        ptr: COpaquePointer,
+        size: UInt,
+        fileOffset: ULong,
+    ): CancellableResourceResult<ByteCountResult> {
         val task = getCurrentTask()
 
         return task.checkIfCancelled()
-            .andThen { out.checkBuffers(size, bufferOffset).notCancelled() }
             .andThen {
                 val sqe = getsqe()
-                val buf = out.pin()
-
-                defer { buf.unpin() }
-
-                io_uring_prep_read(
-                    sqe, handle.actualFd, buf.addressOf(bufferOffset), size, fileOffset
-                )
+                io_uring_prep_write(sqe, handle.actualFd, ptr, size, fileOffset)
                 submitAndWait(task, SleepingWhy.READ_WRITE) { sqe.setuserid(it) }
             }
     }
 
+    @OptIn(Unsafe::class)
     public actual suspend fun write(
         handle: IOHandle,
         input: ByteArray,
@@ -783,26 +809,11 @@ public actual class IOManager(
         fileOffset: ULong,
         bufferOffset: Int
     ): CancellableResult<ByteCountResult, Fail> = memScoped {
-        val task = getCurrentTask()
-
-        return task.checkIfCancelled()
-            .andThen { input.checkBuffers(size, bufferOffset).notCancelled() }
-            .andThen {
-                val sqe = getsqe()
-                val inpData = input.pin()
-
-                defer { inpData.unpin() }
-
-                io_uring_prep_write(
-                    sqe,
-                    handle.actualFd,
-                    inpData.addressOf(bufferOffset),
-                    size,
-                    fileOffset
-                )
-
-                submitAndWait(task, SleepingWhy.READ_WRITE) { sqe.setuserid(it) }
+        return input.checkBuffers(size, bufferOffset).andThen {
+            it.usePinned { pinned ->
+                write(handle, pinned.addressOf(bufferOffset), size, fileOffset)
             }
+        }
     }
 
     public actual suspend fun recv(
