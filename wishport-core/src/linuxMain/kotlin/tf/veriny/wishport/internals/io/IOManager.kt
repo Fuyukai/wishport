@@ -26,8 +26,7 @@ import tf.veriny.wishport.io.fs.*
 import tf.veriny.wishport.io.net.Inet4SocketAddress
 import tf.veriny.wishport.io.net.Inet6SocketAddress
 import tf.veriny.wishport.io.net.SocketAddress
-import tf.veriny.wishport.util.kernelVersion
-import tf.veriny.wishport.util.kstrerror
+import tf.veriny.wishport.util.*
 import kotlin.math.min
 
 // TODO: consider enabling poll mode by default
@@ -97,7 +96,11 @@ public actual class IOManager(
             memset(params.ptr, 0, sizeOf<io_uring_params>().convert())
             var flags = flags(IORING_SETUP_CQSIZE, IORING_SETUP_CLAMP)
 
-            val uname = kernelVersion
+            val uname = try {
+                getKernelVersion()
+            } catch (e: ProcNotFoundError) {
+                KernelVersion(5, 15, 0)
+            }
             // check for at least kernel 5.15, which is needed for mkdirat/symlinkat/linkat.
             if (uname.major < 5 || (uname.major < 6 && uname.minor < 15)) {
                 throw InternalWishportError("Wishport requires at least Linux kernel 5.15")

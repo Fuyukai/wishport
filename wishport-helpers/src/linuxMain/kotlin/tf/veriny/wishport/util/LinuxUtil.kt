@@ -84,7 +84,7 @@ public fun getProcFileDescriptor(): Int {
     return procFd
 }
 
-public val kernelVersion: KernelVersion by lazy {
+private val kernelVersion: KernelVersion by lazy {
     val dirfd = getProcFileDescriptor()
     val fd = wp_openat(dirfd, "sys/kernel/osrelease".cstr, O_RDONLY, 0)
     if (fd < 0) {
@@ -114,3 +114,9 @@ public val kernelVersion: KernelVersion by lazy {
         close(fd)
     }
 }
+
+public fun getKernelVersion(): KernelVersion {
+    return kernelVersion
+}
+
+
