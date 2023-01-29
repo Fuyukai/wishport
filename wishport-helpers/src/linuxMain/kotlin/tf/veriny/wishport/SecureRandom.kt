@@ -22,7 +22,7 @@ import platform.posix.size_t
 //    is a non-worry.
 // Thus, you can conclude this function will *never* fail.
 
-internal actual fun getrandom(ptr: CPointer<ByteVar>, size: size_t) {
+public actual fun getrandom(ptr: CPointer<ByteVar>, size: size_t) {
     while (true) {
         val result = wp_getrandom(
             ptr, size,

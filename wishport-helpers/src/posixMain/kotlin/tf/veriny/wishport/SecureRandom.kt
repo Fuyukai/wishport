@@ -14,7 +14,7 @@ import kotlin.random.Random
 /**
  * Gets random bytes and fills them into the specified [ptr].
  */
-internal expect fun getrandom(ptr: CPointer<ByteVar>, size: size_t)
+public expect fun getrandom(ptr: CPointer<ByteVar>, size: size_t)
 
 /**
  * A secure random number generator based on a platform call. On Linux, this uses the getrandom()
