@@ -7,4 +7,5 @@ pluginManagement {
 include(":wishport-static-uring")
 include(":wishport-helpers")
 include(":wishport-core")
+include(":wishport-tls")
 include(":wishport-test-perf")
