@@ -27,8 +27,18 @@ import kotlin.native.concurrent.Worker
 // iteration over the list of futures. this prevents any annoying interleaving with successive
 // write calls to eventfd not going through properly.
 
+// TODO: reap added workers
+/**
+ * A pool of Kotlin [Worker] instances.
+ */
 @LowLevelApi
-public class WorkerPool(public val loop: EventLoop, public val size: Int) {
+public class WorkerPool
+internal constructor(
+    public val loop: EventLoop,
+    public val size: Int,
+    /** If true, new workers will be created on-demand if none are available. */
+    private val createOnDemand: Boolean
+) {
     private class WorkerJobState<I, R>(
         val loop: EventLoop,
         val res: I,
@@ -48,9 +58,13 @@ public class WorkerPool(public val loop: EventLoop, public val size: Int) {
 
     private var nameSeq = 0
 
+    private fun addNewWorker() {
+        workers.add(Worker.start(name = "Wishport-WorkerThread-${++nameSeq}"))
+    }
+
     init {
         for (i in 0 until size) {
-            workers.add(Worker.start(name = "Wishport-WorkerThread-${++nameSeq}"))
+            addNewWorker()
         }
     }
 
@@ -77,6 +91,20 @@ public class WorkerPool(public val loop: EventLoop, public val size: Int) {
     }
 
     /**
+     * Removes any extra workers in the pool.
+     */
+    internal fun reapExtraWorkers() {
+        if (!createOnDemand) return
+        if (workers.size <= size) return
+
+        val iterator = workers.listIterator(size)
+        for (i in iterator) {
+            i.requestTermination(processScheduledJobs = false)
+            iterator.remove()
+        }
+    }
+
+    /**
      * Runs a function synchronously in another thread.
      */
     public suspend fun <I, S, F : Fail> runSyncInThread(
@@ -88,10 +116,15 @@ public class WorkerPool(public val loop: EventLoop, public val size: Int) {
 
         return task.checkIfCancelled()
             .andThen {
-                if (workers.isEmpty()) {
-                    waiters.park(task)
-                } else {
-                    Cancellable.empty()
+                when {
+                    workers.isEmpty() && !createOnDemand -> {
+                        waiters.park(task)
+                    }
+                    workers.isEmpty() -> {
+                        addNewWorker()
+                        Cancellable.empty()
+                    }
+                    else -> Cancellable.empty()
                 }
             }
             .andThen {

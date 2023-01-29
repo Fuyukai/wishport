@@ -194,7 +194,7 @@ public suspend fun <P, S, F : Fail> runSynchronouslyOffThread(
     block: (P) -> Either<S, F>
 ): CancellableResult<S, F> {
     val loop = EventLoop.get()
-    return loop.workerPool.runSyncInThread(cancellable, producer, block)
+    return loop.userWorkerPool.runSyncInThread(cancellable, producer, block)
 }
 
 /**

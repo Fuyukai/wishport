@@ -976,7 +976,7 @@ public actual class IOManager(
                 fcntl(newFd, F_SETFD, FD_CLOEXEC)
 
                 val loop = task.context.eventLoop
-                loop.workerPool.runSyncInThread(cancellable = false, { newFd }) {
+                loop.ioWorkerPool.runSyncInThread(cancellable = false, { newFd }) {
                     doReadDir(it)
                 }.also { close(newFd) }
             }

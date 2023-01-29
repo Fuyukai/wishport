@@ -95,15 +95,24 @@ public class EventLoop private constructor(
     internal var waitingAllTasksBlocked: Task? = null
 
     @OptIn(ExperimentalStdlibApi::class)
-    private val workerLazy = lazy {
-        WorkerPool(this, Platform.getAvailableProcessors())
+    private val userWorkerLazy = lazy {
+        WorkerPool(this, Platform.getAvailableProcessors(), createOnDemand = false)
     }
+
+    @OptIn(ExperimentalStdlibApi::class)
+    private val ioWorkerLazy = lazy {
+        WorkerPool(this, Platform.getAvailableProcessors() * 2, createOnDemand = true)
+    }
+
+    // used for blocking i/o requests
+    internal val ioWorkerPool by ioWorkerLazy
 
     // public APIs
     /**
      * The pool of worker threads for running synchronous code off-thread concurrently.
      */
-    public val workerPool: WorkerPool by workerLazy
+    public val userWorkerPool: WorkerPool by userWorkerLazy
+
 
     /**
      * The I/O manager for the current event loop.
@@ -254,8 +263,13 @@ public class EventLoop private constructor(
             }
 
             // check for worker thread completion
-            if (workerLazy.isInitialized()) {
-                workerPool.checkThreads()
+            if (userWorkerLazy.isInitialized()) {
+                userWorkerPool.checkThreads()
+            }
+
+            if (ioWorkerLazy.isInitialized()) {
+                ioWorkerPool.checkThreads()
+                ioWorkerPool.reapExtraWorkers()
             }
 
             // there's three possible paths here:
