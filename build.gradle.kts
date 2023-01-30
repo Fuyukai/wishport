@@ -1,12 +1,11 @@
-
 import com.diffplug.gradle.spotless.SpotlessExtension
 import org.jetbrains.kotlin.gradle.dsl.ExplicitApiMode
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    id("org.jetbrains.kotlin.multiplatform").version("1.7.20").apply(false)
-    id("com.diffplug.spotless").version("6.6.1").apply(false)
+    id("org.jetbrains.kotlin.multiplatform").version("1.8.0").apply(false)
+    id("com.diffplug.spotless").version("6.14.0").apply(false)
     id("com.github.ben-manes.versions").version("0.39.0").apply(false)
     id("maven-publish")
 }
@@ -66,10 +65,10 @@ subprojects {
             // linux sourcesets all share a sourceset
             val linuxMain by creating { dependsOn(posixMain) }
 
-            val linuxMainX64 = sourceSets.getByName("linuxX64Main")
+            val linuxMainX64 = getByName("linuxX64Main")
             linuxMainX64.dependsOn(linuxMain)
 
-            val linuxMainArm = sourceSets.getByName("linuxArm64Main")
+            val linuxMainArm = getByName("linuxArm64Main")
             linuxMainArm.dependsOn(linuxMain)
 
             all {
@@ -95,11 +94,6 @@ subprojects {
 
     configure<SpotlessExtension> {
         kotlin {
-            ktlint().userData(mapOf(
-                "disabled_rules" to "no-wildcard-imports",
-                "max-line-length" to "100",
-            ))
-
             target("src/**/kotlin/**")
             targetExclude("build/generated/**")
             licenseHeaderFile(project.file("LICENCE-HEADER"))

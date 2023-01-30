@@ -6,7 +6,7 @@ plugins {
 kotlin {
     val amd64 = linuxX64()
     val aarch64 = linuxArm64()
-    // val win64 = mingwX64()
+    //val win64 = mingwX64()
 
     // manual system call
     listOf(amd64, aarch64).forEach {
@@ -21,5 +21,11 @@ kotlin {
             defFile("src/cinterop/extras.def")
             packageName = "platform.extra"
         }
+    }
+
+    sourceSets {
+        val posixMain = getByName("posixMain")
+        //val mingw = getByName("mingwX64Main")
+        //mingw.dependsOn(posixMain)
     }
 }
