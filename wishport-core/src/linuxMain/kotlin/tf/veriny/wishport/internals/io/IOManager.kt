@@ -82,6 +82,7 @@ public actual class IOManager(
         private set
 
     private val alloca = Arena()
+    private val sqeSharedPointer = alloca.allocPointerTo<io_uring_cqe>()
 
     // THE io_uring
     private val ring = alloca.alloc<io_uring>()
@@ -240,15 +241,14 @@ public actual class IOManager(
      * Waits for I/O. This will first use [block] to wait for the first completion, then peek off
      * any remaining entries from the queue after that.
      */
-    private inline fun pollIO(block: (CPointerVar<io_uring_cqe>) -> Int): Int = memScoped {
+    private inline fun pollIO(block: (CPointerVar<io_uring_cqe>) -> Int): Int {
         // may return -EAGAIN, which means no completions, which means we drop it
         // i think io_uring_wait_cqe_nr might do that if there's nothing in the queue but im
         // not really sure.
         var count = 0
 
-        val cqe = allocPointerTo<io_uring_cqe>()
         run {
-            val res = block(cqe)
+            val res = block(sqeSharedPointer)
             if (res == -EAGAIN) return 0
             if (res == -ETIME) return 0
             else if (res < 0) {
@@ -257,13 +257,13 @@ public actual class IOManager(
             }
         }
 
-        while (cqe.pointed != null) {
+        while (sqeSharedPointer.pointed != null) {
             count++
-            handleCqe(cqe)
-            io_uring_cqe_seen(ring.ptr, cqe.value)
-            cqe.pointed = null
+            handleCqe(sqeSharedPointer)
+            io_uring_cqe_seen(ring.ptr, sqeSharedPointer.value)
+            sqeSharedPointer.pointed = null
 
-            val res = io_uring_peek_cqe(ring.ptr, cqe.ptr)
+            val res = io_uring_peek_cqe(ring.ptr, sqeSharedPointer.ptr)
             if (res == -EAGAIN) break
         }
 
@@ -812,7 +812,7 @@ public actual class IOManager(
         size: UInt,
         fileOffset: ULong,
         bufferOffset: Int
-    ): CancellableResult<ByteCountResult, Fail> = memScoped {
+    ): CancellableResult<ByteCountResult, Fail> {
         return input.checkBuffers(size, bufferOffset).andThen {
             it.usePinned { pinned ->
                 write(handle, pinned.addressOf(bufferOffset), size, fileOffset)
@@ -826,7 +826,7 @@ public actual class IOManager(
         size: UInt,
         bufferOffset: Int,
         flags: Int
-    ): CancellableResult<ByteCountResult, Fail> = memScoped {
+    ): CancellableResult<ByteCountResult, Fail> {
         val task = getCurrentTask()
 
         val recvFlags = flags.or(MSG_NOSIGNAL)
@@ -837,11 +837,13 @@ public actual class IOManager(
                 val sqe = getsqe()
                 val pinned = out.pin()
 
-                defer { pinned.unpin() }
-
                 io_uring_prep_recv(sqe, handle.actualFd, pinned.addressOf(bufferOffset), size.toULong(), recvFlags)
 
-                submitAndWait(task, SleepingWhy.READ_WRITE) { sqe.setuserid(it) }
+                try {
+                    submitAndWait(task, SleepingWhy.READ_WRITE) { sqe.setuserid(it) }
+                } finally {
+                    pinned.unpin()
+                }
             }
     }
 
@@ -851,7 +853,7 @@ public actual class IOManager(
         size: UInt,
         bufferOffset: Int,
         flags: Int
-    ): CancellableResult<ByteCountResult, Fail> = memScoped {
+    ): CancellableResult<ByteCountResult, Fail> {
         val task = getCurrentTask()
 
         val sendFlags = flags.or(MSG_NOSIGNAL)
@@ -862,11 +864,13 @@ public actual class IOManager(
                 val sqe = getsqe()
                 val pinned = input.pin()
 
-                defer { pinned.unpin() }
-
                 io_uring_prep_send(sqe, handle.actualFd, pinned.addressOf(bufferOffset), size.toULong(), sendFlags)
 
-                submitAndWait(task, SleepingWhy.READ_WRITE) { sqe.setuserid(it) }
+                try {
+                    submitAndWait(task, SleepingWhy.READ_WRITE) { sqe.setuserid(it) }
+                } finally {
+                    pinned.unpin()
+                }
             }
     }
 
@@ -1025,7 +1029,7 @@ public actual class IOManager(
         dirHandle: DirectoryHandle?,
         path: ByteString,
         permissions: Set<FilePermissions>,
-    ): CancellableResourceResult<Empty> = memScoped {
+    ): CancellableResourceResult<Empty> {
         val task = getCurrentTask()
 
         return task.checkIfCancelled()
@@ -1034,14 +1038,16 @@ public actual class IOManager(
 
                 val dirFd = dirHandle?.actualFd ?: _AT_FDCWD
                 val buf = path.pinnedTerminated()
-                defer { buf.unpin() }
-
                 var mode = permissions.toMode()
                 if (mode == 0U) mode = 511U /* 777 */
 
                 io_uring_prep_mkdirat(sqe, dirFd, buf.addressOf(0), mode)
 
-                submitAndWait(task, SleepingWhy.MKDIR) { sqe.setuserid(it) }
+                try {
+                    submitAndWait(task, SleepingWhy.MKDIR) { sqe.setuserid(it) }
+                } finally {
+                    buf.unpin()
+                }
             }
     }
 
@@ -1052,7 +1058,7 @@ public actual class IOManager(
         toDirHandle: DirectoryHandle?,
         to: ByteString,
         flags: Set<RenameFlags>
-    ): CancellableResourceResult<Empty> = memScoped {
+    ): CancellableResourceResult<Empty> {
         val task = getCurrentTask()
 
         var realFlags = 0
@@ -1071,9 +1077,7 @@ public actual class IOManager(
                 val toDir = toDirHandle?.actualFd ?: _AT_FDCWD
 
                 val fromBuf = from.pinnedTerminated()
-                defer { fromBuf.unpin() }
                 val toBuf = to.pinnedTerminated()
-                defer { toBuf.unpin() }
 
                 io_uring_prep_renameat(
                     sqe,
@@ -1084,7 +1088,12 @@ public actual class IOManager(
                     realFlags.toUInt()
                 )
 
-                submitAndWait(task, SleepingWhy.RENAME) { sqe.setuserid(it) }
+                try {
+                    submitAndWait(task, SleepingWhy.RENAME) { sqe.setuserid(it) }
+                } finally {
+                    fromBuf.unpin()
+                    toBuf.unpin()
+                }
             }
     }
 
@@ -1094,7 +1103,7 @@ public actual class IOManager(
         from: ByteString,
         toDirHandle: DirectoryHandle?,
         to: ByteString,
-    ): CancellableResourceResult<Empty> = memScoped {
+    ): CancellableResourceResult<Empty> {
         val task = getCurrentTask()
 
         return task.checkIfCancelled()
@@ -1104,9 +1113,7 @@ public actual class IOManager(
                 val toDir = toDirHandle?.actualFd ?: _AT_FDCWD
 
                 val fromBuf = from.pinnedTerminated()
-                defer { fromBuf.unpin() }
                 val toBuf = to.pinnedTerminated()
-                defer { toBuf.unpin() }
 
                 io_uring_prep_renameat(
                     sqe,
@@ -1117,7 +1124,12 @@ public actual class IOManager(
                     0
                 )
 
-                submitAndWait(task, SleepingWhy.LINK) { sqe.setuserid(it) }
+                try {
+                    submitAndWait(task, SleepingWhy.LINK) { sqe.setuserid(it) }
+                } finally {
+                    fromBuf.unpin()
+                    toBuf.unpin()
+                }
             }
     }
 
@@ -1126,7 +1138,7 @@ public actual class IOManager(
         target: ByteString,
         dirHandle: DirectoryHandle?,
         newPath: ByteString,
-    ): CancellableResourceResult<Empty> = memScoped {
+    ): CancellableResourceResult<Empty> {
         val task = getCurrentTask()
 
         return task.checkIfCancelled()
@@ -1135,14 +1147,16 @@ public actual class IOManager(
                 val toDir = dirHandle?.actualFd ?: _AT_FDCWD
 
                 val pathBuf = newPath.pinnedTerminated()
-                defer { pathBuf.unpin() }
-
                 val targetBuf = newPath.pinnedTerminated()
-                defer { targetBuf.unpin() }
 
                 io_uring_prep_symlinkat(sqe, targetBuf.addressOf(0), toDir, pathBuf.addressOf(0))
 
-                submitAndWait(task, SleepingWhy.SYMLINK) { sqe.setuserid(it) }
+                try {
+                    submitAndWait(task, SleepingWhy.SYMLINK) { sqe.setuserid(it) }
+                } finally {
+                    pathBuf.unpin()
+                    targetBuf.unpin()
+                }
             }
     }
 
@@ -1151,7 +1165,7 @@ public actual class IOManager(
         dirHandle: DirectoryHandle?,
         path: ByteString,
         removeDir: Boolean,
-    ): CancellableResourceResult<Empty> = memScoped {
+    ): CancellableResourceResult<Empty> {
         val task = getCurrentTask()
 
         return task.checkIfCancelled()
@@ -1160,13 +1174,16 @@ public actual class IOManager(
 
                 val dirFd = dirHandle?.actualFd ?: _AT_FDCWD
                 val buf = path.pinnedTerminated()
-                defer { buf.unpin() }
 
                 val flags = if (!removeDir) 0 else _AT_REMOVEDIR
 
                 io_uring_prep_unlinkat(sqe, dirFd, buf.addressOf(0), flags)
 
-                submitAndWait(task, SleepingWhy.UNLINK) { sqe.setuserid(it) }
+                try {
+                    submitAndWait(task, SleepingWhy.UNLINK) { sqe.setuserid(it) }
+                } finally {
+                    buf.unpin()
+                }
             }
     }
 
