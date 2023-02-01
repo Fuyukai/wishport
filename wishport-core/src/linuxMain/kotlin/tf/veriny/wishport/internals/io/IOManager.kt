@@ -110,10 +110,14 @@ public actual class IOManager(
                 uname.major >= 6 -> {
                     // we're single threaded wrt the io_uring so this is good and fast
                     flags = flags.or(IORING_SETUP_SINGLE_ISSUER)
+                    flags = flags.or(IORING_SETUP_COOP_TASKRUN)
+                    flags = flags.or(IORING_SETUP_TASKRUN_FLAG)
+                    flags = flags.or(IORING_SETUP_SUBMIT_ALL)
                 }
                 uname.major >= 6 || uname.minor >= 19 -> {
                     flags = flags.or(IORING_SETUP_COOP_TASKRUN)
                     flags = flags.or(IORING_SETUP_TASKRUN_FLAG)
+                    flags = flags.or(IORING_SETUP_SUBMIT_ALL)
                 }
                 uname.major >= 6 || uname.minor >= 18 -> {
                     flags = flags.or(IORING_SETUP_SUBMIT_ALL)
