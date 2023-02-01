@@ -11,7 +11,7 @@ kotlin {
 
     listOf(amd64, aarch64).forEach {
         val main = it.compilations.getByName("main")
-        val sourceSet = main.defaultSourceSetName
+        val sourceSet = main.defaultSourceSet.name
         val libPath = "src/$sourceSet"
         val staticLib = project.file(libPath)
         val path = staticLib.absolutePath
