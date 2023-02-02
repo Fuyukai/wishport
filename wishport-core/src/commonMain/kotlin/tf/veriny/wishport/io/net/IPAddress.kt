@@ -42,6 +42,11 @@ public sealed class IPAddress {
 @OptIn(ExperimentalUnsignedTypes::class)
 public class IPv4Address(private val bytes: ByteArray) : IPAddress() {
     public companion object {
+        /** The IPv4 loopback address. */
+        public val LOOPBACK: IPv4Address = of("127.0.0.1").get()!!
+        /** The IPv4 any address. */
+        public val ANY: IPv4Address = of("0.0.0.0").get()!!
+
         /**
          * Parses an IPv4 address from a String.
          */

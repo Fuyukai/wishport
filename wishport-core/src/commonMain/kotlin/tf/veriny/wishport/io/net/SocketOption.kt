@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-@file:Suppress("ClassName", "ObjectPropertyName")
+@file:Suppress("ClassName", "ObjectPropertyName", "ConstPropertyName")
 
 package tf.veriny.wishport.io.net
 
@@ -14,6 +14,8 @@ private const val _SO_KEEPALIVE = 9
 private const val _SO_BROADCAST = 6
 private const val _SO_OOBINLINE = 10
 private const val _SOL_SOCKET = 1
+private const val _SO_TYPE = 3
+private const val _SO_PROTOCOL = 38
 
 /**
  * Sealed interface over the recognised socket option types.
@@ -58,3 +60,13 @@ public val SO_BROADCAST: SocketOption<Boolean> = BooleanSocketOption(_SO_BROADCA
  * queue.
  */
 public val SO_OOBINLINE: SocketOption<Boolean> = BooleanSocketOption(_SO_OOBINLINE, _SOL_SOCKET)
+
+/**
+ * This can be used in getsockopt() to get the type that the socket was created as.
+ */
+public val SO_TYPE: SocketOption<UInt> = UIntSocketOption(_SO_TYPE, _SOL_SOCKET)
+
+/**
+ * This can be used in getsockopt() to get the protocol that the socket was created as.
+ */
+public val SO_PROTOCOL: SocketOption<UInt> = UIntSocketOption(_SO_PROTOCOL, _SOL_SOCKET)

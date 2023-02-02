@@ -23,9 +23,7 @@ import tf.veriny.wishport.internals.checkIfCancelled
 import tf.veriny.wishport.internals.uncancellableCheckpoint
 import tf.veriny.wishport.io.*
 import tf.veriny.wishport.io.fs.*
-import tf.veriny.wishport.io.net.Inet4SocketAddress
-import tf.veriny.wishport.io.net.Inet6SocketAddress
-import tf.veriny.wishport.io.net.SocketAddress
+import tf.veriny.wishport.io.net.*
 import tf.veriny.wishport.util.*
 import kotlin.math.min
 
@@ -647,65 +645,6 @@ public actual class IOManager(
             }
     }
 
-    // Adding a new socket type:
-    // 1) Make a new SocketAddress subclass that encapsulates the data for the socket connection.
-    // 2) Add a new branch to the when call in ``doSocketAddress`` that handles the new socket type.
-    // This is perhaps not very OO-style code, but I simply do not care. It avoids having to do stupid
-    // expect/actual shenanigans on every socket address subclass.
-
-    @Unsafe
-    private fun doSocketAddress(
-        alloc: NativePlacement,
-        handle: IOHandle,
-        address: SocketAddress,
-        sqe: CPointer<io_uring_sqe>?
-    ): Int = with(alloc) {
-        when (address) {
-            is Inet4SocketAddress -> {
-                val addr = alloc<sockaddr_in>()
-                memset(addr.ptr, 0, sizeOf<sockaddr_in>().toULong())
-                addr.sin_family = AF_INET.toUShort()
-                addr.sin_addr.s_addr = htonl(address.address.toUInt())
-                addr.sin_port = htons(address.port)
-
-                if (sqe != null) {
-                    io_uring_prep_connect(
-                        sqe,
-                        handle.actualFd,
-                        addr.ptr.reinterpret(),
-                        sizeOf<sockaddr_in>().convert()
-                    )
-                } else {
-                    return bind(handle.actualFd, addr.ptr.reinterpret(), sizeOf<sockaddr_in>().convert())
-                }
-            }
-            is Inet6SocketAddress -> {
-                val addr = alloc<wp_sockaddr_in6>()
-                memset(addr.ptr, 0, sizeOf<wp_sockaddr_in6>().toULong())
-
-                addr.sin6_family = AF_INET6.toUShort()
-                address.address.representation.unwrap().usePinned {
-                    memcpy(addr.sin6_addr.addr, it.addressOf(0), 16)
-                }
-
-                addr.sin6_port = htons(address.port)
-
-                if (sqe != null) {
-                    io_uring_prep_connect(
-                        sqe,
-                        handle.actualFd,
-                        addr.ptr.reinterpret(),
-                        sizeOf<sockaddr_in6>().toUInt()
-                    )
-                } else {
-                    return bind(handle.actualFd, addr.ptr.reinterpret(), sizeOf<sockaddr_in6>().toUInt())
-                }
-            }
-        }
-
-        return 0
-    }
-
     // not really asynchronous (yet), but we have itt here for future direct sockets
     // and also so that the stupid sockaddr type punning can be unified here
     @OptIn(Unsafe::class)
@@ -717,7 +656,9 @@ public actual class IOManager(
 
         return task.checkIfCancelled()
             .andThen {
-                val res = doSocketAddress(this, sock, address, null)
+                val (ptr, size) = createCAddress(this, address)
+                val res = bind(sock.actualFd, ptr, size.toUInt())
+
                 if (res < 0) posix_errno().toSysResult().notCancelled()
                 else uncancellableCheckpoint(Empty)
             }
@@ -749,8 +690,9 @@ public actual class IOManager(
         return task.checkIfCancelled()
             .andThen {
                 val sqe = getsqe()
-                // ignore return value, it's always 0
-                doSocketAddress(this, sock, address, sqe)
+                val (ptr, size) = createCAddress(this, address)
+
+                io_uring_prep_connect(sqe, sock.actualFd, ptr, size.toUInt())
 
                 submitAndWait(task, SleepingWhy.CONNECT) { sqe.setuserid(it) }
             }

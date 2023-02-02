@@ -18,7 +18,12 @@ import tf.veriny.wishport.io.*
  */
 @OptIn(LowLevelApi::class)
 public class Socket
-private constructor(override val raw: SocketHandle) : FileLikeHandle {
+private constructor(
+    public val family: SocketFamily,
+    public val type: SocketType,
+    public val protocol: SocketProtocol,
+    override val raw: SocketHandle,
+) : FileLikeHandle {
     public companion object {
         /**
          * Creates a new [Socket] with the specified socket address, and adds it to [scope].
@@ -53,7 +58,9 @@ private constructor(override val raw: SocketHandle) : FileLikeHandle {
             type: SocketType,
             protocol: SocketProtocol,
         ): ResourceResult<Socket> {
-            return makeSocket(family, type, protocol).andThen { Either.ok(Socket(it)) }
+            return makeSocket(family, type, protocol).andThen {
+                Either.ok(Socket(family, type, protocol, it))
+            }
         }
 
         /**
@@ -62,7 +69,9 @@ private constructor(override val raw: SocketHandle) : FileLikeHandle {
         @Unsafe
         public operator fun invoke(address: SocketAddress): ResourceResult<Socket> {
             return makeSocket(address.family, address.type, address.protocol)
-                .andThen { Either.ok(Socket(it)) }
+                .andThen {
+                    Either.ok(Socket(address.family, address.type, address.protocol, it))
+                }
         }
     }
 
@@ -71,6 +80,20 @@ private constructor(override val raw: SocketHandle) : FileLikeHandle {
 
     override var closing: Boolean = false
         private set
+
+    /**
+     * Gets the remote address for this socket.
+     */
+    public fun getRemoteAddress(): ResourceResult<SocketAddress> {
+        return getRemoteAddress(raw, type, protocol)
+    }
+
+    /**
+     * Gets the local address this socket is bound to.
+     */
+    public fun getLocalAddress(): ResourceResult<SocketAddress> {
+        return getLocalAddress(raw, type, protocol)
+    }
 
     /**
      * Binds this socket to the specified address.
@@ -100,7 +123,9 @@ private constructor(override val raw: SocketHandle) : FileLikeHandle {
         if (closed) return Cancellable.failed(AlreadyClosedError)
 
         val io = getIOManager()
-        return io.accept(raw).andThen { Cancellable.ok(Socket(it)) }
+        return io.accept(raw).andThen {
+            Cancellable.ok(Socket(family, type, protocol, it))
+        }
     }
 
     /**

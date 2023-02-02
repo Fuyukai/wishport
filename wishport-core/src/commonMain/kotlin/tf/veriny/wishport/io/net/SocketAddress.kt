@@ -54,6 +54,22 @@ public class Inet4SocketAddress(
     public val address: IPv4Address,
     public val port: UShort
 ) : BaseSocketAddress(SocketFamily.IPV4, type, protocol) {
+    public companion object {
+        /** Gets a socket address for the loopback address with the provided port. */
+        public fun loopback(
+            type: SocketType, protocol: SocketProtocol, port: UShort
+        ): Inet4SocketAddress {
+            return Inet4SocketAddress(type, protocol, IPv4Address.LOOPBACK, port)
+        }
+
+        /** Gets the socket address for the any address with the provided port. */
+        public fun any(
+            type: SocketType, protocol: SocketProtocol, port: UShort
+        ): Inet4SocketAddress {
+            return Inet4SocketAddress(type, protocol, IPv4Address.ANY, port)
+        }
+    }
+
     override fun equals(other: Any?): Boolean {
         if (other === this) return true
         if (other == null || other !is Inet4SocketAddress) return false
@@ -67,6 +83,10 @@ public class Inet4SocketAddress(
         result = 31 * result + address.hashCode()
         result = 31 * result + port.hashCode()
         return result
+    }
+
+    override fun toString(): String {
+        return "Inet4SocketAddress[family = $family, protocol = $protocol, ip = '$address', port = $port]"
     }
 }
 
