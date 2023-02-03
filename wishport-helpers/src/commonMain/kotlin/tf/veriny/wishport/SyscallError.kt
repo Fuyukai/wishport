@@ -36,7 +36,11 @@ public sealed class SyscallError(
 /**
  * Returned when the error is unknown.
  */
-public class UnknownError(errno: Int) : SyscallError(errno)
+public class UnknownError(errno: Int) : SyscallError(errno) {
+    override fun toString(): String {
+        return "UnknownError[errno = $errno]"
+    }
+}
 
 /**
  * Converts an errno into an [SyscallError].

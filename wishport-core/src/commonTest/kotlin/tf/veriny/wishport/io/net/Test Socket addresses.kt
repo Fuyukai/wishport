@@ -23,6 +23,14 @@ class `Test Socket addresses` {
     }
 
     @Test
+    fun `Test getting an address on an unconnected socket fails`() = runWithClosingScope {
+        assertFailureWith(TransportEndpointIsNotConnected) {
+            Socket(it, SocketFamily.IPV4, SocketType.STREAM, SocketProtocol.TCP)
+                .andThen { it.getRemoteAddress() }
+        }
+    }
+
+    @Test
     fun `Test remote socket address`() = runWithClosingScope { assertSuccess {
         Imperatavize.cancellable<Unit, Fail> {
             val address = Inet4SocketAddress.loopback(SocketType.STREAM, SocketProtocol.TCP, 3512U)

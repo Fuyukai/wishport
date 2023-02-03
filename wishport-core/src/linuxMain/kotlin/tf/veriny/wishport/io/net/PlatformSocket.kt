@@ -181,7 +181,7 @@ public actual fun getRemoteAddress(
         )
         if (res < 0) {
             @Suppress("RemoveExplicitTypeArguments")
-            res.toSysResult().q<Nothing, ResourceError>()
+            posix_errno().toSysResult().q<Nothing, ResourceError>()
         } else {
             createKotlinAddress(realType, realProtocol, addr.ptr)
         }
@@ -217,7 +217,7 @@ public actual fun getLocalAddress(
 
         if (res < 0) {
             @Suppress("RemoveExplicitTypeArguments")
-            res.toSysResult().q<Nothing, ResourceError>()
+            posix_errno().toSysResult().q<Nothing, ResourceError>()
         } else {
             createKotlinAddress(realType, realProtocol, addr.ptr)
         }
