@@ -53,11 +53,20 @@ public sealed interface Cancellable<out S, out F : Fail, out T : ResultLike<S, F
 public typealias CancellableResult<Success, Failure> =
     Cancellable<Success, Failure, Either<Success, Failure>>
 
+/**
+ * A [Cancellable] that uses [Validated].
+ */
 public typealias CancellableValidated<Success, Failure> =
     Cancellable<Success, Failure, Validated<Success, Failure>>
 
+/**
+ * A [Cancellable] that can never fail.
+ */
 public typealias CancellableSuccess<Success> = CancellableResult<Success, Nothing>
 
+/**
+ * A [Cancellable] that returns [Unit] on the successful path.
+ */
 public typealias CancellableEmpty = CancellableSuccess<Unit>
 
 /**
