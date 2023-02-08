@@ -9,9 +9,9 @@
 
 package tf.veriny.wishport
 
-import platform.builtins.__wp_bswap16
-import platform.builtins.__wp_bswap32
-import platform.builtins.__wp_bswap64
+import platform.builtin.builtin_bswap16
+import platform.builtin.builtin_bswap32
+import platform.builtin.builtin_bswap64
 
 /**
  * Gets the upper byte of this Int.
@@ -84,16 +84,13 @@ public inline val Long.lowerByte: Long
     get() = (this and 0x00000000000000FF)
 
 /* @InlineOnly */
-public inline val ULong.swapped: ULong
-    get() = (__wp_bswap64(this))
+public inline val Long.swapped: Long get() = (builtin_bswap64(this))
 
 /* @InlineOnly */
-public inline val UInt.swapped: UInt
-    get() = (__wp_bswap32(this))
+public inline val Int.swapped: Int get() = (builtin_bswap32(this))
 
 /* @InlineOnly */
-public inline val UShort.swapped: UShort
-    get() = (__wp_bswap16(this))
+public inline val Short.swapped: Short get() = (builtin_bswap16(this))
 
 // Number --> ByteArray
 /**
