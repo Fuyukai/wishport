@@ -1,2 +1,2 @@
-wishport-static-uring/src/include linguist-vendored
-wishport-static-openssl/src/include linguist-vendored
+wishport-static-uring/src/include/** linguist-vendored
+wishport-static-openssl/src/include/** linguist-vendored
