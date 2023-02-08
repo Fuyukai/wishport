@@ -21,6 +21,11 @@ kotlin {
             defFile("src/cinterop/extras.def")
             packageName = "platform.extra"
         }
+
+        val builtins by main.cinterops.creating {
+            defFile("src/cinterop/builtins.def")
+            packageName = "platform.builtins"
+        }
     }
 
     sourceSets {

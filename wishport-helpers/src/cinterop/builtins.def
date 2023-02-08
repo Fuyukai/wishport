@@ -1,0 +1,17 @@
+---
+#include <stdint.h>
+#include <byteswap.h>
+
+
+// exposes the compiler built-in byteswap instructions (which delegates to x86 bswap instructions)
+static inline uint64_t __wp_bswap64(uint64_t inp) {
+    return __bswap_64(inp);
+}
+
+static inline uint32_t __wp_bswap32(uint32_t inp) {
+    return __bswap_32(inp);
+}
+
+static inline uint16_t __wp_bswap16(uint16_t inp) {
+    return __bswap_16(inp);
+}
