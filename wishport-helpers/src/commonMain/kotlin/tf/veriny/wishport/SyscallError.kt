@@ -20,10 +20,18 @@ public sealed interface ResourceError : Fail
 /** Returned when trying to use a resource that has already been closed. */
 public object AlreadyClosedError : ResourceError
 
+/** Returned when reaching an EOF in a buffered file. */
+public object EndOfFileError : ResourceError
+
+/** Returned if there is not enough data available in the buffer to complete the read request. */
+public object NotEnoughDataError : ResourceError
+
 /** Helper type alias for functions that return a [ResourceError]. */
 public typealias ResourceResult<Success> = Either<Success, ResourceError>
 /** Helper type alias for functions that return a cancellable [ResourceError]. */
 public typealias CancellableResourceResult<Success> = CancellableResult<Success, ResourceError>
+/** Helper type alias for functions that return a cancellable Unit + [ResourceError]. */
+public typealias CancellableResourceEmpty = CancellableResult<Unit, ResourceError>
 
 /**
  * Standard error class for system call related errors.

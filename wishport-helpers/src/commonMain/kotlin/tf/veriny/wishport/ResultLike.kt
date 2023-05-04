@@ -25,8 +25,12 @@ public sealed interface ResultLike<out Success, out Failure : Fail>
  */
 public sealed interface Either<out Success, out Failure : Fail> : ResultLike<Success, Failure> {
     public companion object {
+        @PublishedApi
+        internal val UNIT: Either<Unit, Nothing> = Ok(Unit)
+
+        @Suppress("UNCHECKED_CAST")  // actually safe
         public inline fun <Success> ok(v: Success): Either<Success, Nothing> =
-            Ok(v)
+            if (v == Unit) UNIT as Either<Success, Nothing> else Ok(v)
 
         public inline fun <Failure : Fail> err(v: Failure): Either<Nothing, Failure> =
             Err(v)

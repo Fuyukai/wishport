@@ -27,7 +27,7 @@ public fun Random.randomString(length: Int): String {
 }
 
 /**
- * Generates a random alphanumeric [ByteString] of the speecified [length].
+ * Generates a random alphanumeric [ByteString] of the specified [length].
  */
 @OptIn(Unsafe::class)
 public fun Random.randomByteString(length: Int): ByteString {
